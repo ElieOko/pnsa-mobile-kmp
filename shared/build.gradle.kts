@@ -80,6 +80,14 @@ kotlin {
     }
 }
 
+compose {
+    resources {
+        publicResClass = true
+        packageOfResClass = "app.partners.pnsa.resources"
+        generateResClass = always
+    }
+}
+
 dependencies {
     androidRuntimeClasspath(libs.compose.uiTooling)
 }

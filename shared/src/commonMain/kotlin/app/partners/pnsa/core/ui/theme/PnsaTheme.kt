@@ -1,5 +1,8 @@
 package app.partners.pnsa.core.ui.theme
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
@@ -8,54 +11,72 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-val PnsaGreen = Color(0xFF0B6B45)
-val PnsaGreenSoft = Color(0xFF1B8F5E)
-val PnsaMint = Color(0xFFE4F4EC)
-val PnsaAmber = Color(0xFFE67E22)
-val PnsaSky = Color(0xFF167A8B)
-val PnsaCream = Color(0xFFF6F8F4)
-val PnsaInk = Color(0xFF12281E)
-val PnsaSand = Color(0xFFFFF4E8)
+val PnsaBlue = Color(0xFF0069E1)
+val PnsaBlueDeep = Color(0xFF0B3C8A)
+val PnsaBlueSoft = Color(0xFFE8F2FF)
+val PnsaRed = Color(0xFFD01D2A)
+val PnsaRedHot = Color(0xFFFF2D55)
+val PnsaNavy = Color(0xFF1A2744)
+val PnsaInk = Color(0xFF101828)
+val PnsaIce = Color(0xFFF3F6FB)
+val PnsaChrome = Color(0xFF0A0B10)
+val PnsaChromeLift = Color(0xFF161821)
+val PnsaMuted = Color(0xFF667085)
+
+val PnsaBlueRed = Brush.linearGradient(listOf(PnsaBlue, Color(0xFF3B82F6), PnsaRed))
+val PnsaHeroBrush = Brush.verticalGradient(
+    listOf(Color(0xCC0A0B10), Color(0x990B3C8A), Color(0xE60A0B10)),
+)
+
+fun motionTween(duration: Int = 420) = tween<Float>(durationMillis = duration)
+fun motionSpring() = spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
 
 private val LightColors = lightColorScheme(
-    primary = PnsaGreen,
+    primary = PnsaBlue,
     onPrimary = Color.White,
-    primaryContainer = PnsaMint,
-    onPrimaryContainer = PnsaInk,
-    secondary = Color(0xFFD96B16),
+    primaryContainer = PnsaBlueSoft,
+    onPrimaryContainer = PnsaNavy,
+    secondary = PnsaRed,
     onSecondary = Color.White,
-    secondaryContainer = PnsaSand,
-    onSecondaryContainer = Color(0xFF4A2A0A),
-    tertiary = PnsaSky,
+    secondaryContainer = Color(0xFFFFE5E8),
+    onSecondaryContainer = Color(0xFF4A0B12),
+    tertiary = PnsaBlueDeep,
     onTertiary = Color.White,
-    tertiaryContainer = Color(0xFFD7F1F5),
-    onTertiaryContainer = Color(0xFF08343A),
-    background = PnsaCream,
+    tertiaryContainer = Color(0xFFD9E6FF),
+    onTertiaryContainer = Color(0xFF0A2048),
+    background = PnsaIce,
     onBackground = PnsaInk,
     surface = Color.White,
     onSurface = PnsaInk,
-    surfaceVariant = Color(0xFFE7EEE8),
-    onSurfaceVariant = Color(0xFF3D5348),
-    outline = Color(0xFFB7C6BB),
-    error = Color(0xFFB3261E),
+    surfaceVariant = Color(0xFFE6EEF8),
+    onSurfaceVariant = Color(0xFF3D4B63),
+    outline = Color(0xFFC5D0E0),
+    error = PnsaRed,
 )
 
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFF7ED9A8),
-    onPrimary = Color(0xFF003822),
-    primaryContainer = Color(0xFF0B6B45),
-    onPrimaryContainer = Color(0xFFD4F5E4),
-    secondary = Color(0xFFFFB677),
-    onSecondary = Color(0xFF4A2A0A),
-    background = Color(0xFF0E1A14),
-    onBackground = Color(0xFFE6F2EA),
-    surface = Color(0xFF15241C),
-    onSurface = Color(0xFFE6F2EA),
-    surfaceVariant = Color(0xFF24362D),
-    onSurfaceVariant = Color(0xFFC5D4CB),
+    primary = Color(0xFF5BA8FF),
+    onPrimary = Color(0xFF001A3D),
+    primaryContainer = Color(0xFF0B3C8A),
+    onPrimaryContainer = Color(0xFFD6E7FF),
+    secondary = Color(0xFFFF6B7A),
+    onSecondary = Color(0xFF3D0610),
+    secondaryContainer = Color(0xFF5C1018),
+    onSecondaryContainer = Color(0xFFFFD9DD),
+    tertiary = Color(0xFF8BB4FF),
+    background = Color(0xFF070A12),
+    onBackground = Color(0xFFE8EEF8),
+    surface = Color(0xFF121826),
+    onSurface = Color(0xFFE8EEF8),
+    surfaceVariant = Color(0xFF1C2436),
+    onSurfaceVariant = Color(0xFFB7C3D6),
+    outline = Color(0xFF3A4558),
+    error = Color(0xFFFF6B7A),
 )
 
 private val PnsaShapes = Shapes(
@@ -65,6 +86,8 @@ private val PnsaShapes = Shapes(
     large = RoundedCornerShape(28.dp),
     extraLarge = RoundedCornerShape(36.dp),
 )
+
+val LocalEmbeddedChrome = compositionLocalOf { false }
 
 @Composable
 fun PnsaTheme(
