@@ -1,20 +1,19 @@
 package app.partners.pnsa.features.forum.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,7 +22,6 @@ import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,7 +34,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,12 +45,12 @@ import app.partners.pnsa.core.ui.components.ErrorState
 import app.partners.pnsa.core.ui.components.LoadingState
 import app.partners.pnsa.core.ui.components.PageBackdrop
 import app.partners.pnsa.core.ui.components.PnsaCard
+import app.partners.pnsa.core.ui.components.PnsaChip
 import app.partners.pnsa.core.ui.components.PnsaScaffold
 import app.partners.pnsa.core.ui.components.PnsaTextField
 import app.partners.pnsa.core.ui.components.PnsaTopBar
 import app.partners.pnsa.core.ui.components.PrimaryAction
 import app.partners.pnsa.core.ui.components.StatusBanner
-import app.partners.pnsa.core.ui.components.quietClick
 import app.partners.pnsa.core.ui.navigation.AppDestination
 import app.partners.pnsa.core.ui.navigation.AppNavigator
 import app.partners.pnsa.core.ui.theme.PnsaBlue
@@ -120,9 +117,9 @@ fun ForumListScreen(navigator: AppNavigator) {
                         Text("Discussions publiques", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = PnsaNavy)
                         Text("Catégories, auteurs et réponses — hors urgence médicale.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(10.dp))
-                        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            categories.forEach { label ->
-                                CategoryChip(
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(categories) { label ->
+                                PnsaChip(
                                     label = label,
                                     selected = category == label,
                                     onClick = {
@@ -147,37 +144,24 @@ fun ForumListScreen(navigator: AppNavigator) {
 }
 
 @Composable
-private fun CategoryChip(label: String, selected: Boolean, onClick: () -> Unit) {
-    Surface(
-        modifier = Modifier.quietClick(onClick = onClick),
-        shape = CircleShape,
-        color = if (selected) PnsaBlue else Color.White,
-    ) {
-        Text(
-            label,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-            color = if (selected) Color.White else PnsaNavy,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-        )
-    }
-}
-
-@Composable
 private fun ForumPostCard(sujet: Sujet, onOpen: () -> Unit) {
     PnsaCard(onClick = onOpen) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Surface(shape = CircleShape, color = PnsaBlue.copy(alpha = 0.12f)) {
+            Box(
+                Modifier
+                    .clip(CircleShape)
+                    .background(PnsaBlue.copy(alpha = 0.12f))
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
+            ) {
                 Text(
                     sujet.categoryLabel,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                     color = PnsaBlue,
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
             }
             Spacer(Modifier.weight(1f))
-            Text(formatIsoDate(sujet.updatedAt ?: sujet.createdAt), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            MetaIcon(Icons.Outlined.Schedule, formatIsoDate(sujet.publishedAt))
         }
         Spacer(Modifier.height(10.dp))
         Text(sujet.headline, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium, color = PnsaNavy)
@@ -186,9 +170,9 @@ private fun ForumPostCard(sujet: Sujet, onOpen: () -> Unit) {
         Spacer(Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             AuthorMark(sujet.authorName)
+            Spacer(Modifier.weight(1f))
             MetaIcon(Icons.Outlined.ChatBubbleOutline, "${sujet.replyCount}")
             MetaIcon(Icons.Outlined.FavoriteBorder, "${sujet.likeCount}")
-            MetaIcon(Icons.Outlined.Schedule, formatIsoDate(sujet.createdAt))
         }
     }
 }
@@ -254,21 +238,36 @@ fun ForumDetailScreen(id: Long, onBack: () -> Unit) {
                             Spacer(Modifier.height(12.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                 AuthorMark(post.authorName)
-                                Text(formatIsoDate(post.createdAt), style = MaterialTheme.typography.labelSmall)
+                                Text(formatIsoDate(post.publishedAt), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Text("${post.replyCount} réponses", style = MaterialTheme.typography.labelSmall, color = PnsaBlue)
                             }
                         }
                         Spacer(Modifier.height(14.dp))
-                        Text("Réponses", fontWeight = FontWeight.SemiBold, color = PnsaNavy)
+                        Text("Réponses (${post.commentaires.size})", fontWeight = FontWeight.SemiBold, color = PnsaNavy)
                         Spacer(Modifier.height(8.dp))
                         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (post.commentaires.isEmpty()) {
+                                item {
+                                    Text("Aucune réponse pour le moment.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
                             items(post.commentaires, key = { it.id ?: it.commentaire.orEmpty() }) { comment ->
-                                PnsaCard {
-                                    AuthorMark(comment.user?.displayName ?: "Participant")
-                                    Spacer(Modifier.height(6.dp))
-                                    Text(comment.commentaire.orEmpty())
-                                    Spacer(Modifier.height(6.dp))
-                                    Text(formatIsoDate(comment.createdAt), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Row {
+                                    Box(
+                                        Modifier
+                                            .padding(end = 10.dp, top = 4.dp)
+                                            .width(3.dp)
+                                            .height(48.dp)
+                                            .clip(RoundedCornerShape(2.dp))
+                                            .background(PnsaBlue.copy(alpha = 0.35f)),
+                                    )
+                                    PnsaCard(Modifier.weight(1f)) {
+                                        AuthorMark(comment.user?.displayName ?: "Participant")
+                                        Spacer(Modifier.height(6.dp))
+                                        Text(comment.commentaire.orEmpty())
+                                        Spacer(Modifier.height(6.dp))
+                                        Text(formatIsoDate(comment.createdAt), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
                                 }
                             }
                         }

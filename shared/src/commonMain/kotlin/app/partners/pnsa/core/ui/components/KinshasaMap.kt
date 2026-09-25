@@ -1,16 +1,7 @@
 package app.partners.pnsa.core.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,7 +23,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -93,12 +83,6 @@ fun KinshasaGpsMap(
     userLat: Double = -4.3276,
     userLon: Double = 15.3136,
 ) {
-    val pulse by rememberInfiniteTransition(label = "gps-pulse").animateFloat(
-        initialValue = 0.35f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(1400), RepeatMode.Reverse),
-        label = "pulse",
-    )
     val markers = remember(structures) { structures.filter { it.hasCoordinates } }
     val selected = markers.firstOrNull { it.id == selectedId }
 
@@ -179,7 +163,7 @@ fun KinshasaGpsMap(
             }
 
             val user = KinshasaMapMath.project(userLat, userLon, w, h)
-            drawCircle(PnsaBlue.copy(alpha = 0.18f * pulse), 34f * pulse, user)
+            drawCircle(PnsaBlue.copy(alpha = 0.18f), 34f, user)
             drawCircle(Color.White, 10f, user)
             drawCircle(PnsaBlue, 6f, user)
 
@@ -226,22 +210,24 @@ fun KinshasaGpsMap(
             )
         }
 
-        AnimatedVisibility(
-            visible = selected != null,
-            enter = fadeIn() + slideInVertically { it / 2 },
-            modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp),
-        ) {
-            selected?.let { item ->
-                GpsPlaceCard(item, onOpen = { onSelect(item) })
-            }
+        if (selected != null) {
+            GpsPlaceCard(
+                item = selected,
+                modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp),
+                onOpen = { onSelect(selected) },
+            )
         }
     }
 }
 
 @Composable
-fun GpsPlaceCard(item: HealthStructure, onOpen: () -> Unit) {
+fun GpsPlaceCard(
+    item: HealthStructure,
+    modifier: Modifier = Modifier,
+    onOpen: () -> Unit,
+) {
     Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onOpen),
+        modifier = modifier.fillMaxWidth().quietClick(onClick = onOpen),
         shape = RoundedCornerShape(22.dp),
         color = Color.White,
         shadowElevation = 10.dp,

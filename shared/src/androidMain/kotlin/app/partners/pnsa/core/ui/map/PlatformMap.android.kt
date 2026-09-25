@@ -10,6 +10,11 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 
+private class OsmMapState {
+    var lastIds: List<Long?> = emptyList()
+    var lastSelectedId: Long? = null
+}
+
 @Composable
 actual fun PlatformStructureMap(
     structures: List<HealthStructure>,
@@ -18,6 +23,7 @@ actual fun PlatformStructureMap(
     modifier: Modifier,
 ) {
     val markers = remember(structures) { structures.filter { it.hasCoordinates } }
+    val state = remember { OsmMapState() }
     AndroidView(
         modifier = modifier,
         factory = { context ->
@@ -29,29 +35,37 @@ actual fun PlatformStructureMap(
                 controller.setCenter(GeoPoint(-4.3276, 15.3136))
                 minZoomLevel = 10.0
                 maxZoomLevel = 18.0
+                onResume()
             }
         },
         update = { map ->
-            map.overlays.removeAll { it is Marker }
-            markers.forEach { structure ->
-                val marker = Marker(map).apply {
-                    position = GeoPoint(structure.latitude!!, structure.longitude!!)
-                    title = structure.displayName
-                    snippet = listOfNotNull(structure.displayCity, structure.structureType).joinToString(" · ")
-                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                    relatedObject = structure
-                    setOnMarkerClickListener { _, _ ->
-                        onSelect(structure)
-                        true
+            val ids = markers.map { it.id }
+            if (ids != state.lastIds) {
+                state.lastIds = ids
+                map.overlays.removeAll { it is Marker }
+                markers.forEach { structure ->
+                    val marker = Marker(map).apply {
+                        position = GeoPoint(structure.latitude!!, structure.longitude!!)
+                        title = structure.displayName
+                        snippet = listOfNotNull(structure.displayCity, structure.structureType).joinToString(" · ")
+                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                        relatedObject = structure
+                        setOnMarkerClickListener { _, _ ->
+                            onSelect(structure)
+                            true
+                        }
                     }
+                    map.overlays.add(marker)
                 }
-                map.overlays.add(marker)
+                map.invalidate()
             }
-            val selected = markers.firstOrNull { it.id == selectedId }
-            if (selected != null) {
-                map.controller.setCenter(GeoPoint(selected.latitude!!, selected.longitude!!))
+            if (selectedId != state.lastSelectedId) {
+                state.lastSelectedId = selectedId
+                val selected = markers.firstOrNull { it.id == selectedId }
+                if (selected != null) {
+                    map.controller.setCenter(GeoPoint(selected.latitude!!, selected.longitude!!))
+                }
             }
-            map.invalidate()
         },
         onRelease = { map ->
             map.onPause()

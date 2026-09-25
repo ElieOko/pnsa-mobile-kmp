@@ -1,5 +1,6 @@
 package app.partners.pnsa.core.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -154,6 +155,29 @@ fun SectionTitle(text: String, modifier: Modifier = Modifier) {
         fontWeight = FontWeight.Bold,
         modifier = modifier.padding(vertical = 8.dp),
     )
+}
+
+@Composable
+fun PnsaChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.quietClick(onClick = onClick),
+        shape = CircleShape,
+        color = if (selected) PnsaBlue else Color.White,
+        border = BorderStroke(1.dp, if (selected) PnsaBlue else Color(0xFFC5D0E0)),
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+            color = if (selected) Color.White else PnsaInk,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+        )
+    }
 }
 
 @Composable

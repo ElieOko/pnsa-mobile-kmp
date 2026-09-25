@@ -41,7 +41,6 @@ import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Quiz
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -81,7 +80,12 @@ fun TikTokTopBar(
             .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = { if (canPop) onBack() else onMenu() }) {
+        Box(
+            Modifier
+                .size(48.dp)
+                .quietClick(onClick = { if (canPop) onBack() else onMenu() }),
+            contentAlignment = Alignment.Center,
+        ) {
             Icon(
                 if (canPop) Icons.Default.ArrowBack else Icons.Default.Menu,
                 contentDescription = if (canPop) "Retour" else "Menu",

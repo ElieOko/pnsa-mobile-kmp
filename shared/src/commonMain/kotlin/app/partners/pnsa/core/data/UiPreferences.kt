@@ -27,6 +27,18 @@ class UiPreferences(
         get() = store.get(LAST_QUIZ)?.toLongOrNull()
         set(value) { store.put(LAST_QUIZ, value?.toString()) }
 
+    var lastQuizQuestionIndex: Int
+        get() = store.get(LAST_QUIZ_INDEX)?.toIntOrNull()?.coerceAtLeast(0) ?: 0
+        set(value) { store.put(LAST_QUIZ_INDEX, value.coerceAtLeast(0).toString()) }
+
+    var contentCategory: String
+        get() = store.get(CONTENT_CATEGORY) ?: "Tous"
+        set(value) { store.put(CONTENT_CATEGORY, value) }
+
+    var contentQuery: String
+        get() = store.get(CONTENT_QUERY).orEmpty()
+        set(value) { store.put(CONTENT_QUERY, value) }
+
     companion object {
         private const val FORUM_CATEGORY = "pref_forum_category"
         private const val MAP_SHOW = "pref_map_show"
@@ -34,5 +46,8 @@ class UiPreferences(
         private const val MAP_CITY = "pref_map_city"
         private const val MAP_SELECTED = "pref_map_selected"
         private const val LAST_QUIZ = "pref_last_quiz"
+        private const val LAST_QUIZ_INDEX = "pref_last_quiz_index"
+        private const val CONTENT_CATEGORY = "pref_content_category"
+        private const val CONTENT_QUERY = "pref_content_query"
     }
 }

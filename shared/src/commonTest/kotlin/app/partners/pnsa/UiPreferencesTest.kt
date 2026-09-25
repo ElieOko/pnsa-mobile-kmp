@@ -25,11 +25,17 @@ class UiPreferencesTest {
         prefs.mapCity = "Gombe"
         prefs.mapQuery = "SSR"
         prefs.lastQuizId = 12
+        prefs.lastQuizQuestionIndex = 3
+        prefs.contentCategory = "Santé"
+        prefs.contentQuery = "contraception"
         assertEquals("Puberté", prefs.forumCategory)
         assertEquals(false, prefs.mapShowMap)
         assertEquals("Gombe", prefs.mapCity)
         assertEquals("SSR", prefs.mapQuery)
         assertEquals(12L, prefs.lastQuizId)
+        assertEquals(3, prefs.lastQuizQuestionIndex)
+        assertEquals("Santé", prefs.contentCategory)
+        assertEquals("contraception", prefs.contentQuery)
     }
 
     @Test
@@ -41,10 +47,11 @@ class UiPreferencesTest {
             categorie = Categorie(libelle = "Puberté"),
             user = User(prenom = "Amina", nom = "K."),
             commentaires = emptyList(),
+            commentairesCount = 7,
         )
         assertEquals("Puberté", sujet.categoryLabel)
         assertEquals("Amina K.", sujet.authorName)
-        assertEquals(0, sujet.replyCount)
+        assertEquals(7, sujet.replyCount)
         assertEquals(4, sujet.likeCount)
     }
 }

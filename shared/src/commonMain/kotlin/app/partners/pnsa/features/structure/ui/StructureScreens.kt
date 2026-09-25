@@ -11,8 +11,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import app.partners.pnsa.core.ui.components.PnsaChip
 import app.partners.pnsa.core.ui.components.PnsaScaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -128,14 +128,14 @@ fun StructureListScreen(navigator: AppNavigator) {
                 )
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = showMap, onClick = {
+                    PnsaChip(label = "Carte", selected = showMap, onClick = {
                         showMap = true
                         graph.prefs.mapShowMap = true
-                    }, label = { Text("Carte") })
-                    FilterChip(selected = !showMap, onClick = {
+                    })
+                    PnsaChip(label = "Liste", selected = !showMap, onClick = {
                         showMap = false
                         graph.prefs.mapShowMap = false
-                    }, label = { Text("Liste") })
+                    })
                 }
             }
             item {

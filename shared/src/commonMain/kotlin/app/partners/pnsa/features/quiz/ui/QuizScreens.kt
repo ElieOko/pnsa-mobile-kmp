@@ -111,7 +111,7 @@ fun QuizListScreen(navigator: AppNavigator) {
         }
     }
 
-    val lastId = graph.prefs.lastQuizId
+    val lastId = remember { graph.prefs.lastQuizId }
 
     PnsaScaffold(topBar = { PnsaTopBar("Quiz") }) { padding ->
         PageBackdrop {
@@ -158,6 +158,9 @@ fun QuizListScreen(navigator: AppNavigator) {
                             highlighted = quiz.id == lastId,
                             onOpen = {
                                 quiz.id?.let {
+                                    if (graph.prefs.lastQuizId != it) {
+                                        graph.prefs.lastQuizQuestionIndex = 0
+                                    }
                                     graph.prefs.lastQuizId = it
                                     navigator.push(AppDestination.QuizPlay(it))
                                 }
@@ -234,7 +237,7 @@ fun QuizPlayScreen(quizId: Long, onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     var quiz by remember { mutableStateOf<Quiz?>(null) }
     var attempt by remember { mutableStateOf<QuizAttempt?>(null) }
-    var index by remember { mutableStateOf(0) }
+    var index by remember { mutableStateOf(if (graph.prefs.lastQuizId == quizId) graph.prefs.lastQuizQuestionIndex else 0) }
     val answers = remember { mutableStateMapOf<Long, Long>() }
     var loading by remember { mutableStateOf(true) }
     var submitting by remember { mutableStateOf(false) }
@@ -253,6 +256,14 @@ fun QuizPlayScreen(quizId: Long, onBack: () -> Unit) {
             )
             attempt = started
             graph.profile.track("quiz_start", mapOf("quiz_id" to quizId.toString()))
+            val last = detail.questionnaires.size - 1
+            if (last >= 0 && graph.prefs.lastQuizId == quizId) {
+                index = graph.prefs.lastQuizQuestionIndex.coerceIn(0, last)
+            } else {
+                index = 0
+                graph.prefs.lastQuizQuestionIndex = 0
+            }
+            graph.prefs.lastQuizId = quizId
         }.onFailure { error = (it as? ApiException)?.userMessage() ?: it.message }
         loading = false
     }
@@ -279,7 +290,11 @@ fun QuizPlayScreen(quizId: Long, onBack: () -> Unit) {
                         .padding(20.dp)
                         .verticalScroll(rememberScrollState()),
                 ) {
-                    Text("Question ${index + 1} / ${questions.size}", color = PnsaBlue, fontWeight = FontWeight.SemiBold)
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Question ${index + 1} / ${questions.size}", color = PnsaBlue, fontWeight = FontWeight.SemiBold)
+                        Spacer(Modifier.weight(1f))
+                        Text("${answers.size} répondues", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                     Spacer(Modifier.height(8.dp))
                     LinearProgressIndicator(
                         progress = { progress },
@@ -335,8 +350,15 @@ fun QuizPlayScreen(quizId: Long, onBack: () -> Unit) {
                     if (index < questions.lastIndex) {
                         PrimaryAction("Question suivante", enabled = current.id != null && answers[current.id] != null) {
                             index += 1
+                            graph.prefs.lastQuizId = quizId
+                            graph.prefs.lastQuizQuestionIndex = index
                         }
-                        if (index > 0) QuietAction("Question précédente") { index -= 1 }
+                        if (index > 0) {
+                            QuietAction("Question précédente") {
+                                index -= 1
+                                graph.prefs.lastQuizQuestionIndex = index
+                            }
+                        }
                     } else {
                         PrimaryAction(if (submitting) "Envoi…" else "Terminer et envoyer", enabled = !submitting) {
                             val clientId = attempt?.clientAttemptId ?: return@PrimaryAction
@@ -347,6 +369,7 @@ fun QuizPlayScreen(quizId: Long, onBack: () -> Unit) {
                                     .onSuccess {
                                         attempt = it
                                         done = true
+                                        graph.prefs.lastQuizQuestionIndex = 0
                                         graph.profile.track("quiz_submit", mapOf("quiz_id" to quizId.toString()))
                                     }
                                     .onFailure { throwable ->
@@ -356,10 +379,17 @@ fun QuizPlayScreen(quizId: Long, onBack: () -> Unit) {
                                 submitting = false
                             }
                         }
+                        if (index > 0) {
+                            QuietAction("Question précédente") {
+                                index -= 1
+                                graph.prefs.lastQuizQuestionIndex = index
+                            }
+                        }
                         SecondaryAction("Abandonner cette tentative") {
                             val clientId = attempt?.clientAttemptId ?: return@SecondaryAction
                             scope.launch {
                                 runCatching { graph.quizAttempts.abandon(clientId) }
+                                graph.prefs.lastQuizQuestionIndex = 0
                                 onBack()
                             }
                         }
@@ -380,22 +410,27 @@ private fun QuizResultPane(
     val max = QuizScoring.maxScore(quiz.questionnaires)
     val local = QuizScoring.localScore(quiz.questionnaires, answers)
     val score = attempt.displayScore ?: local
+    val percent = if (max > 0) (score * 100) / max else 0
     Column(
         Modifier
             .fillMaxSize()
             .padding(20.dp)
             .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text("Résultat", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = PnsaNavy)
         Spacer(Modifier.height(12.dp))
         Box(
             Modifier
-                .size(96.dp)
+                .size(112.dp)
                 .clip(CircleShape)
-                .background(PnsaBlue.copy(alpha = 0.12f)),
+                .background(if (percent >= 60) PnsaBlue.copy(alpha = 0.12f) else PnsaRed.copy(alpha = 0.10f)),
             contentAlignment = Alignment.Center,
         ) {
-            Text("$score / $max", fontWeight = FontWeight.Bold, color = PnsaBlue, fontSize = 20.sp)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("$score / $max", fontWeight = FontWeight.Bold, color = if (percent >= 60) PnsaBlue else PnsaRed, fontSize = 22.sp)
+                Text("$percent %", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
         Spacer(Modifier.height(12.dp))
         StatusBanner(
@@ -412,7 +447,7 @@ private fun QuizResultPane(
             val chosen = question.reponses.firstOrNull { it.id == selected }
             val correct = question.reponses.firstOrNull { it.isCorrect }
             val ok = chosen != null && chosen.id == correct?.id
-            PnsaCard(Modifier.padding(bottom = 10.dp)) {
+            PnsaCard(Modifier.fillMaxWidth().padding(bottom = 10.dp)) {
                 Text(question.prompt, fontWeight = FontWeight.SemiBold, color = PnsaNavy)
                 Spacer(Modifier.height(6.dp))
                 Text("Ta réponse : ${chosen?.reponse ?: "non répondue"}", color = if (ok) PnsaBlue else PnsaRed)
