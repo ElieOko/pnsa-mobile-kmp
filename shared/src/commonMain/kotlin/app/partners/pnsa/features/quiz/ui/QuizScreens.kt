@@ -20,7 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
+import app.partners.pnsa.core.ui.components.PnsaScaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -106,7 +106,7 @@ fun QuizListScreen(navigator: AppNavigator) {
         }
     }
 
-    Scaffold(topBar = { PnsaTopBar("Quiz") }) { padding ->
+    PnsaScaffold(topBar = { PnsaTopBar("Quiz") }) { padding ->
         when {
             loading -> LoadingState("Chargement des quiz…")
             error != null -> ErrorState(error.orEmpty(), onRetry = { load() })
@@ -196,7 +196,7 @@ fun QuizPlayScreen(quizId: Long, onBack: () -> Unit) {
     val questions = quiz?.questionnaires.orEmpty()
     val current = questions.getOrNull(index)
 
-    Scaffold(topBar = { PnsaTopBar(quiz?.title ?: "Quiz", onBack = onBack) }) { padding ->
+    PnsaScaffold(topBar = { PnsaTopBar(quiz?.title ?: "Quiz", onBack = onBack) }) { padding ->
         when {
             loading -> LoadingState("Préparation de ta tentative…")
             error != null && quiz == null -> ErrorState(error.orEmpty())

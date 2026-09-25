@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -27,6 +26,7 @@ import app.partners.pnsa.core.di.AppGraph
 import app.partners.pnsa.core.di.LocalAppGraph
 import app.partners.pnsa.core.ui.components.KeepAlivePane
 import app.partners.pnsa.core.ui.components.PnsaDrawerContent
+import app.partners.pnsa.core.ui.components.PnsaScaffold
 import app.partners.pnsa.core.ui.components.TikTokBottomBar
 import app.partners.pnsa.core.ui.components.TikTokTopBar
 import app.partners.pnsa.core.ui.navigation.AppDestination
@@ -116,7 +116,7 @@ private fun PnsaRoot(graph: AppGraph) {
         },
     ) {
         CompositionLocalProvider(LocalEmbeddedChrome provides true) {
-            Scaffold(
+            PnsaScaffold(
                 containerColor = MaterialTheme.colorScheme.background,
                 topBar = {
                     if (showChrome) {

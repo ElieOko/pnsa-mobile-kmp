@@ -12,7 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import app.partners.pnsa.core.ui.components.PnsaScaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -75,7 +75,7 @@ fun ForumListScreen(navigator: AppNavigator) {
         }
     }
 
-    Scaffold(topBar = { PnsaTopBar("Forum", onBack = { navigator.pop() }) }) { padding ->
+    PnsaScaffold(topBar = { PnsaTopBar("Forum", onBack = { navigator.pop() }) }) { padding ->
         when {
             loading -> LoadingState()
             error != null -> ErrorState(error.orEmpty(), onRetry = { load() })
@@ -120,7 +120,7 @@ fun ForumDetailScreen(id: Long, onBack: () -> Unit) {
 
     LaunchedEffect(id) { load() }
 
-    Scaffold(topBar = { PnsaTopBar(sujet?.headline ?: "Sujet", onBack = onBack) }) { padding ->
+    PnsaScaffold(topBar = { PnsaTopBar(sujet?.headline ?: "Sujet", onBack = onBack) }) { padding ->
         when {
             loading -> LoadingState()
             error != null && sujet == null -> ErrorState(error.orEmpty(), onRetry = { load() })
@@ -171,7 +171,7 @@ fun AdviceListScreen(navigator: AppNavigator) {
         loading = false
     }
 
-    Scaffold(topBar = { PnsaTopBar("Conseil privé", onBack = { navigator.pop() }) }) { padding ->
+    PnsaScaffold(topBar = { PnsaTopBar("Conseil privé", onBack = { navigator.pop() }) }) { padding ->
         when {
             loading -> LoadingState()
             error != null -> ErrorState(error.orEmpty())
@@ -215,7 +215,7 @@ fun AdviceChatScreen(id: Long, onBack: () -> Unit) {
 
     LaunchedEffect(id) { load() }
 
-    Scaffold(topBar = { PnsaTopBar("Discussion", onBack = onBack) }) { padding ->
+    PnsaScaffold(topBar = { PnsaTopBar("Discussion", onBack = onBack) }) { padding ->
         Column(Modifier.padding(padding).padding(16.dp).fillMaxSize()) {
             StatusBanner("Les notifications n’affichent jamais le texte de tes messages.")
             if (loading) {

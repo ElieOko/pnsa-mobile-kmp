@@ -17,7 +17,7 @@ import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import app.partners.pnsa.core.ui.components.PnsaScaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -59,7 +59,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun MoreMenuScreen(navigator: AppNavigator) {
-    Scaffold(topBar = { PnsaTopBar("Plus") }) { padding ->
+    PnsaScaffold(topBar = { PnsaTopBar("Plus") }) { padding ->
         Column(Modifier.padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 ShortcutTile("Forum", "Questions publiques", Icons.Default.Help, { navigator.push(AppDestination.Forum) }, Modifier.weight(1f))
@@ -90,10 +90,10 @@ fun ProfileScreen(navigator: AppNavigator, onLoggedOut: () -> Unit) {
         loading = false
     }
 
-    Scaffold(topBar = { PnsaTopBar("Mon profil", onBack = { navigator.pop() }) }) { padding ->
+    PnsaScaffold(topBar = { PnsaTopBar("Mon profil", onBack = { navigator.pop() }) }) { padding ->
         if (loading) {
             LoadingState()
-            return@Scaffold
+            return@PnsaScaffold
         }
         Column(
             Modifier
@@ -195,7 +195,7 @@ fun ProfileEditScreen(onBack: () -> Unit) {
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    Scaffold(topBar = { PnsaTopBar("Modifier le profil", onBack = onBack) }) { padding ->
+    PnsaScaffold(topBar = { PnsaTopBar("Modifier le profil", onBack = onBack) }) { padding ->
         Column(Modifier.padding(padding).padding(20.dp).verticalScroll(rememberScrollState())) {
             PnsaTextField(prenom, { prenom = it }, "Prénom")
             Spacer(Modifier.height(8.dp))
@@ -259,7 +259,7 @@ fun HelpScreen(onBack: () -> Unit) {
         }
     }
 
-    Scaffold(topBar = { PnsaTopBar("Aide", onBack = onBack) }) { padding ->
+    PnsaScaffold(topBar = { PnsaTopBar("Aide", onBack = onBack) }) { padding ->
         LazyColumn(
             Modifier.padding(padding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),

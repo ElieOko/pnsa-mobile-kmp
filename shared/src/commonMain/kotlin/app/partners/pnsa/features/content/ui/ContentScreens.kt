@@ -13,7 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import app.partners.pnsa.core.ui.components.PnsaScaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -92,7 +92,7 @@ fun ContentListScreen(navigator: AppNavigator) {
         matchesCategory && (query.isBlank() || haystack.contains(query.lowercase()))
     }
 
-    Scaffold(topBar = { PnsaTopBar("Apprendre") }) { padding ->
+    PnsaScaffold(topBar = { PnsaTopBar("Apprendre") }) { padding ->
         Column(Modifier.padding(padding).fillMaxSize().padding(horizontal = 16.dp)) {
             PnsaTextField(query, { query = it }, "Rechercher un thème, un mot-clé…")
             Spacer(Modifier.height(8.dp))
@@ -146,7 +146,7 @@ fun ContentDetailScreen(id: Long, onBack: () -> Unit) {
         loading = false
     }
 
-    Scaffold(topBar = { PnsaTopBar(item?.title ?: "Contenu", onBack = onBack) }) { padding ->
+    PnsaScaffold(topBar = { PnsaTopBar(item?.title ?: "Contenu", onBack = onBack) }) { padding ->
         when {
             loading -> LoadingState()
             error != null -> ErrorState(error.orEmpty(), onRetry = {

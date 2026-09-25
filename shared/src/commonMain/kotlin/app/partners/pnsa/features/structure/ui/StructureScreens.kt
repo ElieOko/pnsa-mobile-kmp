@@ -14,7 +14,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import app.partners.pnsa.core.ui.components.PnsaScaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -112,7 +112,7 @@ fun StructureListScreen(navigator: AppNavigator) {
         matchesQuery && matchesCity && matchesProvince
     }
 
-    Scaffold(topBar = { PnsaTopBar("Trouver une structure") }) { padding ->
+    PnsaScaffold(topBar = { PnsaTopBar("Trouver une structure") }) { padding ->
         LazyColumn(
             Modifier.padding(padding).padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -205,7 +205,7 @@ fun StructureDetailScreen(id: Long, navigator: AppNavigator, onBack: () -> Unit)
         loading = false
     }
 
-    Scaffold(topBar = { PnsaTopBar(item?.displayName ?: "Structure", onBack = onBack) }) { padding ->
+    PnsaScaffold(topBar = { PnsaTopBar(item?.displayName ?: "Structure", onBack = onBack) }) { padding ->
         when {
             loading -> LoadingState()
             error != null -> ErrorState(error.orEmpty())
@@ -278,7 +278,7 @@ fun OrientationListScreen(navigator: AppNavigator) {
 
     LaunchedEffect(Unit) { load() }
 
-    Scaffold(topBar = { PnsaTopBar("Mes orientations", onBack = { navigator.pop() }) }) { padding ->
+    PnsaScaffold(topBar = { PnsaTopBar("Mes orientations", onBack = { navigator.pop() }) }) { padding ->
         when {
             loading -> LoadingState()
             error != null -> ErrorState(error.orEmpty(), onRetry = { load() })
@@ -316,7 +316,7 @@ fun OrientationDetailScreen(id: Long, onBack: () -> Unit) {
         loading = false
     }
 
-    Scaffold(topBar = { PnsaTopBar("Orientation", onBack = onBack) }) { padding ->
+    PnsaScaffold(topBar = { PnsaTopBar("Orientation", onBack = onBack) }) { padding ->
         when {
             loading -> LoadingState()
             error != null -> ErrorState(error.orEmpty())
@@ -356,7 +356,7 @@ fun OrientationCreateScreen(structureId: Long, navigator: AppNavigator, onBack: 
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    Scaffold(topBar = { PnsaTopBar("Nouvelle orientation", onBack = onBack) }) { padding ->
+    PnsaScaffold(topBar = { PnsaTopBar("Nouvelle orientation", onBack = onBack) }) { padding ->
         Column(Modifier.padding(padding).padding(20.dp)) {
             StatusBanner("Avant validation, vérifie la structure. Le serveur confirmera la référence. Un double envoi avec le même identifiant ne crée pas de doublon.")
             Spacer(Modifier.height(16.dp))
