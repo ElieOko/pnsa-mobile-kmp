@@ -22,6 +22,7 @@ kotlin {
 compose.desktop {
     application {
         mainClass = "app.partners.pnsa.MainKt"
+        jvmArgs += listOf("-Dskiko.renderApi=SOFTWARE")
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "PNSA"
