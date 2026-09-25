@@ -1,5 +1,6 @@
 package app.partners.pnsa.core.ui.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -45,6 +46,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import app.partners.pnsa.resources.Res
+import app.partners.pnsa.resources.hero_bg
+import org.jetbrains.compose.resources.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Color
@@ -102,6 +107,30 @@ fun PnsaTopBar(
     )
 }
 
+fun Modifier.quietClick(enabled: Boolean = true, onClick: () -> Unit): Modifier = this.then(
+    Modifier.clickable(
+        enabled = enabled,
+        indication = null,
+        interactionSource = null,
+        onClick = onClick,
+    ),
+)
+
+@Composable
+fun PageBackdrop(content: @Composable () -> Unit) {
+    Box(Modifier.fillMaxSize()) {
+        Image(
+            painter = painterResource(Res.drawable.hero_bg),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+            alpha = 0.18f,
+        )
+        Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.88f)))
+        content()
+    }
+}
+
 @Composable
 fun PnsaCard(
     modifier: Modifier = Modifier,
@@ -109,7 +138,7 @@ fun PnsaCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Card(
-        modifier = modifier.then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        modifier = modifier.then(if (onClick != null) Modifier.quietClick(onClick = onClick) else Modifier),
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
@@ -286,7 +315,7 @@ fun ShortcutTile(
     modifier: Modifier = Modifier,
 ) {
     Card(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier.quietClick(onClick = onClick),
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(1.dp),

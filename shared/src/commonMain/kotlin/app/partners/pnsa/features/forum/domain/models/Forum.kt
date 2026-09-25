@@ -41,11 +41,17 @@ data class Sujet(
     val statusDel: Boolean? = true,
     @SerialName("user_id") val userId: Long? = null,
     @SerialName("categorie_id") val categorieId: Long? = null,
+    val categorie: Categorie? = null,
+    val user: User? = null,
     val commentaires: List<Commentaire> = emptyList(),
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null,
 ) {
     val headline: String get() = title?.ifBlank { null } ?: libelle ?: "Sujet"
+    val categoryLabel: String get() = categorie?.libelle?.ifBlank { null } ?: "Forum"
+    val authorName: String get() = user?.displayName?.ifBlank { null } ?: "Membre PNSA"
+    val replyCount: Int get() = commentaires.size
+    val likeCount: Int get() = likes?.toIntOrNull() ?: 0
 }
 
 @Serializable

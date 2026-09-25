@@ -3,6 +3,7 @@ package app.partners.pnsa.core.di
 import androidx.compose.runtime.staticCompositionLocalOf
 import app.partners.pnsa.core.data.CatalogCache
 import app.partners.pnsa.core.data.ScreenStore
+import app.partners.pnsa.core.data.UiPreferences
 import app.partners.pnsa.core.data.createKeyValueStore
 import app.partners.pnsa.core.network.ApiClient
 import app.partners.pnsa.core.session.SessionRepository
@@ -14,7 +15,9 @@ import app.partners.pnsa.features.structure.data.OrientationRepository
 import app.partners.pnsa.features.user.data.ProfileRepository
 
 class AppGraph {
-    val session: SessionRepository = SessionRepository(createKeyValueStore())
+    private val store = createKeyValueStore()
+    val session: SessionRepository = SessionRepository(store)
+    val prefs: UiPreferences = UiPreferences(store)
     val cache: CatalogCache = CatalogCache()
     val screens: ScreenStore = ScreenStore()
     val api: ApiClient = ApiClient(session)

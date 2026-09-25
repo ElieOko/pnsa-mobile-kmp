@@ -1,14 +1,6 @@
 package app.partners.pnsa.core.ui.components
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,11 +45,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -99,27 +89,21 @@ fun TikTokTopBar(
             )
         }
         Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-            AnimatedContent(
-                targetState = title,
-                transitionSpec = { fadeIn() togetherWith fadeOut() },
-                label = "top-title",
-            ) { label ->
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        label,
-                        color = Color.White,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp,
-                    )
-                    Box(
-                        Modifier
-                            .padding(top = 2.dp)
-                            .width(28.dp)
-                            .height(2.dp)
-                            .clip(CircleShape)
-                            .background(Brush.horizontalGradient(listOf(PnsaBlue, PnsaRed))),
-                    )
-                }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    title,
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 15.sp,
+                )
+                Box(
+                    Modifier
+                        .padding(top = 2.dp)
+                        .width(28.dp)
+                        .height(2.dp)
+                        .clip(CircleShape)
+                        .background(Brush.horizontalGradient(listOf(PnsaBlue, PnsaRed))),
+                )
             }
         }
         Box(
@@ -128,7 +112,7 @@ fun TikTokTopBar(
                 .size(28.dp)
                 .clip(CircleShape)
                 .background(Brush.linearGradient(listOf(PnsaBlue, PnsaRed)))
-                .clickable(onClick = onAvatar),
+                .quietClick(onClick = onAvatar),
             contentAlignment = Alignment.Center,
         ) {
             Text(initials, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
@@ -167,32 +151,26 @@ private fun RowScope.TikTokTabItem(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    val tint = animateColorAsState(if (selected) PnsaRedHot else Color.White.copy(alpha = 0.55f), label = "tab-tint")
-    val scale = animateFloatAsState(if (selected) 1.08f else 1f, label = "tab-scale")
+    val tint = if (selected) PnsaRedHot else Color.White.copy(alpha = 0.55f)
     val (filled, outline) = tabIcons(tab)
     Column(
         modifier = Modifier
             .weight(1f)
             .fillMaxHeight()
-            .scale(scale.value)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick,
-            ),
+            .quietClick(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Icon(
             imageVector = if (selected) filled else outline,
             contentDescription = tab.label,
-            tint = tint.value,
+            tint = tint,
             modifier = Modifier.size(22.dp),
         )
         Spacer(Modifier.height(2.dp))
         Text(
             tab.label,
-            color = tint.value,
+            color = tint,
             fontSize = 9.sp,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
         )
@@ -271,7 +249,7 @@ private fun DrawerItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .quietClick(onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

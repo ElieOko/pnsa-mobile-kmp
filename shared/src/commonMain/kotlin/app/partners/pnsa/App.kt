@@ -1,11 +1,5 @@
 package app.partners.pnsa
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -155,14 +149,7 @@ private fun PnsaRoot(graph: AppGraph) {
 
 @Composable
 private fun AuthFlow(navigator: AppNavigator) {
-    AnimatedContent(
-        targetState = navigator.current,
-        transitionSpec = {
-            (slideInHorizontally { it / 3 } + fadeIn()) togetherWith (slideOutHorizontally { -it / 4 } + fadeOut())
-        },
-        label = "auth-flow",
-    ) { dest ->
-        when (dest) {
+    when (val dest = navigator.current) {
             AppDestination.Welcome -> WelcomeScreen(
                 onLogin = { navigator.push(AppDestination.Login) },
                 onRegister = { navigator.push(AppDestination.Register) },
@@ -189,7 +176,6 @@ private fun AuthFlow(navigator: AppNavigator) {
                 onLegal = { navigator.push(AppDestination.PublicLegal) },
             )
         }
-    }
 }
 
 @Composable
