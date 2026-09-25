@@ -1,31 +1,63 @@
-This is a Kotlin Multiplatform project targeting Android, iOS.
+# PNSA — application mobile Android / iPhone
 
-* [/iosApp](./iosApp/iosApp) contains an iOS application. Even if you’re sharing your UI with Compose Multiplatform,
-  you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
+Application Kotlin Multiplatform (Compose Multiplatform) du **Programme National de Santé de l’Adolescent**. Elle permet aux jeunes de consulter le catalogue SSR, de faire des quiz, de chercher une structure, de suivre une orientation, et d’accéder au forum et au conseil privé.
 
-* [/shared](./shared/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - [commonMain](./shared/src/commonMain/kotlin) is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    the [iosMain](./shared/src/iosMain/kotlin) folder would be the right place for such calls.
-    Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./shared/src/jvmMain/kotlin)
-    folder is the appropriate location.
+L’interface est partagée entre Android et iOS. Un module `desktopApp` sert de prévisualisation téléphone sur ordinateur.
 
-### Running the apps
+## Modules
 
-Use the run configurations provided by the run widget in your IDE's toolbar. You can also use these commands and options:
+| Module | Rôle |
+| --- | --- |
+| `shared` | UI Compose, navigation, thème, réseau, session, fonctionnalités |
+| `androidApp` | Point d’entrée Android |
+| `iosApp` | Point d’entrée iOS (SwiftUI + `MainViewController`) |
+| `desktopApp` | Fenêtre de prévisualisation 390×844 |
 
-- Android app: `./gradlew :androidApp:assembleDebug`
-- iOS app: open the [/iosApp](./iosApp) directory in Xcode and run it from there.
+## Architecture
 
-### Running tests
+Le code partagé est organisé par **fonctionnalité** (`features/*`) et par **cœur** (`core/*`) :
 
-Use the run button in your IDE's editor gutter, or run tests using Gradle tasks:
+```
+shared/src/commonMain/kotlin/app/partners/pnsa/
+  core/           config, réseau, session, cache, thème, composants, navigation
+  features/
+    auth/         connexion, inscription, consentements
+    home/         accueil et raccourcis
+    content/      catalogue Apprendre
+    quiz/         quiz versionnés + reprise
+    structure/    annuaire + orientations
+    forum/        forum public + conseil privé
+    user/         profil, notifications, aide
+```
 
-- Android tests: `./gradlew :shared:testAndroidHostTest`
-- iOS tests: `./gradlew :shared:iosSimulatorArm64Test`
+Chaque fonctionnalité expose `data` (API), `domain` (modèles) et `ui` (écrans). L’API mobile documentée (`/api/mobile/v1/*` + Sanctum) est le contrat unique : pas de second catalogue local.
 
----
+## API
 
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
+Racine configurée dans `AppConfig` :
+
+`https://uxfqst-ip-167-86-108-98.tunnelmole.net/api`
+
+- Authentification : `POST /auth/login` et `/auth/register`, puis `Authorization: Bearer {token}`
+- Catalogue et annuaire réservés aux comptes connectés
+- Sync différentielle : `GET /mobile/v1/sync/catalog` et `/sync/structures`
+- Quiz : `client_attempt_id` (UUID) pour l’idempotence
+- Orientations : `client_request_id` (UUID)
+
+## Lancer
+
+- Android : `./gradlew :androidApp:assembleDebug`
+- Desktop (prévisualisation) : `./gradlew :desktopApp:run`
+- Tests partagés : `./gradlew :shared:jvmTest` ou `:shared:testAndroidHostTest`
+- iOS : ouvrir `iosApp` dans Xcode
+
+## Parcours couverts
+
+Accès (E01), profil et consentements (E02), accueil (E03), contenus (E04), quiz avec reprise (E05), forum (E06), conseil privé (E07), structures (E08), orientations (E09), notifications (E10), aide (E11). Les états chargement / vide / erreur / hors-ligne sont prévus sur les listes principales.
+
+## Qualité
+
+- Secrets : le jeton Sanctum est stocké dans les préférences de la plateforme, jamais dans les journaux d’écran
+- HTTPS uniquement
+- Textes d’erreur compréhensibles, sans révéler l’existence d’un compte à un tiers
+- Ce service n’est pas une urgence médicale
