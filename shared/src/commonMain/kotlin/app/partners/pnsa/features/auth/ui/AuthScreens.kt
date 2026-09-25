@@ -27,7 +27,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import app.partners.pnsa.core.ui.components.PnsaScaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -155,7 +155,7 @@ fun LoginScreen(
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    Scaffold(
+    PnsaScaffold(
         snackbarHost = { SnackbarHost(snackbar) },
         containerColor = Color.White,
     ) { padding ->
@@ -419,7 +419,7 @@ private fun ConsentRow(
 
 @Composable
 fun LegalScreen(onBack: () -> Unit) {
-    Scaffold(topBar = { PnsaTopBar("Confidentialité", onBack = onBack) }) { padding ->
+    PnsaScaffold(topBar = { PnsaTopBar("Confidentialité", onBack = onBack) }) { padding ->
         Column(
             Modifier
                 .padding(padding)

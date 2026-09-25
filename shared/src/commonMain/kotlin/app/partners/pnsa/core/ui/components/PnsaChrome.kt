@@ -15,12 +15,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -82,8 +86,9 @@ fun TikTokTopBar(
         modifier = Modifier
             .fillMaxWidth()
             .background(PnsaChrome)
-            .height(58.dp)
-            .padding(horizontal = 8.dp),
+            .windowInsetsPadding(WindowInsets.statusBars)
+            .height(48.dp)
+            .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = { if (canPop) onBack() else onMenu() }) {
@@ -104,13 +109,13 @@ fun TikTokTopBar(
                         label,
                         color = Color.White,
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 17.sp,
+                        fontSize = 15.sp,
                     )
                     Box(
                         Modifier
-                            .padding(top = 3.dp)
-                            .width(36.dp)
-                            .height(3.dp)
+                            .padding(top = 2.dp)
+                            .width(28.dp)
+                            .height(2.dp)
                             .clip(CircleShape)
                             .background(Brush.horizontalGradient(listOf(PnsaBlue, PnsaRed))),
                     )
@@ -119,8 +124,8 @@ fun TikTokTopBar(
         }
         Box(
             Modifier
-                .padding(end = 8.dp)
-                .size(34.dp)
+                .padding(end = 6.dp)
+                .size(28.dp)
                 .clip(CircleShape)
                 .background(Brush.linearGradient(listOf(PnsaBlue, PnsaRed)))
                 .clickable(onClick = onAvatar),
@@ -140,8 +145,9 @@ fun TikTokBottomBar(
         modifier = Modifier
             .fillMaxWidth()
             .background(PnsaChrome)
-            .height(64.dp)
-            .padding(horizontal = 6.dp),
+            .windowInsetsPadding(WindowInsets.navigationBars)
+            .height(52.dp)
+            .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
@@ -181,13 +187,13 @@ private fun RowScope.TikTokTabItem(
             imageVector = if (selected) filled else outline,
             contentDescription = tab.label,
             tint = tint.value,
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier.size(22.dp),
         )
-        Spacer(Modifier.height(3.dp))
+        Spacer(Modifier.height(2.dp))
         Text(
             tab.label,
             color = tint.value,
-            fontSize = 10.sp,
+            fontSize = 9.sp,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
         )
     }
@@ -212,6 +218,7 @@ fun PnsaDrawerContent(
     ModalDrawerSheet(
         drawerContainerColor = PnsaChromeLift,
         drawerContentColor = Color.White,
+        windowInsets = WindowInsets(0, 0, 0, 0),
     ) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
             Box(
