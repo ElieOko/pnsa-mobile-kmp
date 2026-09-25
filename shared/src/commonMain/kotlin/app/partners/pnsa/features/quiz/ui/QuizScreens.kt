@@ -11,16 +11,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
-import app.partners.pnsa.core.ui.components.PnsaScaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,28 +37,34 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import app.partners.pnsa.resources.Res
-import app.partners.pnsa.resources.quiz_question
-import org.jetbrains.compose.resources.painterResource
+import androidx.compose.ui.unit.sp
 import app.partners.pnsa.core.di.LocalAppGraph
 import app.partners.pnsa.core.network.ApiException
 import app.partners.pnsa.core.ui.components.EmptyState
 import app.partners.pnsa.core.ui.components.ErrorState
 import app.partners.pnsa.core.ui.components.LoadingState
-import app.partners.pnsa.core.ui.components.MetaRow
+import app.partners.pnsa.core.ui.components.PageBackdrop
 import app.partners.pnsa.core.ui.components.PnsaCard
+import app.partners.pnsa.core.ui.components.PnsaScaffold
 import app.partners.pnsa.core.ui.components.PnsaTopBar
 import app.partners.pnsa.core.ui.components.PrimaryAction
 import app.partners.pnsa.core.ui.components.QuietAction
 import app.partners.pnsa.core.ui.components.SecondaryAction
 import app.partners.pnsa.core.ui.components.StatusBanner
+import app.partners.pnsa.core.ui.components.quietClick
 import app.partners.pnsa.core.ui.navigation.AppDestination
 import app.partners.pnsa.core.ui.navigation.AppNavigator
+import app.partners.pnsa.core.ui.theme.PnsaBlue
+import app.partners.pnsa.core.ui.theme.PnsaNavy
+import app.partners.pnsa.core.ui.theme.PnsaRed
 import app.partners.pnsa.core.util.QuizScoring
 import app.partners.pnsa.core.util.excerpt
 import app.partners.pnsa.features.quiz.domain.models.Quiz
 import app.partners.pnsa.features.quiz.domain.models.QuizAttempt
+import app.partners.pnsa.resources.Res
+import app.partners.pnsa.resources.quiz_question
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun QuizListScreen(navigator: AppNavigator) {
@@ -106,61 +111,123 @@ fun QuizListScreen(navigator: AppNavigator) {
         }
     }
 
+    val lastId = remember { graph.prefs.lastQuizId }
+
     PnsaScaffold(topBar = { PnsaTopBar("Quiz") }) { padding ->
-        when {
-            loading -> LoadingState("Chargement des quiz…")
-            error != null -> ErrorState(error.orEmpty(), onRetry = { load() })
-            quizzes.isEmpty() -> EmptyState("Aucun quiz publié", "Les quiz validés par le PNSA apparaîtront ici.")
-            else -> LazyColumn(
-                Modifier.padding(padding).padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                item {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(120.dp)
-                            .clip(RoundedCornerShape(22.dp)),
-                    ) {
-                        Image(
-                            painterResource(Res.drawable.quiz_question),
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize(),
-                        )
+        PageBackdrop {
+            when {
+                loading -> LoadingState("Chargement des quiz…")
+                error != null -> ErrorState(error.orEmpty(), onRetry = { load() })
+                quizzes.isEmpty() -> EmptyState("Aucun quiz publié", "Les quiz validés par le PNSA apparaîtront ici.")
+                else -> LazyColumn(
+                    Modifier.padding(padding).padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    item {
                         Box(
-                            Modifier.fillMaxSize().background(
-                                Brush.horizontalGradient(listOf(Color(0xCC0069E1), Color(0x99D01D2A))),
-                            ),
-                        )
-                        Text(
-                            "Tester tes connaissances SSR",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.align(Alignment.BottomStart).padding(16.dp),
+                            Modifier
+                                .fillMaxWidth()
+                                .height(132.dp)
+                                .clip(RoundedCornerShape(22.dp)),
+                        ) {
+                            Image(
+                                painterResource(Res.drawable.quiz_question),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                            Box(
+                                Modifier.fillMaxSize().background(
+                                    Brush.horizontalGradient(listOf(Color(0xCC0069E1), Color(0x99D01D2A))),
+                                ),
+                            )
+                            Column(Modifier.align(Alignment.BottomStart).padding(16.dp)) {
+                                Text("Quiz SSR", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.labelMedium)
+                                Text("Tester tes connaissances", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                            }
+                        }
+                    }
+                    item {
+                        StatusBanner("Tu peux interrompre un quiz et le reprendre. Le score définitif est confirmé par le serveur.")
+                    }
+                    items(quizzes, key = { it.id ?: it.title }) { quiz ->
+                        val last = attempts.firstOrNull { it.quizId == quiz.id }
+                        QuizCatalogCard(
+                            quiz = quiz,
+                            attempt = last,
+                            highlighted = quiz.id == lastId,
+                            onOpen = {
+                                quiz.id?.let {
+                                    if (graph.prefs.lastQuizId != it) {
+                                        graph.prefs.lastQuizQuestionIndex = 0
+                                    }
+                                    graph.prefs.lastQuizId = it
+                                    navigator.push(AppDestination.QuizPlay(it))
+                                }
+                            },
                         )
                     }
-                    Spacer(Modifier.height(10.dp))
-                    StatusBanner("Tu peux interrompre un quiz et le reprendre. Le score définitif est confirmé par le serveur.")
+                    item { Spacer(Modifier.height(24.dp)) }
                 }
-                items(quizzes, key = { it.id ?: it.title }) { quiz ->
-                    val last = attempts.firstOrNull { it.quizId == quiz.id }
-                    PnsaCard(onClick = { quiz.id?.let { navigator.push(AppDestination.QuizPlay(it)) } }) {
-                        Text(quiz.title, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
-                        Text(excerpt(quiz.description), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.height(8.dp))
-                        MetaRow(
-                            listOfNotNull(
-                                quiz.nbSecond?.let { "$it sec." },
-                                "v${quiz.contentVersion ?: 1}",
-                                last?.status,
-                            ),
-                        )
-                    }
-                }
-                item { Spacer(Modifier.height(24.dp)) }
             }
         }
+    }
+}
+
+@Composable
+private fun QuizCatalogCard(
+    quiz: Quiz,
+    attempt: QuizAttempt?,
+    highlighted: Boolean,
+    onOpen: () -> Unit,
+) {
+    val score = attempt?.displayScore
+    val total = attempt?.totalQuestions ?: quiz.questionCount.takeIf { it > 0 }
+    PnsaCard(onClick = onOpen) {
+        Row(verticalAlignment = Alignment.Top) {
+            Column(Modifier.weight(1f)) {
+                if (highlighted) {
+                    Text("Dernier quiz", color = PnsaBlue, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
+                }
+                Text(quiz.title, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium, color = PnsaNavy)
+                Spacer(Modifier.height(4.dp))
+                Text(excerpt(quiz.description), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    InfoPill(quiz.nbSecond?.let { "$it sec." } ?: "Libre")
+                    InfoPill("${quiz.questionCount.takeIf { it > 0 } ?: "—"} questions")
+                    InfoPill(attempt?.status ?: "Nouveau")
+                }
+            }
+            if (score != null && total != null && total > 0) {
+                ScoreBadge(score, total)
+            }
+        }
+    }
+}
+
+@Composable
+private fun InfoPill(text: String) {
+    Box(
+        Modifier
+            .clip(CircleShape)
+            .background(Color(0xFFE8F2FF))
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+    ) {
+        Text(text, style = MaterialTheme.typography.labelSmall, color = PnsaBlue)
+    }
+}
+
+@Composable
+private fun ScoreBadge(score: Int, total: Int) {
+    Box(
+        Modifier
+            .size(52.dp)
+            .clip(CircleShape)
+            .background(PnsaBlue.copy(alpha = 0.12f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text("$score/$total", fontWeight = FontWeight.Bold, color = PnsaBlue, fontSize = 12.sp)
     }
 }
 
@@ -170,7 +237,7 @@ fun QuizPlayScreen(quizId: Long, onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     var quiz by remember { mutableStateOf<Quiz?>(null) }
     var attempt by remember { mutableStateOf<QuizAttempt?>(null) }
-    var index by remember { mutableStateOf(0) }
+    var index by remember { mutableStateOf(if (graph.prefs.lastQuizId == quizId) graph.prefs.lastQuizQuestionIndex else 0) }
     val answers = remember { mutableStateMapOf<Long, Long>() }
     var loading by remember { mutableStateOf(true) }
     var submitting by remember { mutableStateOf(false) }
@@ -189,47 +256,67 @@ fun QuizPlayScreen(quizId: Long, onBack: () -> Unit) {
             )
             attempt = started
             graph.profile.track("quiz_start", mapOf("quiz_id" to quizId.toString()))
+            val last = detail.questionnaires.size - 1
+            if (last >= 0 && graph.prefs.lastQuizId == quizId) {
+                index = graph.prefs.lastQuizQuestionIndex.coerceIn(0, last)
+            } else {
+                index = 0
+                graph.prefs.lastQuizQuestionIndex = 0
+            }
+            graph.prefs.lastQuizId = quizId
         }.onFailure { error = (it as? ApiException)?.userMessage() ?: it.message }
         loading = false
     }
 
     val questions = quiz?.questionnaires.orEmpty()
     val current = questions.getOrNull(index)
+    val progress = if (questions.isEmpty()) 0f else (index + 1f) / questions.size
 
     PnsaScaffold(topBar = { PnsaTopBar(quiz?.title ?: "Quiz", onBack = onBack) }) { padding ->
-        when {
-            loading -> LoadingState("Préparation de ta tentative…")
-            error != null && quiz == null -> ErrorState(error.orEmpty())
-            done && attempt != null && quiz != null -> QuizResultPane(
-                quiz = quiz!!,
-                attempt = attempt!!,
-                answers = answers.toMap(),
-                onBack = onBack,
-            )
-            current == null -> EmptyState("Quiz indisponible", "Aucune question n’est encore publiée.")
-            else -> Column(
-                Modifier
-                    .padding(padding)
-                    .padding(20.dp)
-                    .verticalScroll(rememberScrollState()),
-            ) {
-                Text("Question ${index + 1} / ${questions.size}", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                LinearProgressIndicator(
-                    progress = { (index + 1f) / questions.size.coerceAtLeast(1) },
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        PageBackdrop {
+            when {
+                loading -> LoadingState("Préparation de ta tentative…")
+                error != null && quiz == null -> ErrorState(error.orEmpty())
+                done && attempt != null && quiz != null -> QuizResultPane(
+                    quiz = quiz!!,
+                    attempt = attempt!!,
+                    answers = answers.toMap(),
+                    onBack = onBack,
                 )
-                Text(current.prompt, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(16.dp))
-                current.reponses.forEach { option ->
-                    val selected = current.id != null && answers[current.id] == option.id
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .selectable(
-                                selected = selected,
-                                onClick = {
-                                    val qid = current.id ?: return@selectable
-                                    val rid = option.id ?: return@selectable
+                current == null -> EmptyState("Quiz indisponible", "Aucune question n’est encore publiée.")
+                else -> Column(
+                    Modifier
+                        .padding(padding)
+                        .padding(20.dp)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Question ${index + 1} / ${questions.size}", color = PnsaBlue, fontWeight = FontWeight.SemiBold)
+                        Spacer(Modifier.weight(1f))
+                        Text("${answers.size} répondues", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
+                        color = PnsaBlue,
+                        trackColor = Color(0xFFE8F2FF),
+                    )
+                    Spacer(Modifier.height(18.dp))
+                    Text(current.prompt, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = PnsaNavy)
+                    Spacer(Modifier.height(16.dp))
+                    current.reponses.forEachIndexed { optionIndex, option ->
+                        val selected = current.id != null && answers[current.id] == option.id
+                        val letter = ('A' + optionIndex).toString()
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(if (selected) PnsaBlue.copy(alpha = 0.12f) else Color.White)
+                                .quietClick {
+                                    val qid = current.id ?: return@quietClick
+                                    val rid = option.id ?: return@quietClick
                                     answers[qid] = rid
                                     val clientId = attempt?.clientAttemptId
                                     if (clientId != null) {
@@ -238,49 +325,73 @@ fun QuizPlayScreen(quizId: Long, onBack: () -> Unit) {
                                                 .onSuccess { attempt = it }
                                         }
                                     }
-                                },
-                            )
-                            .padding(vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        RadioButton(selected = selected, onClick = null)
-                        Text(option.reponse.orEmpty(), style = MaterialTheme.typography.bodyLarge)
-                    }
-                }
-                error?.let {
-                    Spacer(Modifier.height(12.dp))
-                    StatusBanner(it)
-                }
-                Spacer(Modifier.height(24.dp))
-                if (index < questions.lastIndex) {
-                    PrimaryAction("Question suivante", enabled = current.id != null && answers[current.id] != null) {
-                        index += 1
-                    }
-                    if (index > 0) QuietAction("Question précédente") { index -= 1 }
-                } else {
-                    PrimaryAction(if (submitting) "Envoi…" else "Terminer et envoyer", enabled = !submitting) {
-                        val clientId = attempt?.clientAttemptId ?: return@PrimaryAction
-                        scope.launch {
-                            submitting = true
-                            error = null
-                            runCatching { graph.quizAttempts.submit(clientId, questions, answers.toMap()) }
-                                .onSuccess {
-                                    attempt = it
-                                    done = true
-                                    graph.profile.track("quiz_submit", mapOf("quiz_id" to quizId.toString()))
                                 }
-                                .onFailure { throwable ->
-                                    error = (throwable as? ApiException)?.userMessage()
-                                        ?: "Envoi non confirmé. Ta tentative est conservée."
-                                }
-                            submitting = false
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Box(
+                                Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(if (selected) PnsaBlue else Color(0xFFE8F2FF)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(letter, color = if (selected) Color.White else PnsaBlue, fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(Modifier.size(12.dp))
+                            Text(option.reponse.orEmpty(), style = MaterialTheme.typography.bodyLarge, color = PnsaNavy)
                         }
                     }
-                    SecondaryAction("Abandonner cette tentative") {
-                        val clientId = attempt?.clientAttemptId ?: return@SecondaryAction
-                        scope.launch {
-                            runCatching { graph.quizAttempts.abandon(clientId) }
-                            onBack()
+                    error?.let {
+                        Spacer(Modifier.height(12.dp))
+                        StatusBanner(it)
+                    }
+                    Spacer(Modifier.height(20.dp))
+                    if (index < questions.lastIndex) {
+                        PrimaryAction("Question suivante", enabled = current.id != null && answers[current.id] != null) {
+                            index += 1
+                            graph.prefs.lastQuizId = quizId
+                            graph.prefs.lastQuizQuestionIndex = index
+                        }
+                        if (index > 0) {
+                            QuietAction("Question précédente") {
+                                index -= 1
+                                graph.prefs.lastQuizQuestionIndex = index
+                            }
+                        }
+                    } else {
+                        PrimaryAction(if (submitting) "Envoi…" else "Terminer et envoyer", enabled = !submitting) {
+                            val clientId = attempt?.clientAttemptId ?: return@PrimaryAction
+                            scope.launch {
+                                submitting = true
+                                error = null
+                                runCatching { graph.quizAttempts.submit(clientId, questions, answers.toMap()) }
+                                    .onSuccess {
+                                        attempt = it
+                                        done = true
+                                        graph.prefs.lastQuizQuestionIndex = 0
+                                        graph.profile.track("quiz_submit", mapOf("quiz_id" to quizId.toString()))
+                                    }
+                                    .onFailure { throwable ->
+                                        error = (throwable as? ApiException)?.userMessage()
+                                            ?: "Envoi non confirmé. Ta tentative est conservée."
+                                    }
+                                submitting = false
+                            }
+                        }
+                        if (index > 0) {
+                            QuietAction("Question précédente") {
+                                index -= 1
+                                graph.prefs.lastQuizQuestionIndex = index
+                            }
+                        }
+                        SecondaryAction("Abandonner cette tentative") {
+                            val clientId = attempt?.clientAttemptId ?: return@SecondaryAction
+                            scope.launch {
+                                runCatching { graph.quizAttempts.abandon(clientId) }
+                                graph.prefs.lastQuizQuestionIndex = 0
+                                onBack()
+                            }
                         }
                     }
                 }
@@ -299,15 +410,29 @@ private fun QuizResultPane(
     val max = QuizScoring.maxScore(quiz.questionnaires)
     val local = QuizScoring.localScore(quiz.questionnaires, answers)
     val score = attempt.displayScore ?: local
+    val percent = if (max > 0) (score * 100) / max else 0
     Column(
         Modifier
             .fillMaxSize()
             .padding(20.dp)
             .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("Résultat", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(8.dp))
-        Text("$score / $max", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
+        Text("Résultat", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = PnsaNavy)
+        Spacer(Modifier.height(12.dp))
+        Box(
+            Modifier
+                .size(112.dp)
+                .clip(CircleShape)
+                .background(if (percent >= 60) PnsaBlue.copy(alpha = 0.12f) else PnsaRed.copy(alpha = 0.10f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("$score / $max", fontWeight = FontWeight.Bold, color = if (percent >= 60) PnsaBlue else PnsaRed, fontSize = 22.sp)
+                Text("$percent %", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        Spacer(Modifier.height(12.dp))
         StatusBanner(
             when (attempt.status) {
                 "synced" -> "Score confirmé par le serveur (version ${attempt.quizVersion ?: quiz.contentVersion ?: 1})."
@@ -321,13 +446,12 @@ private fun QuizResultPane(
             val selected = question.id?.let { answers[it] }
             val chosen = question.reponses.firstOrNull { it.id == selected }
             val correct = question.reponses.firstOrNull { it.isCorrect }
-            PnsaCard(Modifier.padding(bottom = 10.dp)) {
-                Text(question.prompt, fontWeight = FontWeight.SemiBold)
-                Text("Ta réponse : ${chosen?.reponse ?: "non répondue"}")
-                Text(
-                    "Bonne réponse : ${correct?.reponse ?: "—"}",
-                    color = MaterialTheme.colorScheme.primary,
-                )
+            val ok = chosen != null && chosen.id == correct?.id
+            PnsaCard(Modifier.fillMaxWidth().padding(bottom = 10.dp)) {
+                Text(question.prompt, fontWeight = FontWeight.SemiBold, color = PnsaNavy)
+                Spacer(Modifier.height(6.dp))
+                Text("Ta réponse : ${chosen?.reponse ?: "non répondue"}", color = if (ok) PnsaBlue else PnsaRed)
+                Text("Bonne réponse : ${correct?.reponse ?: "—"}", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         PrimaryAction("Retour aux quiz", onClick = onBack)

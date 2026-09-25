@@ -3,6 +3,7 @@ package app.partners.pnsa.core.data
 import app.partners.pnsa.features.content.domain.models.Actualite
 import app.partners.pnsa.features.content.domain.models.Contenu
 import app.partners.pnsa.features.content.domain.models.Faq
+import app.partners.pnsa.features.forum.domain.models.Categorie
 import app.partners.pnsa.features.quiz.domain.models.Quiz
 import app.partners.pnsa.features.structure.domain.models.HealthStructure
 
@@ -17,6 +18,8 @@ class CatalogCache {
         private set
     var structures: List<HealthStructure> = emptyList()
         private set
+    var categories: List<Categorie> = emptyList()
+        private set
     var lastCatalogSync: String? = null
         private set
     var lastStructureSync: String? = null
@@ -27,12 +30,14 @@ class CatalogCache {
         quizzes: List<Quiz>? = null,
         actualites: List<Actualite>? = null,
         faqs: List<Faq>? = null,
+        categories: List<Categorie>? = null,
         syncedAt: String? = null,
     ) {
         if (contenus != null) this.contenus = mergeById(this.contenus, contenus) { it.id }
         if (quizzes != null) this.quizzes = mergeById(this.quizzes, quizzes) { it.id }
         if (actualites != null) this.actualites = mergeById(this.actualites, actualites) { it.id }
         if (faqs != null) this.faqs = mergeById(this.faqs, faqs) { it.id }
+        if (categories != null) this.categories = mergeById(this.categories, categories) { it.id }
         if (syncedAt != null) lastCatalogSync = syncedAt
     }
 
@@ -47,6 +52,7 @@ class CatalogCache {
         actualites = emptyList()
         faqs = emptyList()
         structures = emptyList()
+        categories = emptyList()
         lastCatalogSync = null
         lastStructureSync = null
     }

@@ -11,8 +11,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import app.partners.pnsa.core.ui.components.PageBackdrop
+import app.partners.pnsa.core.ui.components.PnsaChip
 import app.partners.pnsa.core.ui.components.PnsaScaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,8 +48,8 @@ fun ContentListScreen(navigator: AppNavigator) {
     val graph = LocalAppGraph.current
     val scope = rememberCoroutineScope()
     var items by remember { mutableStateOf<List<Contenu>>(emptyList()) }
-    var query by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf("Tous") }
+    var query by remember { mutableStateOf(graph.prefs.contentQuery) }
+    var category by remember { mutableStateOf(graph.prefs.contentCategory) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
 
@@ -93,12 +94,23 @@ fun ContentListScreen(navigator: AppNavigator) {
     }
 
     PnsaScaffold(topBar = { PnsaTopBar("Apprendre") }) { padding ->
+        PageBackdrop {
         Column(Modifier.padding(padding).fillMaxSize().padding(horizontal = 16.dp)) {
-            PnsaTextField(query, { query = it }, "Rechercher un thème, un mot-clé…")
+            PnsaTextField(query, {
+                query = it
+                graph.prefs.contentQuery = it
+            }, "Rechercher un thème, un mot-clé…")
             Spacer(Modifier.height(8.dp))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(categories) { label ->
-                    FilterChip(selected = category == label, onClick = { category = label }, label = { Text(label) })
+                    PnsaChip(
+                        label = label,
+                        selected = category == label,
+                        onClick = {
+                            category = label
+                            graph.prefs.contentCategory = label
+                        },
+                    )
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -121,6 +133,7 @@ fun ContentListScreen(navigator: AppNavigator) {
                     item { Spacer(Modifier.height(24.dp)) }
                 }
             }
+        }
         }
     }
 }

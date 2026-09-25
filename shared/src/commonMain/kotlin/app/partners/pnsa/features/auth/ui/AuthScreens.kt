@@ -23,10 +23,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import app.partners.pnsa.core.ui.components.PnsaChip
 import app.partners.pnsa.core.ui.components.PnsaScaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -300,8 +300,8 @@ fun RegisterScreen(
                     Spacer(Modifier.height(12.dp))
                     Text("Genre (volontaire)", fontWeight = FontWeight.Medium)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(selected = genre == "F", onClick = { genre = "F" }, label = { Text("Fille") })
-                        FilterChip(selected = genre == "M", onClick = { genre = "M" }, label = { Text("Garçon") })
+                        PnsaChip(label = "Fille", selected = genre == "F", onClick = { genre = "F" })
+                        PnsaChip(label = "Garçon", selected = genre == "M", onClick = { genre = "M" })
                     }
                     Spacer(Modifier.height(10.dp))
                     PnsaTextField(dateNaissance, { dateNaissance = it }, "Date de naissance (AAAA-MM-JJ)")
@@ -317,10 +317,10 @@ fun RegisterScreen(
                     Spacer(Modifier.height(10.dp))
                     PnsaTextField(province, { province = it }, "Province")
                     DrcLocations.provinces.take(8).forEach { item ->
-                        FilterChip(
+                        PnsaChip(
+                            label = item,
                             selected = province == item,
                             onClick = { province = item },
-                            label = { Text(item) },
                             modifier = Modifier.padding(end = 4.dp, bottom = 4.dp),
                         )
                     }

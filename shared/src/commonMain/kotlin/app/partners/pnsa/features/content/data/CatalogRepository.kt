@@ -40,6 +40,7 @@ class CatalogRepository(
             quizzes = payload.quizzes,
             actualites = payload.actualites,
             faqs = payload.faqs,
+            categories = payload.categories,
             syncedAt = payload.syncedAt ?: payload.cursor,
         )
         session.saveLastSync(payload.cursor ?: payload.syncedAt)
@@ -116,5 +117,6 @@ class CatalogRepository(
     fun cachedContenus(): List<Contenu> = cache.contenus
     fun cachedQuizzes(): List<Quiz> = cache.quizzes
     fun cachedFaqs() = cache.faqs
+    fun cachedCategories() = cache.categories
     fun lastSyncLabel(): String? = cache.lastCatalogSync ?: session.lastSync()
 }

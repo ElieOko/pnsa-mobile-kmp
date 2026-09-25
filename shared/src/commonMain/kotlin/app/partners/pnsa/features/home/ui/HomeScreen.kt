@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import app.partners.pnsa.core.ui.components.PageBackdrop
 import app.partners.pnsa.core.ui.components.PnsaScaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -114,6 +115,7 @@ fun HomeScreen(navigator: AppNavigator) {
     }
 
     PnsaScaffold { padding ->
+        PageBackdrop {
         PullToRefreshBox(
             isRefreshing = refreshing,
             onRefresh = { load(true) },
@@ -215,6 +217,7 @@ fun HomeScreen(navigator: AppNavigator) {
                     }
                 }
             }
+        }
         }
     }
 }
