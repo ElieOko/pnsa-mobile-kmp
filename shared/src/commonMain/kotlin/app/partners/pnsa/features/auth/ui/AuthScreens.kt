@@ -1,5 +1,9 @@
 package app.partners.pnsa.features.auth.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,7 +20,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Checkbox
@@ -27,8 +30,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,10 +42,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.partners.pnsa.core.config.AppConfig
 import app.partners.pnsa.core.di.LocalAppGraph
 import app.partners.pnsa.core.network.ApiException
@@ -50,10 +59,20 @@ import app.partners.pnsa.core.ui.components.PrimaryAction
 import app.partners.pnsa.core.ui.components.QuietAction
 import app.partners.pnsa.core.ui.components.SecondaryAction
 import app.partners.pnsa.core.ui.components.StatusBanner
+import app.partners.pnsa.core.ui.theme.PnsaBlue
+import app.partners.pnsa.core.ui.theme.PnsaNavy
+import app.partners.pnsa.core.ui.theme.PnsaRed
 import app.partners.pnsa.core.util.DrcLocations
 import app.partners.pnsa.features.auth.domain.models.ConsentPayload
 import app.partners.pnsa.features.auth.domain.models.RegisterRequest
+import app.partners.pnsa.resources.Res
+import app.partners.pnsa.resources.about
+import app.partners.pnsa.resources.favicon
+import app.partners.pnsa.resources.hero_bg
+import app.partners.pnsa.resources.teen
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun WelcomeScreen(
@@ -62,48 +81,60 @@ fun WelcomeScreen(
     onHelp: () -> Unit,
     onLegal: () -> Unit,
 ) {
-    Scaffold { padding ->
-        Column(
-            modifier = Modifier
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { visible = true }
+
+    Box(Modifier.fillMaxSize()) {
+        Image(
+            painterResource(Res.drawable.hero_bg),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
+        Box(
+            Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color(0x990A0B10), Color(0x660B3C8A), Color(0xF20A0B10)),
+                    ),
+                ),
+        )
+        Column(
+            Modifier
+                .fillMaxSize()
                 .padding(24.dp)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.Center,
+            verticalArrangement = Arrangement.Bottom,
         ) {
-            Box(
-                Modifier
-                    .size(76.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(MaterialTheme.colorScheme.primary),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.Default.Favorite,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(36.dp),
-                )
+            AnimatedVisibility(visible, enter = fadeIn() + slideInVertically { it / 3 }) {
+                Column {
+                    BrandMark()
+                    Spacer(Modifier.height(16.dp))
+                    Text("PNSA", color = Color.White, fontSize = 40.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Plateforme professionnelle SSR",
+                        color = Color.White.copy(alpha = 0.86f),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "Informer, former et orienter les adolescents et les professionnels de santé en République démocratique du Congo.",
+                        color = Color.White.copy(alpha = 0.9f),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Spacer(Modifier.height(24.dp))
+                    PrimaryAction("Se connecter", onClick = onLogin)
+                    Spacer(Modifier.height(10.dp))
+                    SecondaryAction("Créer un compte professionnel", onClick = onRegister)
+                    androidx.compose.material3.TextButton(onClick = onHelp, modifier = Modifier.fillMaxWidth()) {
+                        Text("Aide et limites du service", color = Color.White)
+                    }
+                    androidx.compose.material3.TextButton(onClick = onLegal, modifier = Modifier.fillMaxWidth()) {
+                        Text("Confidentialité et conditions", color = Color.White)
+                    }
+                }
             }
-            Spacer(Modifier.height(20.dp))
-            Text("PNSA", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
-            Text(
-                "Santé sexuelle et reproductive, en toute confiance.",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(16.dp))
-            Text(
-                "Informe-toi, teste tes connaissances, pose une question et trouve une structure adaptée près de chez toi. Tes données restent protégées.",
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Spacer(Modifier.height(28.dp))
-            PrimaryAction("Se connecter", onClick = onLogin)
-            Spacer(Modifier.height(10.dp))
-            SecondaryAction("Créer un compte", onClick = onRegister)
-            Spacer(Modifier.height(8.dp))
-            QuietAction("Aide et limites du service", onClick = onHelp)
-            QuietAction("Confidentialité et conditions", onClick = onLegal)
         }
     }
 }
@@ -125,59 +156,67 @@ fun LoginScreen(
     var error by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
-        topBar = { PnsaTopBar("Connexion", onBack = onBack) },
         snackbarHost = { SnackbarHost(snackbar) },
+        containerColor = Color.White,
     ) { padding ->
         Column(
             Modifier
                 .padding(padding)
-                .padding(20.dp)
+                .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
         ) {
-            Text("Heureux de te revoir", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(8.dp))
-            Text("Connecte-toi pour accéder aux contenus, aux quiz et à l’annuaire SSR.")
-            Spacer(Modifier.height(20.dp))
-            PnsaTextField(email, { email = it }, "Adresse e-mail")
-            Spacer(Modifier.height(12.dp))
-            PnsaTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = "Mot de passe",
-                visualTransformation = if (hidePassword) PasswordVisualTransformation() else VisualTransformation.None,
-                trailing = {
-                    IconButton(onClick = { hidePassword = !hidePassword }) {
-                        Icon(
-                            if (hidePassword) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = "Afficher le mot de passe",
+            AuthHero(
+                image = Res.drawable.teen,
+                title = "Espace professionnel",
+                subtitle = "Connexion sécurisée à la plateforme PNSA",
+                onBack = onBack,
+            )
+            Column(Modifier.padding(20.dp)) {
+                Text("Heureux de vous revoir", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = PnsaNavy)
+                Spacer(Modifier.height(6.dp))
+                Text("Accédez aux contenus, quiz, forum et à l’annuaire géolocalisé des structures SSR.")
+                Spacer(Modifier.height(18.dp))
+                PnsaTextField(email, { email = it }, "Adresse e-mail professionnelle")
+                Spacer(Modifier.height(12.dp))
+                PnsaTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = "Mot de passe",
+                    visualTransformation = if (hidePassword) PasswordVisualTransformation() else VisualTransformation.None,
+                    trailing = {
+                        IconButton(onClick = { hidePassword = !hidePassword }) {
+                            Icon(
+                                if (hidePassword) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                contentDescription = "Afficher le mot de passe",
+                            )
+                        }
+                    },
+                )
+                error?.let {
+                    Spacer(Modifier.height(12.dp))
+                    StatusBanner(it)
+                }
+                Spacer(Modifier.height(20.dp))
+                PrimaryAction(if (loading) "Connexion…" else "Entrer", enabled = !loading) {
+                    scope.launch {
+                        loading = true
+                        error = null
+                        runCatching { graph.auth.login(email, password) }
+                            .onSuccess { onLoggedIn() }
+                            .onFailure { error = (it as? ApiException)?.userMessage() ?: it.message }
+                        loading = false
+                    }
+                }
+                QuietAction("Pas encore de compte ? S’inscrire") { onRegister() }
+                QuietAction("Mot de passe oublié") {
+                    scope.launch {
+                        snackbar.showSnackbar(
+                            "Écris à ${AppConfig.contactEmail} ou appelle ${AppConfig.contactPhone} pour récupérer l’accès.",
                         )
                     }
-                },
-            )
-            error?.let {
-                Spacer(Modifier.height(12.dp))
-                StatusBanner(it)
-            }
-            Spacer(Modifier.height(20.dp))
-            PrimaryAction(if (loading) "Connexion…" else "Entrer", enabled = !loading) {
-                scope.launch {
-                    loading = true
-                    error = null
-                    runCatching { graph.auth.login(email, password) }
-                        .onSuccess { onLoggedIn() }
-                        .onFailure { error = (it as? ApiException)?.userMessage() ?: it.message }
-                    loading = false
                 }
+                QuietAction("Besoin d’aide ?") { onHelp() }
             }
-            QuietAction("Pas encore de compte ? S’inscrire") { onRegister() }
-            QuietAction("Mot de passe oublié") {
-                scope.launch {
-                    snackbar.showSnackbar(
-                        "Écris à ${AppConfig.contactEmail} ou appelle ${AppConfig.contactPhone} pour récupérer l’accès.",
-                    )
-                }
-            }
-            QuietAction("Besoin d’aide ?") { onHelp() }
         }
     }
 }
@@ -216,23 +255,42 @@ fun RegisterScreen(
         else -> null
     }
 
-    Scaffold(topBar = { PnsaTopBar("Inscription", onBack = onBack) }) { padding ->
-        Column(
-            Modifier
-                .padding(padding)
-                .padding(20.dp)
-                .verticalScroll(rememberScrollState()),
-        ) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(Color.White)
+            .verticalScroll(rememberScrollState()),
+    ) {
+        AuthHero(
+            image = Res.drawable.about,
+            title = "Créer un accès",
+            subtitle = "Inscription professionnelle · étape ${step + 1}/3",
+            onBack = onBack,
+        )
+        Column(Modifier.padding(20.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                repeat(3) { index ->
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .height(4.dp)
+                            .clip(CircleShape)
+                            .background(if (index <= step) PnsaBlue else MaterialTheme.colorScheme.surfaceVariant),
+                    )
+                }
+            }
+            Spacer(Modifier.height(16.dp))
             Text(
                 when (step) {
-                    0 -> "Qui es-tu ?"
-                    1 -> "Ton accès"
-                    else -> "Tes choix"
+                    0 -> "Identité professionnelle"
+                    1 -> "Accès et localisation"
+                    else -> "Consentements"
                 },
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
+                color = PnsaNavy,
             )
-            Text("Étape ${step + 1} / 3  •  Tes informations restent confidentielles.")
+            Text("Tes informations restent confidentielles et sont utilisées pour l’orientation SSR.")
             Spacer(Modifier.height(16.dp))
             when (step) {
                 0 -> {
@@ -382,5 +440,66 @@ fun LegalScreen(onBack: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             Text("Ce service n’est pas une urgence médicale. En cas de danger, contacte un service de santé ou les personnes de confiance près de toi.")
         }
+    }
+}
+
+@Composable
+private fun BrandMark() {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Image(
+            painterResource(Res.drawable.favicon),
+            contentDescription = "PNSA",
+            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(14.dp)),
+            contentScale = ContentScale.Crop,
+        )
+        Column {
+            Text("Programme National", color = Color.White, fontWeight = FontWeight.SemiBold)
+            Text("Santé des Adolescents", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
+        }
+    }
+}
+
+@Composable
+private fun AuthHero(
+    image: DrawableResource,
+    title: String,
+    subtitle: String,
+    onBack: () -> Unit,
+) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(220.dp),
+    ) {
+        Image(
+            painterResource(image),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(listOf(Color(0x660A0B10), Color(0xCC0B3C8A), Color(0xF20A0B10))),
+                ),
+        )
+        Column(Modifier.align(Alignment.BottomStart).padding(20.dp)) {
+            Surface(shape = CircleShape, color = Color.White.copy(alpha = 0.16f), onClick = onBack) {
+                Text("Retour", color = Color.White, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), fontSize = 12.sp)
+            }
+            Spacer(Modifier.height(10.dp))
+            Text(title, color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+            Text(subtitle, color = Color.White.copy(alpha = 0.85f))
+        }
+        Box(
+            Modifier
+                .align(Alignment.TopEnd)
+                .padding(16.dp)
+                .height(4.dp)
+                .clip(CircleShape)
+                .background(Brush.horizontalGradient(listOf(PnsaBlue, PnsaRed)))
+                .fillMaxWidth(0.2f),
+        )
     }
 }

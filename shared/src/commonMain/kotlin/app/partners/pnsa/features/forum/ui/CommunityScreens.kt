@@ -56,13 +56,24 @@ fun ForumListScreen(navigator: AppNavigator) {
         scope.launch {
             loading = true
             runCatching { graph.community.sujets() }
-                .onSuccess { items = it.data }
+                .onSuccess {
+                    items = it.data
+                    graph.screens.sujets = it.data
+                    graph.screens.sujetsLoaded = true
+                }
                 .onFailure { error = (it as? ApiException)?.userMessage() ?: it.message }
             loading = false
         }
     }
 
-    LaunchedEffect(Unit) { load() }
+    LaunchedEffect(Unit) {
+        if (graph.screens.sujetsLoaded) {
+            items = graph.screens.sujets
+            loading = false
+        } else {
+            load()
+        }
+    }
 
     Scaffold(topBar = { PnsaTopBar("Forum", onBack = { navigator.pop() }) }) { padding ->
         when {

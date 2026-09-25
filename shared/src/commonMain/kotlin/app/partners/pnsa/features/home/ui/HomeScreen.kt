@@ -1,6 +1,9 @@
 package app.partners.pnsa.features.home.ui
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Help
@@ -28,9 +32,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import app.partners.pnsa.resources.Res
+import app.partners.pnsa.resources.hero_bg
+import org.jetbrains.compose.resources.painterResource
 import app.partners.pnsa.core.di.LocalAppGraph
 import app.partners.pnsa.core.network.ApiException
 import app.partners.pnsa.core.ui.components.AvatarCircle
@@ -72,11 +84,15 @@ fun HomeScreen(navigator: AppNavigator) {
                 synced to home
             }.onSuccess { (sync, home) ->
                 feed = home
+                graph.screens.home = home
+                graph.screens.homeLoaded = true
                 graph.session.saveLastSync(sync?.syncedAt ?: sync?.cursor ?: graph.catalog.lastSyncLabel())
             }.onFailure { throwable ->
                 val cached = graph.catalog.cachedContenus()
                 if (cached.isNotEmpty()) {
                     feed = HomeFeed(contenus = cached, faqs = graph.catalog.cachedFaqs())
+                    graph.screens.home = feed
+                    graph.screens.homeLoaded = true
                     offlineHint = "Affichage du dernier catalogue synchronisé."
                 } else {
                     error = (throwable as? ApiException)?.userMessage() ?: throwable.message
@@ -87,7 +103,15 @@ fun HomeScreen(navigator: AppNavigator) {
         }
     }
 
-    LaunchedEffect(Unit) { load() }
+    LaunchedEffect(Unit) {
+        val cached = graph.screens.home
+        if (graph.screens.homeLoaded && cached != null) {
+            feed = cached
+            loading = false
+        } else {
+            load()
+        }
+    }
 
     Scaffold { padding ->
         PullToRefreshBox(
@@ -107,12 +131,34 @@ fun HomeScreen(navigator: AppNavigator) {
                     ) {
                         item {
                             Spacer(Modifier.height(8.dp))
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Column(Modifier.weight(1f)) {
-                                    Text("Salut ${user?.prenom ?: ""}", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                                    Text("Des infos claires, sans jugement.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(148.dp)
+                                    .clip(RoundedCornerShape(24.dp)),
+                            ) {
+                                Image(
+                                    painterResource(Res.drawable.hero_bg),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                                Box(
+                                    Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            Brush.horizontalGradient(
+                                                listOf(Color(0xE00B3C8A), Color(0x990069E1), Color(0xB3D01D2A)),
+                                            ),
+                                        ),
+                                )
+                                Column(
+                                    Modifier.align(Alignment.BottomStart).padding(16.dp),
+                                ) {
+                                    Text("Salut ${user?.prenom ?: ""}", color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                                    Text("Plateforme professionnelle SSR · Kinshasa", color = Color.White.copy(alpha = 0.88f))
                                 }
-                                AvatarCircle(user?.initials ?: "?", Modifier)
+                                AvatarCircle(user?.initials ?: "?", Modifier.align(Alignment.TopEnd).padding(14.dp))
                             }
                             Spacer(Modifier.height(10.dp))
                             StatusBanner(

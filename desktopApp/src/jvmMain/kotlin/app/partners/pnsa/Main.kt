@@ -33,7 +33,7 @@ private fun DesktopPreview() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF12281E)),
+            .background(Color(0xFF0A0B10)),
         contentAlignment = Alignment.Center,
     ) {
         Box(

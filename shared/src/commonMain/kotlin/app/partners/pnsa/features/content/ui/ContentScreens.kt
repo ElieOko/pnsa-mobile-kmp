@@ -57,9 +57,17 @@ fun ContentListScreen(navigator: AppNavigator) {
             loading = true
             error = null
             runCatching { graph.catalog.contenus(perPage = 50) }
-                .onSuccess { items = it.data }
+                .onSuccess {
+                    items = it.data
+                    graph.screens.contenus = it.data
+                    graph.screens.contenusLoaded = true
+                }
                 .onFailure { throwable ->
                     items = graph.catalog.cachedContenus()
+                    if (items.isNotEmpty()) {
+                        graph.screens.contenus = items
+                        graph.screens.contenusLoaded = true
+                    }
                     if (items.isEmpty()) {
                         error = (throwable as? ApiException)?.userMessage() ?: throwable.message
                     }
@@ -68,7 +76,14 @@ fun ContentListScreen(navigator: AppNavigator) {
         }
     }
 
-    LaunchedEffect(Unit) { load() }
+    LaunchedEffect(Unit) {
+        if (graph.screens.contenusLoaded) {
+            items = graph.screens.contenus
+            loading = false
+        } else {
+            load()
+        }
+    }
 
     val categories = listOf("Tous") + items.map { it.categoryLabel }.distinct()
     val filtered = items.filter { item ->

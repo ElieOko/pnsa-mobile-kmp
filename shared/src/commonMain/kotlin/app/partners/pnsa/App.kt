@@ -1,29 +1,38 @@
 package app.partners.pnsa
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import app.partners.pnsa.core.di.AppGraph
 import app.partners.pnsa.core.di.LocalAppGraph
+import app.partners.pnsa.core.ui.components.KeepAlivePane
+import app.partners.pnsa.core.ui.components.PnsaDrawerContent
+import app.partners.pnsa.core.ui.components.TikTokBottomBar
+import app.partners.pnsa.core.ui.components.TikTokTopBar
 import app.partners.pnsa.core.ui.navigation.AppDestination
 import app.partners.pnsa.core.ui.navigation.AppNavigator
 import app.partners.pnsa.core.ui.navigation.MainTab
+import app.partners.pnsa.core.ui.theme.LocalEmbeddedChrome
 import app.partners.pnsa.core.ui.theme.PnsaTheme
 import app.partners.pnsa.features.auth.ui.LegalScreen
 import app.partners.pnsa.features.auth.ui.LoginScreen
@@ -44,14 +53,14 @@ import app.partners.pnsa.features.structure.ui.OrientationListScreen
 import app.partners.pnsa.features.structure.ui.StructureDetailScreen
 import app.partners.pnsa.features.structure.ui.StructureListScreen
 import app.partners.pnsa.features.user.ui.HelpScreen
-import app.partners.pnsa.features.user.ui.MoreMenuScreen
 import app.partners.pnsa.features.user.ui.ProfileEditScreen
 import app.partners.pnsa.features.user.ui.ProfileScreen
+import kotlinx.coroutines.launch
 
 @Composable
 fun App() {
     val graph = remember { AppGraph() }
-    PnsaTheme {
+    PnsaTheme(darkTheme = false) {
         CompositionLocalProvider(LocalAppGraph provides graph) {
             PnsaRoot(graph)
         }
@@ -71,26 +80,74 @@ private fun PnsaRoot(graph: AppGraph) {
         return
     }
 
-    val showBar = navigator.current !is AppDestination.QuizPlay
-    Scaffold(
-        bottomBar = {
-            if (showBar) {
-                NavigationBar {
-                    MainTab.entries.forEach { tab ->
-                        NavigationBarItem(
-                            selected = navigator.tab == tab,
-                            onClick = { navigator.openTab(tab) },
-                            icon = { Icon(tab.icon(), contentDescription = tab.label) },
-                            label = { Text(tab.label) },
+    val user by graph.session.user.collectAsState()
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    val visited = remember { mutableStateListOf(MainTab.Home) }
+    val showChrome = navigator.current !is AppDestination.QuizPlay
+
+    LaunchedEffect(navigator.tab) {
+        if (navigator.tab !in visited) visited += navigator.tab
+    }
+
+    fun logout() {
+        scope.launch {
+            drawerState.close()
+            graph.auth.logout()
+            graph.cache.clear()
+            graph.screens.clear()
+        }
+    }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        gesturesEnabled = !navigator.canPop,
+        drawerContent = {
+            PnsaDrawerContent(
+                name = user?.displayName ?: "Professionnel PNSA",
+                email = user?.email.orEmpty(),
+                initials = user?.initials ?: "P",
+                onDestination = { dest ->
+                    scope.launch { drawerState.close() }
+                    navigator.push(dest)
+                },
+                onLogout = { logout() },
+            )
+        },
+    ) {
+        CompositionLocalProvider(LocalEmbeddedChrome provides true) {
+            Scaffold(
+                containerColor = MaterialTheme.colorScheme.background,
+                topBar = {
+                    if (showChrome) {
+                        TikTokTopBar(
+                            title = navigator.title(),
+                            canPop = navigator.canPop,
+                            onMenu = { scope.launch { drawerState.open() } },
+                            onBack = { navigator.pop() },
+                            initials = user?.initials ?: "P",
+                            onAvatar = { navigator.push(AppDestination.Profile) },
                         )
                     }
+                },
+                bottomBar = {
+                    if (showChrome) {
+                        TikTokBottomBar(
+                            selected = navigator.tab,
+                            onSelect = { navigator.openTab(it) },
+                        )
+                    }
+                },
+            ) { padding ->
+                Box(Modifier.padding(padding).fillMaxSize()) {
+                    MainTab.entries.forEach { tab ->
+                        if (tab in visited) {
+                            KeepAlivePane(visible = navigator.tab == tab) {
+                                SignedInFlow(navigator, tab) { logout() }
+                            }
+                        }
+                    }
                 }
-            }
-        },
-    ) { padding ->
-        androidx.compose.foundation.layout.Box(Modifier.padding(padding)) {
-            SignedInFlow(navigator) {
-                navigator.replace(AppDestination.Welcome)
             }
         }
     }
@@ -98,38 +155,46 @@ private fun PnsaRoot(graph: AppGraph) {
 
 @Composable
 private fun AuthFlow(navigator: AppNavigator) {
-    when (val dest = navigator.current) {
-        AppDestination.Welcome -> WelcomeScreen(
-            onLogin = { navigator.push(AppDestination.Login) },
-            onRegister = { navigator.push(AppDestination.Register) },
-            onHelp = { navigator.push(AppDestination.PublicHelp) },
-            onLegal = { navigator.push(AppDestination.PublicLegal) },
-        )
-        AppDestination.Login -> LoginScreen(
-            onBack = { navigator.pop() },
-            onLoggedIn = { navigator.replace(AppDestination.Home) },
-            onRegister = { navigator.replaceCurrent(AppDestination.Register) },
-            onHelp = { navigator.push(AppDestination.PublicHelp) },
-        )
-        AppDestination.Register -> RegisterScreen(
-            onBack = { navigator.pop() },
-            onRegistered = { navigator.replace(AppDestination.Home) },
-            onLegal = { navigator.push(AppDestination.PublicLegal) },
-        )
-        AppDestination.PublicHelp -> HelpScreen(onBack = { navigator.pop() })
-        AppDestination.PublicLegal -> LegalScreen(onBack = { navigator.pop() })
-        else -> WelcomeScreen(
-            onLogin = { navigator.push(AppDestination.Login) },
-            onRegister = { navigator.push(AppDestination.Register) },
-            onHelp = { navigator.push(AppDestination.PublicHelp) },
-            onLegal = { navigator.push(AppDestination.PublicLegal) },
-        )
+    AnimatedContent(
+        targetState = navigator.current,
+        transitionSpec = {
+            (slideInHorizontally { it / 3 } + fadeIn()) togetherWith (slideOutHorizontally { -it / 4 } + fadeOut())
+        },
+        label = "auth-flow",
+    ) { dest ->
+        when (dest) {
+            AppDestination.Welcome -> WelcomeScreen(
+                onLogin = { navigator.push(AppDestination.Login) },
+                onRegister = { navigator.push(AppDestination.Register) },
+                onHelp = { navigator.push(AppDestination.PublicHelp) },
+                onLegal = { navigator.push(AppDestination.PublicLegal) },
+            )
+            AppDestination.Login -> LoginScreen(
+                onBack = { navigator.pop() },
+                onLoggedIn = { navigator.replace(AppDestination.Home) },
+                onRegister = { navigator.replaceCurrent(AppDestination.Register) },
+                onHelp = { navigator.push(AppDestination.PublicHelp) },
+            )
+            AppDestination.Register -> RegisterScreen(
+                onBack = { navigator.pop() },
+                onRegistered = { navigator.replace(AppDestination.Home) },
+                onLegal = { navigator.push(AppDestination.PublicLegal) },
+            )
+            AppDestination.PublicHelp -> HelpScreen(onBack = { navigator.pop() })
+            AppDestination.PublicLegal -> LegalScreen(onBack = { navigator.pop() })
+            else -> WelcomeScreen(
+                onLogin = { navigator.push(AppDestination.Login) },
+                onRegister = { navigator.push(AppDestination.Register) },
+                onHelp = { navigator.push(AppDestination.PublicHelp) },
+                onLegal = { navigator.push(AppDestination.PublicLegal) },
+            )
+        }
     }
 }
 
 @Composable
-private fun SignedInFlow(navigator: AppNavigator, onLoggedOut: () -> Unit) {
-    when (val dest = navigator.current) {
+private fun SignedInFlow(navigator: AppNavigator, tab: MainTab, onLoggedOut: () -> Unit) {
+    when (val dest = navigator.currentFor(tab)) {
         AppDestination.Home -> HomeScreen(navigator)
         AppDestination.Learn -> ContentListScreen(navigator)
         is AppDestination.ContentDetail -> ContentDetailScreen(dest.id, onBack = { navigator.pop() })
@@ -148,15 +213,7 @@ private fun SignedInFlow(navigator: AppNavigator, onLoggedOut: () -> Unit) {
         AppDestination.ProfileEdit -> ProfileEditScreen(onBack = { navigator.pop() })
         AppDestination.Help, AppDestination.PublicHelp -> HelpScreen(onBack = { navigator.pop() })
         AppDestination.PublicLegal -> LegalScreen(onBack = { navigator.pop() })
-        AppDestination.More -> MoreMenuScreen(navigator)
+        AppDestination.More -> ProfileScreen(navigator, onLoggedOut)
         AppDestination.Welcome, AppDestination.Login, AppDestination.Register -> HomeScreen(navigator)
     }
-}
-
-private fun MainTab.icon(): ImageVector = when (this) {
-    MainTab.Home -> Icons.Default.Home
-    MainTab.Learn -> Icons.Default.Favorite
-    MainTab.Quiz -> Icons.Default.Star
-    MainTab.Structures -> Icons.Default.Place
-    MainTab.More -> Icons.Default.Menu
 }

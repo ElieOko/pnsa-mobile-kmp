@@ -1,6 +1,9 @@
 package app.partners.pnsa.features.quiz.ui
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -8,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -28,8 +32,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import app.partners.pnsa.resources.Res
+import app.partners.pnsa.resources.quiz_question
+import org.jetbrains.compose.resources.painterResource
 import app.partners.pnsa.core.di.LocalAppGraph
 import app.partners.pnsa.core.network.ApiException
 import app.partners.pnsa.core.ui.components.EmptyState
@@ -70,15 +81,30 @@ fun QuizListScreen(navigator: AppNavigator) {
             }.onSuccess { (list, history) ->
                 quizzes = list
                 attempts = history
+                graph.screens.quizzes = list
+                graph.screens.quizAttempts = history
+                graph.screens.quizzesLoaded = true
             }.onFailure { throwable ->
                 quizzes = graph.catalog.cachedQuizzes()
+                if (quizzes.isNotEmpty()) {
+                    graph.screens.quizzes = quizzes
+                    graph.screens.quizzesLoaded = true
+                }
                 if (quizzes.isEmpty()) error = (throwable as? ApiException)?.userMessage() ?: throwable.message
             }
             loading = false
         }
     }
 
-    LaunchedEffect(Unit) { load() }
+    LaunchedEffect(Unit) {
+        if (graph.screens.quizzesLoaded) {
+            quizzes = graph.screens.quizzes
+            attempts = graph.screens.quizAttempts
+            loading = false
+        } else {
+            load()
+        }
+    }
 
     Scaffold(topBar = { PnsaTopBar("Quiz") }) { padding ->
         when {
@@ -90,6 +116,31 @@ fun QuizListScreen(navigator: AppNavigator) {
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(120.dp)
+                            .clip(RoundedCornerShape(22.dp)),
+                    ) {
+                        Image(
+                            painterResource(Res.drawable.quiz_question),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                        Box(
+                            Modifier.fillMaxSize().background(
+                                Brush.horizontalGradient(listOf(Color(0xCC0069E1), Color(0x99D01D2A))),
+                            ),
+                        )
+                        Text(
+                            "Tester tes connaissances SSR",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.align(Alignment.BottomStart).padding(16.dp),
+                        )
+                    }
+                    Spacer(Modifier.height(10.dp))
                     StatusBanner("Tu peux interrompre un quiz et le reprendre. Le score définitif est confirmé par le serveur.")
                 }
                 items(quizzes, key = { it.id ?: it.title }) { quiz ->

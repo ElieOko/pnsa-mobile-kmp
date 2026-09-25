@@ -130,6 +130,7 @@ fun ProfileScreen(navigator: AppNavigator, onLoggedOut: () -> Unit) {
                 scope.launch {
                     graph.auth.logout()
                     graph.cache.clear()
+                    graph.screens.clear()
                     onLoggedOut()
                 }
             }

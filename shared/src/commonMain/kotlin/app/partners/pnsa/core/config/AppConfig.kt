@@ -2,6 +2,7 @@ package app.partners.pnsa.core.config
 
 object AppConfig {
     const val siteBaseUrl: String = "https://uxfqst-ip-167-86-108-98.tunnelmole.net"
+    const val publicSiteUrl: String = "https://pnsa.cd"
     const val apiBaseUrl: String = "$siteBaseUrl/api"
     const val mediaBaseUrl: String = siteBaseUrl
     const val contactEmail: String = "secretariat@pnsa.cd"

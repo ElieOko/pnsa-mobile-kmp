@@ -4,13 +4,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 
 enum class MainTab(val label: String) {
     Home("Accueil"),
     Learn("Apprendre"),
     Quiz("Quiz"),
-    Structures("Structures"),
-    More("Plus"),
+    Structures("Carte"),
+    Forum("Forum"),
 }
 
 sealed class AppDestination {
@@ -43,62 +44,118 @@ sealed class AppDestination {
 class AppNavigator(
     start: AppDestination,
 ) {
-    private val stack = mutableStateListOf(start)
-    var tab by mutableStateOf(MainTab.Home)
+    private val authStack = mutableStateListOf(start)
+    private val tabStacks: Map<MainTab, SnapshotStateList<AppDestination>> =
+        MainTab.entries.associateWith { tab -> mutableStateListOf(rootFor(tab)) }
 
-    val current: AppDestination get() = stack.last()
-    val canPop: Boolean get() = stack.size > 1
+    var tab by mutableStateOf(MainTab.Home)
+        private set
+    var signedIn by mutableStateOf(start is AppDestination.Home || tabFor(start) != null)
+
+    val current: AppDestination
+        get() = if (signedIn) tabStacks.getValue(tab).last() else authStack.last()
+    val canPop: Boolean
+        get() = if (signedIn) tabStacks.getValue(tab).size > 1 else authStack.size > 1
+
+    fun currentFor(tab: MainTab): AppDestination = tabStacks.getValue(tab).last()
 
     fun push(destination: AppDestination) {
-        stack += destination
-        tab = tabFor(destination) ?: tab
+        val target = tabFor(destination)
+        if (signedIn && target != null && isTabRoot(destination)) {
+            openTab(target)
+            return
+        }
+        if (signedIn) {
+            val stackTab = target ?: tab
+            if (stackTab != tab) tab = stackTab
+            val stack = tabStacks.getValue(stackTab)
+            if (stack.lastOrNull() == destination) return
+            stack += destination
+        } else {
+            authStack += destination
+        }
     }
 
     fun replace(destination: AppDestination) {
-        stack.clear()
-        stack += destination
-        tab = tabFor(destination) ?: tab
+        if (signedIn) {
+            val target = tabFor(destination) ?: tab
+            tab = target
+            val stack = tabStacks.getValue(target)
+            stack.clear()
+            stack += if (isTabRoot(destination)) destination else destination
+        } else {
+            authStack.clear()
+            authStack += destination
+        }
     }
 
     fun pop() {
+        val stack = if (signedIn) tabStacks.getValue(tab) else authStack
         if (stack.size > 1) stack.removeAt(stack.lastIndex)
     }
 
     fun openTab(next: MainTab) {
         tab = next
-        val dest = when (next) {
-            MainTab.Home -> AppDestination.Home
-            MainTab.Learn -> AppDestination.Learn
-            MainTab.Quiz -> AppDestination.Quizzes
-            MainTab.Structures -> AppDestination.Structures
-            MainTab.More -> AppDestination.More
-        }
-        replace(dest)
     }
 
     fun replaceCurrent(destination: AppDestination) {
+        val stack = if (signedIn) tabStacks.getValue(tab) else authStack
         if (stack.isNotEmpty()) stack.removeAt(stack.lastIndex)
         stack += destination
-        tab = tabFor(destination) ?: tab
+        tabFor(destination)?.let { tab = it }
     }
 
-    private fun tabFor(destination: AppDestination): MainTab? = when (destination) {
+    fun title(): String = titleFor(current)
+
+    private fun rootFor(tab: MainTab): AppDestination = when (tab) {
+        MainTab.Home -> AppDestination.Home
+        MainTab.Learn -> AppDestination.Learn
+        MainTab.Quiz -> AppDestination.Quizzes
+        MainTab.Structures -> AppDestination.Structures
+        MainTab.Forum -> AppDestination.Forum
+    }
+
+    private fun isTabRoot(destination: AppDestination): Boolean = when (destination) {
+        AppDestination.Home,
+        AppDestination.Learn,
+        AppDestination.Quizzes,
+        AppDestination.Structures,
+        AppDestination.Forum,
+        -> true
+        else -> false
+    }
+
+    fun tabFor(destination: AppDestination): MainTab? = when (destination) {
         AppDestination.Home -> MainTab.Home
         AppDestination.Learn, is AppDestination.ContentDetail -> MainTab.Learn
         AppDestination.Quizzes, is AppDestination.QuizPlay -> MainTab.Quiz
         AppDestination.Structures, is AppDestination.StructureDetail -> MainTab.Structures
-        AppDestination.More,
-        AppDestination.Forum,
-        is AppDestination.ForumDetail,
-        AppDestination.Advice,
-        is AppDestination.AdviceChat,
-        AppDestination.Orientations,
-        is AppDestination.OrientationDetail,
-        is AppDestination.OrientationCreate,
-        AppDestination.Profile,
-        AppDestination.ProfileEdit,
-        AppDestination.Help,
-        -> MainTab.More
+        AppDestination.Forum, is AppDestination.ForumDetail -> MainTab.Forum
         else -> null
     }
+}
+
+fun titleFor(destination: AppDestination): String = when (destination) {
+    AppDestination.Welcome -> "PNSA"
+    AppDestination.Login -> "Connexion"
+    AppDestination.Register -> "Inscription"
+    AppDestination.PublicHelp, AppDestination.Help -> "Aide"
+    AppDestination.PublicLegal -> "Confidentialité"
+    AppDestination.Home -> "PNSA"
+    AppDestination.Learn -> "Apprendre"
+    is AppDestination.ContentDetail -> "Contenu"
+    AppDestination.Quizzes -> "Quiz"
+    is AppDestination.QuizPlay -> "Quiz"
+    AppDestination.Structures -> "Carte"
+    is AppDestination.StructureDetail -> "Structure"
+    AppDestination.Orientations -> "Orientations"
+    is AppDestination.OrientationDetail -> "Orientation"
+    is AppDestination.OrientationCreate -> "Nouvelle orientation"
+    AppDestination.Forum -> "Forum"
+    is AppDestination.ForumDetail -> "Discussion"
+    AppDestination.Advice -> "Conseil"
+    is AppDestination.AdviceChat -> "Échange"
+    AppDestination.Profile -> "Profil"
+    AppDestination.ProfileEdit -> "Modifier le profil"
+    AppDestination.More -> "Menu"
 }

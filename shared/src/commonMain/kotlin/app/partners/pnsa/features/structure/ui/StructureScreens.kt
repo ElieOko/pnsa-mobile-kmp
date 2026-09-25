@@ -1,14 +1,18 @@
 package app.partners.pnsa.features.structure.ui
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -26,7 +30,11 @@ import app.partners.pnsa.core.di.LocalAppGraph
 import app.partners.pnsa.core.network.ApiException
 import app.partners.pnsa.core.ui.components.EmptyState
 import app.partners.pnsa.core.ui.components.ErrorState
+import app.partners.pnsa.core.ui.components.GpsPlaceCard
+import app.partners.pnsa.core.ui.components.KinshasaGpsMap
+import app.partners.pnsa.core.ui.components.KinshasaMapMath
 import app.partners.pnsa.core.ui.components.LoadingState
+import app.partners.pnsa.core.ui.components.MapLegendRow
 import app.partners.pnsa.core.ui.components.MetaRow
 import app.partners.pnsa.core.ui.components.PnsaCard
 import app.partners.pnsa.core.ui.components.PnsaTextField
@@ -36,6 +44,7 @@ import app.partners.pnsa.core.ui.components.StatusBanner
 import app.partners.pnsa.core.ui.navigation.AppDestination
 import app.partners.pnsa.core.ui.navigation.AppNavigator
 import app.partners.pnsa.core.util.formatIsoDate
+import app.partners.pnsa.features.structure.data.KinshasaCenters
 import app.partners.pnsa.features.structure.domain.models.HealthStructure
 import app.partners.pnsa.features.structure.domain.models.Orientation
 import kotlinx.coroutines.launch
@@ -44,12 +53,24 @@ import kotlinx.coroutines.launch
 fun StructureListScreen(navigator: AppNavigator) {
     val graph = LocalAppGraph.current
     val scope = rememberCoroutineScope()
-    var items by remember { mutableStateOf<List<HealthStructure>>(emptyList()) }
-    var province by remember { mutableStateOf("") }
+    var items by remember { mutableStateOf(graph.screens.structures.ifEmpty { KinshasaCenters.all }) }
+    var province by remember { mutableStateOf("Kinshasa") }
     var city by remember { mutableStateOf("") }
     var query by remember { mutableStateOf("") }
-    var loading by remember { mutableStateOf(true) }
+    var loading by remember { mutableStateOf(!graph.screens.structuresLoaded) }
     var error by remember { mutableStateOf<String?>(null) }
+    var selectedId by remember { mutableStateOf(items.firstOrNull()?.id) }
+    var showMap by remember { mutableStateOf(true) }
+
+    fun apply(list: List<HealthStructure>) {
+        val merged = KinshasaCenters.mergeWith(list)
+        items = merged
+        graph.screens.structures = merged
+        graph.screens.structuresLoaded = true
+        if (selectedId == null || merged.none { it.id == selectedId }) {
+            selectedId = merged.firstOrNull { it.hasCoordinates }?.id
+        }
+    }
 
     fun load() {
         scope.launch {
@@ -63,48 +84,99 @@ fun StructureListScreen(navigator: AppNavigator) {
                     city = city.ifBlank { null },
                     queryText = query.ifBlank { null },
                 )
-            }.onSuccess { items = it.data }
+            }.onSuccess { apply(it.data) }
                 .onFailure { throwable ->
-                    error = (throwable as? ApiException)?.userMessage() ?: throwable.message
+                    apply(emptyList())
+                    error = (throwable as? ApiException)?.userMessage()
                 }
             loading = false
         }
     }
 
-    LaunchedEffect(Unit) { load() }
+    LaunchedEffect(Unit) {
+        if (graph.screens.structuresLoaded) {
+            items = graph.screens.structures
+            loading = false
+        } else {
+            load()
+        }
+    }
+
+    val filtered = items.filter { item ->
+        val haystack = listOf(item.displayName, item.displayCity, item.displayAddress, item.services, item.structureType)
+            .joinToString(" ")
+            .lowercase()
+        val matchesQuery = query.isBlank() || haystack.contains(query.lowercase())
+        val matchesCity = city.isBlank() || item.displayCity.contains(city, ignoreCase = true)
+        val matchesProvince = province.isBlank() || item.province.orEmpty().contains(province, ignoreCase = true)
+        matchesQuery && matchesCity && matchesProvince
+    }
 
     Scaffold(topBar = { PnsaTopBar("Trouver une structure") }) { padding ->
-        Column(Modifier.padding(padding).padding(horizontal = 16.dp)) {
-            PnsaTextField(query, { query = it }, "Nom ou service")
-            Spacer(Modifier.height(8.dp))
-            PnsaTextField(province, { province = it }, "Province")
-            Spacer(Modifier.height(8.dp))
-            PnsaTextField(city, { city = it }, "Ville")
-            Spacer(Modifier.height(8.dp))
-            PrimaryAction("Rechercher") { load() }
-            Spacer(Modifier.height(12.dp))
-            when {
-                loading -> LoadingState("Recherche des structures…")
-                error != null -> ErrorState(error.orEmpty(), onRetry = { load() })
-                items.isEmpty() -> EmptyState(
-                    "Aucune structure pour ces filtres",
-                    "L’annuaire n’affiche que les fiches actives et validées. Tu peux chercher sans géolocalisation, par province ou ville.",
-                )
-                else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(items, key = { it.id ?: it.displayName }) { structure ->
-                        PnsaCard(onClick = { structure.id?.let { navigator.push(AppDestination.StructureDetail(it)) } }) {
-                            Text(structure.displayName, fontWeight = FontWeight.SemiBold)
-                            Text("${structure.province ?: "—"} · ${structure.displayCity}")
-                            Text(structure.displayAddress, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            if (structure.hasCoordinates) {
+        LazyColumn(
+            Modifier.padding(padding).padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            item {
+                Text("Annuaire GPS Kinshasa", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Markers locaux disponibles hors ligne, même si le serveur n’a pas encore synchronisé les fiches.")
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(selected = showMap, onClick = { showMap = true }, label = { Text("Carte") })
+                    FilterChip(selected = !showMap, onClick = { showMap = false }, label = { Text("Liste") })
+                }
+            }
+            item {
+                PnsaTextField(query, { query = it }, "Nom, service ou commune")
+                Spacer(Modifier.height(8.dp))
+                PnsaTextField(city, { city = it }, "Commune / ville")
+                Spacer(Modifier.height(8.dp))
+                PrimaryAction(if (loading) "Recherche…" else "Actualiser l’annuaire") { load() }
+            }
+            if (showMap) {
+                item {
+                    MapLegendRow()
+                    Spacer(Modifier.height(8.dp))
+                    KinshasaGpsMap(
+                        structures = filtered,
+                        selectedId = selectedId,
+                        onSelect = { marker ->
+                            selectedId = marker.id
+                        },
+                        modifier = Modifier.fillMaxWidth().height(320.dp),
+                    )
+                }
+                item {
+                    val selected = filtered.firstOrNull { it.id == selectedId }
+                    AnimatedVisibility(selected != null) {
+                        selected?.let { item ->
+                            Column {
+                                GpsPlaceCard(item) { item.id?.let { navigator.push(AppDestination.StructureDetail(it)) } }
                                 Spacer(Modifier.height(6.dp))
-                                MetaRow(listOf("GPS ${structure.latitude}, ${structure.longitude}"))
+                                StatusBanner(KinshasaMapMath.formatCoord(item.latitude, item.longitude))
                             }
                         }
                     }
-                    item { Spacer(Modifier.height(24.dp)) }
                 }
             }
+            if (error != null && filtered.isEmpty()) {
+                item { ErrorState(error.orEmpty(), onRetry = { load() }) }
+            }
+            items(filtered, key = { it.id ?: it.displayName }) { structure ->
+                PnsaCard(onClick = {
+                    selectedId = structure.id
+                    structure.id?.let { navigator.push(AppDestination.StructureDetail(it)) }
+                }) {
+                    Text(structure.displayName, fontWeight = FontWeight.SemiBold)
+                    Text("${structure.province ?: "—"} · ${structure.displayCity}")
+                    Text(structure.displayAddress, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (structure.hasCoordinates) {
+                        Spacer(Modifier.height(6.dp))
+                        MetaRow(listOf(KinshasaMapMath.formatCoord(structure.latitude, structure.longitude)))
+                    }
+                }
+            }
+            item { Spacer(Modifier.height(24.dp)) }
         }
     }
 }
@@ -118,6 +190,12 @@ fun StructureDetailScreen(id: Long, navigator: AppNavigator, onBack: () -> Unit)
 
     LaunchedEffect(id) {
         loading = true
+        val local = KinshasaCenters.byId(id)
+        if (local != null) {
+            item = local
+            loading = false
+            return@LaunchedEffect
+        }
         runCatching { graph.catalog.structure(id) }
             .onSuccess {
                 item = it
@@ -156,7 +234,16 @@ fun StructureDetailScreen(id: Long, navigator: AppNavigator, onBack: () -> Unit)
                     }
                     if (structure.hasCoordinates) {
                         Spacer(Modifier.height(8.dp))
-                        StatusBanner("Position indicative : ${structure.latitude}, ${structure.longitude}. Ce n’est pas un temps de trajet.")
+                        KinshasaGpsMap(
+                            structures = listOf(structure),
+                            selectedId = structure.id,
+                            onSelect = {},
+                            modifier = Modifier.fillMaxWidth().height(220.dp),
+                            userLat = structure.latitude ?: -4.3276,
+                            userLon = structure.longitude ?: 15.3136,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        StatusBanner("Position indicative : ${KinshasaMapMath.formatCoord(structure.latitude, structure.longitude)}. Ce n’est pas un temps de trajet.")
                     } else {
                         Spacer(Modifier.height(8.dp))
                         StatusBanner("Coordonnées GPS non renseignées. La fiche reste consultable.")
