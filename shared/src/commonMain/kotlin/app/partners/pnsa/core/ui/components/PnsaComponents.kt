@@ -32,6 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -44,8 +45,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import app.partners.pnsa.core.ui.theme.LocalEmbeddedChrome
+import app.partners.pnsa.core.ui.theme.PnsaBlue
+import app.partners.pnsa.core.ui.theme.PnsaInk
+import app.partners.pnsa.core.ui.theme.PnsaMuted
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -233,6 +238,19 @@ fun PnsaTextField(
         trailingIcon = trailing,
         visualTransformation = visualTransformation,
         shape = RoundedCornerShape(16.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedTextColor = PnsaInk,
+            unfocusedTextColor = PnsaInk,
+            disabledTextColor = PnsaMuted,
+            cursorColor = PnsaBlue,
+            focusedContainerColor = Color.White,
+            unfocusedContainerColor = Color.White,
+            disabledContainerColor = Color.White,
+            focusedBorderColor = PnsaBlue,
+            unfocusedBorderColor = Color(0xFFC5D0E0),
+            focusedLabelColor = PnsaBlue,
+            unfocusedLabelColor = PnsaMuted,
+        ),
     )
 }
 

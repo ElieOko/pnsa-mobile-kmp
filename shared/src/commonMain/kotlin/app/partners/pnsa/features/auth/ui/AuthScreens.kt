@@ -127,8 +127,12 @@ fun WelcomeScreen(
                     PrimaryAction("Se connecter", onClick = onLogin)
                     Spacer(Modifier.height(10.dp))
                     SecondaryAction("Créer un compte professionnel", onClick = onRegister)
-                    QuietAction("Aide et limites du service", onClick = onHelp)
-                    QuietAction("Confidentialité et conditions", onClick = onLegal)
+                    androidx.compose.material3.TextButton(onClick = onHelp, modifier = Modifier.fillMaxWidth()) {
+                        Text("Aide et limites du service", color = Color.White)
+                    }
+                    androidx.compose.material3.TextButton(onClick = onLegal, modifier = Modifier.fillMaxWidth()) {
+                        Text("Confidentialité et conditions", color = Color.White)
+                    }
                 }
             }
         }
@@ -153,7 +157,7 @@ fun LoginScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
-        containerColor = Color.Transparent,
+        containerColor = Color.White,
     ) { padding ->
         Column(
             Modifier
@@ -251,7 +255,12 @@ fun RegisterScreen(
         else -> null
     }
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(Color.White)
+            .verticalScroll(rememberScrollState()),
+    ) {
         AuthHero(
             image = Res.drawable.about,
             title = "Créer un accès",
