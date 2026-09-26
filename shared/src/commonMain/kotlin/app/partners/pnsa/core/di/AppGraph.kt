@@ -5,6 +5,7 @@ import app.partners.pnsa.core.data.CatalogCache
 import app.partners.pnsa.core.data.ScreenStore
 import app.partners.pnsa.core.data.UiPreferences
 import app.partners.pnsa.core.data.createKeyValueStore
+import app.partners.pnsa.core.location.DirectionsClient
 import app.partners.pnsa.core.network.ApiClient
 import app.partners.pnsa.core.session.SessionRepository
 import app.partners.pnsa.features.auth.data.AuthRepository
@@ -27,6 +28,7 @@ class AppGraph {
     val orientations: OrientationRepository = OrientationRepository(api)
     val community: CommunityRepository = CommunityRepository(api)
     val profile: ProfileRepository = ProfileRepository(api, session)
+    val directions: DirectionsClient = DirectionsClient()
 }
 
 val LocalAppGraph = staticCompositionLocalOf<AppGraph> {

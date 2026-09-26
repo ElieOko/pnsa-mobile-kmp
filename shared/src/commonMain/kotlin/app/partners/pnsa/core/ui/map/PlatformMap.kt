@@ -2,6 +2,8 @@ package app.partners.pnsa.core.ui.map
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import app.partners.pnsa.core.location.LatLngPoint
+import app.partners.pnsa.core.location.RouteTrack
 import app.partners.pnsa.features.structure.domain.models.HealthStructure
 
 @Composable
@@ -10,6 +12,8 @@ expect fun PlatformStructureMap(
     selectedId: Long?,
     onSelect: (HealthStructure) -> Unit,
     modifier: Modifier = Modifier,
+    userLocation: LatLngPoint? = null,
+    route: RouteTrack? = null,
 )
 
-expect fun usesOpenStreetMap(): Boolean
+expect fun usesGoogleMaps(): Boolean
