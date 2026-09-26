@@ -66,4 +66,14 @@ fun decodePolyline(encoded: String): List<LatLngPoint> {
     return points
 }
 
+fun bearingDegrees(from: LatLngPoint, to: LatLngPoint): Float {
+    val lat1 = toRadians(from.latitude)
+    val lat2 = toRadians(to.latitude)
+    val dLon = toRadians(to.longitude - from.longitude)
+    val y = sin(dLon) * cos(lat2)
+    val x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon)
+    val bearing = atan2(y, x) * 180.0 / PI
+    return ((bearing + 360.0) % 360.0).toFloat()
+}
+
 private fun toRadians(degrees: Double): Double = degrees * PI / 180.0
