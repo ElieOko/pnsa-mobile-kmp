@@ -14,6 +14,8 @@ expect fun PlatformStructureMap(
     modifier: Modifier = Modifier,
     userLocation: LatLngPoint? = null,
     route: RouteTrack? = null,
+    followUser: Boolean = true,
+    onFollowInterrupted: () -> Unit = {},
 )
 
 expect fun usesGoogleMaps(): Boolean

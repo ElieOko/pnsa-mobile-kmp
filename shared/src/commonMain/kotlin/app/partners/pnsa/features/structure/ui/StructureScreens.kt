@@ -1,16 +1,24 @@
 package app.partners.pnsa.features.structure.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import app.partners.pnsa.core.ui.components.PnsaChip
 import app.partners.pnsa.core.ui.components.PnsaScaffold
@@ -22,9 +30,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import app.partners.pnsa.core.ui.components.quietClick
+import app.partners.pnsa.core.ui.theme.PnsaBlue
 import app.partners.pnsa.core.di.LocalAppGraph
 import app.partners.pnsa.core.location.LatLngPoint
 import app.partners.pnsa.core.location.RouteTrack
@@ -37,7 +50,6 @@ import app.partners.pnsa.core.ui.components.ErrorState
 import app.partners.pnsa.core.ui.components.GpsPlaceCard
 import app.partners.pnsa.core.ui.components.KinshasaMapMath
 import app.partners.pnsa.core.ui.components.LoadingState
-import app.partners.pnsa.core.ui.components.MapLegendRow
 import app.partners.pnsa.core.ui.components.MetaRow
 import app.partners.pnsa.core.ui.components.PageBackdrop
 import app.partners.pnsa.core.ui.components.PnsaCard
@@ -66,7 +78,7 @@ fun StructureListScreen(navigator: AppNavigator) {
     var loading by remember { mutableStateOf(!graph.screens.structuresLoaded) }
     var error by remember { mutableStateOf<String?>(null) }
     var selectedId by remember { mutableStateOf(graph.prefs.mapSelectedId ?: items.firstOrNull()?.id) }
-    var showMap by remember { mutableStateOf(graph.prefs.mapShowMap) }
+    var showMap by remember { mutableStateOf(true) }
 
     fun apply(list: List<HealthStructure>) {
         val merged = KinshasaCenters.mergeWith(list)
@@ -120,100 +132,141 @@ fun StructureListScreen(navigator: AppNavigator) {
     }
     val selected = filtered.firstOrNull { it.id == selectedId }
     val navigation = rememberMapNavigation(selected)
+    var followUser by remember { mutableStateOf(true) }
 
     PnsaScaffold(topBar = { PnsaTopBar("Trouver une structure") }) { padding ->
-        PageBackdrop {
-        LazyColumn(
-            Modifier.padding(padding).padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            item {
-                Text("Annuaire GPS Kinshasa", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(
-                    if (usesGoogleMaps()) "Google Maps interactif · itinéraire depuis ta position."
-                    else "Carte locale Kinshasa · centres disponibles hors ligne.",
-                )
-                Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PnsaChip(label = "Carte", selected = showMap, onClick = {
-                        showMap = true
-                        graph.prefs.mapShowMap = true
-                    })
-                    PnsaChip(label = "Liste", selected = !showMap, onClick = {
-                        showMap = false
-                        graph.prefs.mapShowMap = false
-                    })
-                }
-            }
-            item {
-                PnsaTextField(query, {
-                    query = it
-                    graph.prefs.mapQuery = it
-                }, "Nom, service ou commune")
-                Spacer(Modifier.height(8.dp))
-                PnsaTextField(city, {
-                    city = it
-                    graph.prefs.mapCity = it
-                }, "Commune / ville")
-                Spacer(Modifier.height(8.dp))
-                PrimaryAction(if (loading) "Recherche…" else "Actualiser l’annuaire") { load() }
-            }
+        Box(Modifier.padding(padding).fillMaxSize()) {
             if (showMap) {
-                item {
-                    MapLegendRow()
-                    Spacer(Modifier.height(8.dp))
-                    if (!navigation.granted) {
-                        StatusBanner("Autorise la localisation pour afficher l’itinéraire depuis ta position.")
-                        Spacer(Modifier.height(8.dp))
-                    } else if (navigation.user == null) {
-                        StatusBanner("Recherche de ta position…")
-                        Spacer(Modifier.height(8.dp))
-                    } else if (navigation.route != null) {
-                        StatusBanner("Itinéraire : ${navigation.route.summary}")
-                        Spacer(Modifier.height(8.dp))
+                PlatformStructureMap(
+                    structures = filtered,
+                    selectedId = selectedId,
+                    onSelect = { marker ->
+                        selectedId = marker.id
+                        graph.prefs.mapSelectedId = marker.id
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                    userLocation = navigation.user,
+                    route = navigation.route,
+                    followUser = followUser && navigation.granted,
+                    onFollowInterrupted = { followUser = false },
+                )
+                Column(
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PnsaChip(label = "Carte", selected = true, onClick = {})
+                        PnsaChip(label = "Liste", selected = false, onClick = {
+                            showMap = false
+                            graph.prefs.mapShowMap = false
+                        })
                     }
-                    PlatformStructureMap(
-                        structures = filtered,
-                        selectedId = selectedId,
-                        onSelect = { marker ->
-                            selectedId = marker.id
-                            graph.prefs.mapSelectedId = marker.id
-                        },
-                        modifier = Modifier.fillMaxWidth().height(320.dp),
-                        userLocation = navigation.user,
-                        route = navigation.route,
+                    Spacer(Modifier.height(8.dp))
+                    PnsaTextField(query, {
+                        query = it
+                        graph.prefs.mapQuery = it
+                    }, "Nom, service ou commune")
+                    if (!navigation.granted) {
+                        Spacer(Modifier.height(8.dp))
+                        StatusBanner("Autorise la localisation pour suivre ton déplacement.")
+                    } else if (navigation.user == null) {
+                        Spacer(Modifier.height(8.dp))
+                        StatusBanner("Recherche de ta position…")
+                    }
+                }
+                Box(
+                    Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = 12.dp)
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(if (followUser) PnsaBlue else Color.White)
+                        .quietClick(onClick = { followUser = true }),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Default.MyLocation,
+                        contentDescription = "Suivre ma position",
+                        tint = if (followUser) Color.White else PnsaBlue,
                     )
                 }
-                item {
+                Column(
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                ) {
+                    if (navigation.route != null) {
+                        StatusBanner("En route · ${navigation.route.summary}")
+                        Spacer(Modifier.height(8.dp))
+                    }
                     if (selected != null) {
-                        Column {
-                            GpsPlaceCard(selected) { selected.id?.let { navigator.push(AppDestination.StructureDetail(it)) } }
-                            Spacer(Modifier.height(6.dp))
-                            StatusBanner(KinshasaMapMath.formatCoord(selected.latitude, selected.longitude))
+                        GpsPlaceCard(selected) {
+                            selected.id?.let { navigator.push(AppDestination.StructureDetail(it)) }
                         }
                     }
                 }
-            }
-            if (error != null && filtered.isEmpty()) {
-                item { ErrorState(error.orEmpty(), onRetry = { load() }) }
-            }
-            items(filtered, key = { it.id ?: it.displayName }) { structure ->
-                PnsaCard(onClick = {
-                    selectedId = structure.id
-                    graph.prefs.mapSelectedId = structure.id
-                    structure.id?.let { navigator.push(AppDestination.StructureDetail(it)) }
-                }) {
-                    Text(structure.displayName, fontWeight = FontWeight.SemiBold)
-                    Text("${structure.province ?: "—"} · ${structure.displayCity}")
-                    Text(structure.displayAddress, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (structure.hasCoordinates) {
-                        Spacer(Modifier.height(6.dp))
-                        MetaRow(listOf(KinshasaMapMath.formatCoord(structure.latitude, structure.longitude)))
+            } else {
+                PageBackdrop {
+                    LazyColumn(
+                        Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        item {
+                            Spacer(Modifier.height(8.dp))
+                            Text("Annuaire GPS Kinshasa", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(
+                                if (usesGoogleMaps()) "Google Maps interactif · suivi de ta position."
+                                else "Carte locale Kinshasa · centres disponibles hors ligne.",
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                PnsaChip(label = "Carte", selected = false, onClick = {
+                                    showMap = true
+                                    followUser = true
+                                    graph.prefs.mapShowMap = true
+                                })
+                                PnsaChip(label = "Liste", selected = true, onClick = {})
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            PnsaTextField(query, {
+                                query = it
+                                graph.prefs.mapQuery = it
+                            }, "Nom, service ou commune")
+                            Spacer(Modifier.height(8.dp))
+                            PnsaTextField(city, {
+                                city = it
+                                graph.prefs.mapCity = it
+                            }, "Commune / ville")
+                            Spacer(Modifier.height(8.dp))
+                            PrimaryAction(if (loading) "Recherche…" else "Actualiser l’annuaire") { load() }
+                        }
+                        if (error != null && filtered.isEmpty()) {
+                            item { ErrorState(error.orEmpty(), onRetry = { load() }) }
+                        }
+                        items(filtered, key = { it.id ?: it.displayName }) { structure ->
+                            PnsaCard(onClick = {
+                                selectedId = structure.id
+                                graph.prefs.mapSelectedId = structure.id
+                                showMap = true
+                                followUser = true
+                                graph.prefs.mapShowMap = true
+                            }) {
+                                Text(structure.displayName, fontWeight = FontWeight.SemiBold)
+                                Text("${structure.province ?: "—"} · ${structure.displayCity}")
+                                Text(structure.displayAddress, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                if (structure.hasCoordinates) {
+                                    Spacer(Modifier.height(6.dp))
+                                    MetaRow(listOf(KinshasaMapMath.formatCoord(structure.latitude, structure.longitude)))
+                                }
+                            }
+                        }
+                        item { Spacer(Modifier.height(24.dp)) }
                     }
                 }
             }
-            item { Spacer(Modifier.height(24.dp)) }
-        }
         }
     }
 }
@@ -283,9 +336,10 @@ fun StructureDetailScreen(id: Long, navigator: AppNavigator, onBack: () -> Unit)
                             structures = listOf(structure),
                             selectedId = structure.id,
                             onSelect = {},
-                            modifier = Modifier.fillMaxWidth().height(220.dp),
+                            modifier = Modifier.fillMaxWidth().height(280.dp),
                             userLocation = navigation.user,
                             route = navigation.route,
+                            followUser = true,
                         )
                         Spacer(Modifier.height(8.dp))
                         StatusBanner("Position : ${KinshasaMapMath.formatCoord(structure.latitude, structure.longitude)}.")

@@ -1,7 +1,6 @@
 package app.partners.pnsa.core.ui.map
 
 import android.os.Bundle
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -9,22 +8,22 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.partners.pnsa.core.location.LatLngPoint
 import app.partners.pnsa.core.location.RouteTrack
+import app.partners.pnsa.core.location.bearingDegrees
+import app.partners.pnsa.core.location.haversineMeters
 import app.partners.pnsa.features.structure.domain.models.HealthStructure
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.MapView
 import com.google.android.gms.maps.MapsInitializer
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.Polyline
@@ -35,7 +34,7 @@ private class GoogleMapState {
     var lastRouteSize: Int = -1
     var lastSelectedId: Long? = null
     var lastUser: LatLngPoint? = null
-    var fittedRoute = false
+    var lastFollow = false
     val markers = mutableListOf<Marker>()
     var outline: Polyline? = null
     var track: Polyline? = null
@@ -49,6 +48,8 @@ actual fun PlatformStructureMap(
     modifier: Modifier,
     userLocation: LatLngPoint?,
     route: RouteTrack?,
+    followUser: Boolean,
+    onFollowInterrupted: () -> Unit,
 ) {
     val points = remember(structures) { structures.filter { it.hasCoordinates } }
     val state = remember { GoogleMapState() }
@@ -72,7 +73,7 @@ actual fun PlatformStructureMap(
     }
 
     AndroidView(
-        modifier = modifier.clip(RoundedCornerShape(22.dp)),
+        modifier = modifier,
         factory = { context ->
             MapsInitializer.initialize(context)
             MapView(context).apply {
@@ -80,23 +81,33 @@ actual fun PlatformStructureMap(
                 mapView = this
                 getMapAsync { googleMap ->
                     configureMap(googleMap)
+                    googleMap.setOnCameraMoveStartedListener { reason ->
+                        if (reason == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE) {
+                            onFollowInterrupted()
+                        }
+                    }
                     googleMap.setOnMarkerClickListener { marker ->
                         val structure = marker.tag as? HealthStructure ?: return@setOnMarkerClickListener false
                         onSelect(structure)
                         true
                     }
-                    bindGoogleMap(state, googleMap, points, selectedId, userLocation, route)
+                    bindGoogleMap(state, googleMap, points, selectedId, userLocation, route, followUser)
                 }
             }
         },
         update = { view ->
             view.getMapAsync { googleMap ->
+                googleMap.setOnCameraMoveStartedListener { reason ->
+                    if (reason == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE) {
+                        onFollowInterrupted()
+                    }
+                }
                 googleMap.setOnMarkerClickListener { marker ->
                     val structure = marker.tag as? HealthStructure ?: return@setOnMarkerClickListener false
                     onSelect(structure)
                     true
                 }
-                bindGoogleMap(state, googleMap, points, selectedId, userLocation, route)
+                bindGoogleMap(state, googleMap, points, selectedId, userLocation, route, followUser)
             }
         },
     )
@@ -104,16 +115,17 @@ actual fun PlatformStructureMap(
 
 private fun configureMap(map: GoogleMap) {
     map.uiSettings.apply {
-        isZoomControlsEnabled = true
+        isZoomControlsEnabled = false
         isZoomGesturesEnabled = true
         isScrollGesturesEnabled = true
         isRotateGesturesEnabled = true
         isTiltGesturesEnabled = true
         isCompassEnabled = true
-        isMyLocationButtonEnabled = true
+        isMyLocationButtonEnabled = false
+        isIndoorLevelPickerEnabled = false
         isMapToolbarEnabled = false
     }
-    map.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(-4.3276, 15.3136), 12.4f))
+    map.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(-4.3276, 15.3136), 16.5f))
 }
 
 private fun bindGoogleMap(
@@ -123,9 +135,9 @@ private fun bindGoogleMap(
     selectedId: Long?,
     userLocation: LatLngPoint?,
     route: RouteTrack?,
+    followUser: Boolean,
 ) {
     runCatching { map.isMyLocationEnabled = userLocation != null }
-    map.uiSettings.isMyLocationButtonEnabled = userLocation != null
 
     val ids = structures.map { it.id }
     if (ids != state.lastIds) {
@@ -165,7 +177,6 @@ private fun bindGoogleMap(
         state.lastRouteSize = routePoints.size
         state.outline?.remove()
         state.track?.remove()
-        state.fittedRoute = false
         if (routePoints.size >= 2) {
             val latLngs = routePoints.map { LatLng(it.latitude, it.longitude) }
             state.outline = map.addPolyline(
@@ -177,28 +188,39 @@ private fun bindGoogleMap(
         }
     }
 
-    if (routePoints.size >= 2 && !state.fittedRoute) {
-        runCatching {
-            val bounds = LatLngBounds.builder()
-            routePoints.forEach { bounds.include(LatLng(it.latitude, it.longitude)) }
-            map.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds.build(), 96))
-            state.fittedRoute = true
-        }
-    } else if (selectedId != state.lastSelectedId) {
-        val selected = structures.firstOrNull { it.id == selectedId }
-        if (selected != null && routePoints.size < 2) {
+    if (followUser && userLocation != null) {
+        val moved = state.lastUser == null || haversineMeters(state.lastUser!!, userLocation) >= 1.5
+        val resumed = followUser && !state.lastFollow
+        if (moved || resumed) {
+            val heading = state.lastUser?.let { previous ->
+                if (haversineMeters(previous, userLocation) >= 3) bearingDegrees(previous, userLocation) else null
+            } ?: map.cameraPosition.bearing
+            val zoom = if (resumed || map.cameraPosition.zoom < 15f) 17.2f else map.cameraPosition.zoom.coerceIn(16f, 18.5f)
             map.animateCamera(
-                CameraUpdateFactory.newLatLngZoom(LatLng(selected.latitude!!, selected.longitude!!), 14.5f),
+                CameraUpdateFactory.newCameraPosition(
+                    CameraPosition.Builder()
+                        .target(LatLng(userLocation.latitude, userLocation.longitude))
+                        .zoom(zoom)
+                        .tilt(42f)
+                        .bearing(heading)
+                        .build(),
+                ),
+                380,
+                null,
             )
         }
-    } else if (userLocation != null && state.lastUser == null && routePoints.size < 2) {
-        map.animateCamera(
-            CameraUpdateFactory.newLatLngZoom(LatLng(userLocation.latitude, userLocation.longitude), 14.2f),
-        )
+    } else if (selectedId != state.lastSelectedId && !followUser) {
+        val selected = structures.firstOrNull { it.id == selectedId }
+        if (selected != null) {
+            map.animateCamera(
+                CameraUpdateFactory.newLatLngZoom(LatLng(selected.latitude!!, selected.longitude!!), 15.5f),
+            )
+        }
     }
 
     state.lastSelectedId = selectedId
     state.lastUser = userLocation
+    state.lastFollow = followUser
 }
 
 actual fun usesGoogleMaps(): Boolean = true

@@ -15,6 +15,8 @@ actual fun PlatformStructureMap(
     modifier: Modifier,
     userLocation: LatLngPoint?,
     route: RouteTrack?,
+    followUser: Boolean,
+    onFollowInterrupted: () -> Unit,
 ) {
     KinshasaGpsMap(
         structures = structures,

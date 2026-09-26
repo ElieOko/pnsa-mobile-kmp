@@ -1,6 +1,7 @@
 package app.partners.pnsa
 
 import app.partners.pnsa.core.location.LatLngPoint
+import app.partners.pnsa.core.location.bearingDegrees
 import app.partners.pnsa.core.location.decodePolyline
 import app.partners.pnsa.core.location.haversineMeters
 import app.partners.pnsa.core.location.shouldRefreshRoute
@@ -30,5 +31,13 @@ class DirectionsGeoTest {
         assertFalse(shouldRefreshRoute(origin, nearby, minMeters = 80.0))
         assertTrue(haversineMeters(origin, LatLngPoint(-4.3400, 15.3300)) > 80.0)
         assertTrue(shouldRefreshRoute(origin, LatLngPoint(-4.3400, 15.3300)))
+    }
+
+    @Test
+    fun bearingPointsEastward() {
+        val from = LatLngPoint(-4.3276, 15.3136)
+        val to = LatLngPoint(-4.3276, 15.3236)
+        val bearing = bearingDegrees(from, to)
+        assertTrue(bearing in 80f..100f, "bearing=$bearing")
     }
 }

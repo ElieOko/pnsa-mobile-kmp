@@ -67,9 +67,10 @@ actual fun locationUpdates(): Flow<LatLngPoint> = callbackFlow {
             }
         }
     }
-    val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5_000L)
-        .setMinUpdateIntervalMillis(3_000L)
-        .setMinUpdateDistanceMeters(12f)
+    val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1_200L)
+        .setMinUpdateIntervalMillis(600L)
+        .setMinUpdateDistanceMeters(2f)
+        .setWaitForAccurateLocation(false)
         .build()
     val callback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {

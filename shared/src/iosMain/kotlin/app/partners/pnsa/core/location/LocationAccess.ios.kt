@@ -73,6 +73,7 @@ actual fun locationUpdates(): Flow<LatLngPoint> = callbackFlow {
     )
     manager.delegate = delegate
     manager.desiredAccuracy = platform.CoreLocation.kCLLocationAccuracyBest
+    manager.distanceFilter = 3.0
     if (manager.authorizationStatus.isGranted()) {
         manager.startUpdatingLocation()
     } else if (manager.authorizationStatus == kCLAuthorizationStatusNotDetermined) {
