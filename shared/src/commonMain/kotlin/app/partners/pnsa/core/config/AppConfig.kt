@@ -10,6 +10,7 @@ object AppConfig {
     const val contactPhoneTel: String = "+243862011506"
     const val privacyPolicyVersion: String = "1.0"
     const val termsVersion: String = "1.0"
+    const val googleMapsApiKey: String = "AIzaSyBtJ_UIIACwrn6lDgoHYsoDaeBIsr-HKTE"
 
     fun mediaUrl(path: String?): String? {
         val clean = path?.trim().orEmpty()

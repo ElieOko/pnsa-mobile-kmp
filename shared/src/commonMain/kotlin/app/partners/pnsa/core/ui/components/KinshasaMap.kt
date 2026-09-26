@@ -40,6 +40,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.partners.pnsa.core.location.RouteTrack
 import app.partners.pnsa.core.ui.theme.PnsaBlue
 import app.partners.pnsa.core.ui.theme.PnsaNavy
 import app.partners.pnsa.core.ui.theme.PnsaRed
@@ -82,6 +83,7 @@ fun KinshasaGpsMap(
     modifier: Modifier = Modifier,
     userLat: Double = -4.3276,
     userLon: Double = 15.3136,
+    route: RouteTrack? = null,
 ) {
     val markers = remember(structures) { structures.filter { it.hasCoordinates } }
     val selected = markers.firstOrNull { it.id == selectedId }
@@ -160,6 +162,13 @@ fun KinshasaGpsMap(
             communes.forEach { commune ->
                 val p = KinshasaMapMath.project(commune.lat, commune.lon, w, h)
                 drawCircle(Color.White.copy(alpha = 0.08f), 18f, p)
+            }
+
+            route?.points?.zipWithNext { start, end ->
+                val from = KinshasaMapMath.project(start.latitude, start.longitude, w, h)
+                val to = KinshasaMapMath.project(end.latitude, end.longitude, w, h)
+                drawLine(Color(0xFF0B3C8A), from, to, strokeWidth = 10f, cap = StrokeCap.Round)
+                drawLine(PnsaBlue, from, to, strokeWidth = 6f, cap = StrokeCap.Round)
             }
 
             val user = KinshasaMapMath.project(userLat, userLon, w, h)
@@ -258,6 +267,7 @@ fun MapLegendRow() {
         LegendDot(PnsaBlue, "Position")
         LegendDot(Color(0xFFFFC107), "Centre")
         LegendDot(PnsaRed, "Sélection")
+        LegendDot(Color(0xFF0B3C8A), "Itinéraire")
     }
 }
 

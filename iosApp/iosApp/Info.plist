@@ -4,5 +4,9 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>PNSA utilise ta position pour afficher l’itinéraire jusqu’à une structure de santé.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>PNSA utilise ta position pour afficher l’itinéraire jusqu’à une structure de santé.</string>
 </dict>
 </plist>

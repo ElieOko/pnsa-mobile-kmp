@@ -26,6 +26,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.partners.pnsa.core.di.LocalAppGraph
+import app.partners.pnsa.core.location.LatLngPoint
+import app.partners.pnsa.core.location.RouteTrack
+import app.partners.pnsa.core.location.locationUpdates
+import app.partners.pnsa.core.location.rememberLocationGranted
+import app.partners.pnsa.core.location.shouldRefreshRoute
 import app.partners.pnsa.core.network.ApiException
 import app.partners.pnsa.core.ui.components.EmptyState
 import app.partners.pnsa.core.ui.components.ErrorState
@@ -41,7 +46,7 @@ import app.partners.pnsa.core.ui.components.PnsaTopBar
 import app.partners.pnsa.core.ui.components.PrimaryAction
 import app.partners.pnsa.core.ui.components.StatusBanner
 import app.partners.pnsa.core.ui.map.PlatformStructureMap
-import app.partners.pnsa.core.ui.map.usesOpenStreetMap
+import app.partners.pnsa.core.ui.map.usesGoogleMaps
 import app.partners.pnsa.core.ui.navigation.AppDestination
 import app.partners.pnsa.core.ui.navigation.AppNavigator
 import app.partners.pnsa.core.util.formatIsoDate
@@ -113,6 +118,8 @@ fun StructureListScreen(navigator: AppNavigator) {
         val matchesProvince = province.isBlank() || item.province.orEmpty().contains(province, ignoreCase = true)
         matchesQuery && matchesCity && matchesProvince
     }
+    val selected = filtered.firstOrNull { it.id == selectedId }
+    val navigation = rememberMapNavigation(selected)
 
     PnsaScaffold(topBar = { PnsaTopBar("Trouver une structure") }) { padding ->
         PageBackdrop {
@@ -123,7 +130,7 @@ fun StructureListScreen(navigator: AppNavigator) {
             item {
                 Text("Annuaire GPS Kinshasa", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text(
-                    if (usesOpenStreetMap()) "Carte OpenStreetMap Android · centres locaux disponibles hors ligne."
+                    if (usesGoogleMaps()) "Google Maps interactif · itinéraire depuis ta position."
                     else "Carte locale Kinshasa · centres disponibles hors ligne.",
                 )
                 Spacer(Modifier.height(8.dp))
@@ -155,6 +162,16 @@ fun StructureListScreen(navigator: AppNavigator) {
                 item {
                     MapLegendRow()
                     Spacer(Modifier.height(8.dp))
+                    if (!navigation.granted) {
+                        StatusBanner("Autorise la localisation pour afficher l’itinéraire depuis ta position.")
+                        Spacer(Modifier.height(8.dp))
+                    } else if (navigation.user == null) {
+                        StatusBanner("Recherche de ta position…")
+                        Spacer(Modifier.height(8.dp))
+                    } else if (navigation.route != null) {
+                        StatusBanner("Itinéraire : ${navigation.route.summary}")
+                        Spacer(Modifier.height(8.dp))
+                    }
                     PlatformStructureMap(
                         structures = filtered,
                         selectedId = selectedId,
@@ -163,10 +180,11 @@ fun StructureListScreen(navigator: AppNavigator) {
                             graph.prefs.mapSelectedId = marker.id
                         },
                         modifier = Modifier.fillMaxWidth().height(320.dp),
+                        userLocation = navigation.user,
+                        route = navigation.route,
                     )
                 }
                 item {
-                    val selected = filtered.firstOrNull { it.id == selectedId }
                     if (selected != null) {
                         Column {
                             GpsPlaceCard(selected) { selected.id?.let { navigator.push(AppDestination.StructureDetail(it)) } }
@@ -252,15 +270,25 @@ fun StructureDetailScreen(id: Long, navigator: AppNavigator, onBack: () -> Unit)
                         Text(structure.services.orEmpty())
                     }
                     if (structure.hasCoordinates) {
+                        val navigation = rememberMapNavigation(structure)
                         Spacer(Modifier.height(8.dp))
+                        if (!navigation.granted) {
+                            StatusBanner("Autorise la localisation pour tracer l’itinéraire jusqu’à cette structure.")
+                            Spacer(Modifier.height(8.dp))
+                        } else if (navigation.route != null) {
+                            StatusBanner("Itinéraire : ${navigation.route.summary}")
+                            Spacer(Modifier.height(8.dp))
+                        }
                         PlatformStructureMap(
                             structures = listOf(structure),
                             selectedId = structure.id,
                             onSelect = {},
                             modifier = Modifier.fillMaxWidth().height(220.dp),
+                            userLocation = navigation.user,
+                            route = navigation.route,
                         )
                         Spacer(Modifier.height(8.dp))
-                        StatusBanner("Position indicative : ${KinshasaMapMath.formatCoord(structure.latitude, structure.longitude)}. Ce n’est pas un temps de trajet.")
+                        StatusBanner("Position : ${KinshasaMapMath.formatCoord(structure.latitude, structure.longitude)}.")
                     } else {
                         Spacer(Modifier.height(8.dp))
                         StatusBanner("Coordonnées GPS non renseignées. La fiche reste consultable.")
@@ -399,4 +427,48 @@ fun OrientationCreateScreen(structureId: Long, navigator: AppNavigator, onBack: 
             }
         }
     }
+}
+
+private data class MapNavigationState(
+    val granted: Boolean,
+    val user: LatLngPoint?,
+    val route: RouteTrack?,
+)
+
+@Composable
+private fun rememberMapNavigation(destination: HealthStructure?): MapNavigationState {
+    val graph = LocalAppGraph.current
+    val granted = rememberLocationGranted()
+    var user by remember { mutableStateOf<LatLngPoint?>(null) }
+    var route by remember { mutableStateOf<RouteTrack?>(null) }
+    var lastOrigin by remember { mutableStateOf<LatLngPoint?>(null) }
+    var lastDestId by remember { mutableStateOf<Long?>(null) }
+
+    LaunchedEffect(granted) {
+        if (!granted) {
+            user = null
+            route = null
+            return@LaunchedEffect
+        }
+        locationUpdates().collect { user = it }
+    }
+
+    LaunchedEffect(granted, user, destination?.id) {
+        val origin = user
+        val dest = destination
+        if (!granted || origin == null || dest == null || !dest.hasCoordinates) {
+            if (dest?.id != lastDestId) route = null
+            return@LaunchedEffect
+        }
+        val destPoint = LatLngPoint(dest.latitude!!, dest.longitude!!)
+        val sameDest = dest.id == lastDestId
+        if (sameDest && route != null && !shouldRefreshRoute(lastOrigin, origin)) {
+            return@LaunchedEffect
+        }
+        lastOrigin = origin
+        lastDestId = dest.id
+        route = graph.directions.route(origin, destPoint)
+    }
+
+    return MapNavigationState(granted = granted, user = user, route = route)
 }
