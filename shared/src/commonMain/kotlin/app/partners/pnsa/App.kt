@@ -27,6 +27,7 @@ import app.partners.pnsa.core.ui.navigation.AppDestination
 import app.partners.pnsa.core.ui.navigation.AppNavigator
 import app.partners.pnsa.core.ui.navigation.MainTab
 import app.partners.pnsa.core.ui.theme.LocalEmbeddedChrome
+import app.partners.pnsa.core.ui.theme.LocalTabActive
 import app.partners.pnsa.core.ui.theme.PnsaTheme
 import app.partners.pnsa.features.auth.ui.LegalScreen
 import app.partners.pnsa.features.auth.ui.LoginScreen
@@ -93,9 +94,14 @@ private fun PnsaRoot(graph: AppGraph) {
         }
     }
 
+    val onMapTab = navigator.tab == MainTab.Structures
+    LaunchedEffect(onMapTab) {
+        if (onMapTab && drawerState.isOpen) drawerState.close()
+    }
+
     ModalNavigationDrawer(
         drawerState = drawerState,
-        gesturesEnabled = !navigator.canPop,
+        gesturesEnabled = !navigator.canPop && !onMapTab,
         drawerContent = {
             PnsaDrawerContent(
                 name = user?.displayName ?: "Professionnel PNSA",
@@ -137,7 +143,9 @@ private fun PnsaRoot(graph: AppGraph) {
                     MainTab.entries.forEach { tab ->
                         if (tab in visited) {
                             KeepAlivePane(visible = navigator.tab == tab) {
-                                SignedInFlow(navigator, tab) { logout() }
+                                CompositionLocalProvider(LocalTabActive provides (navigator.tab == tab)) {
+                                    SignedInFlow(navigator, tab) { logout() }
+                                }
                             }
                         }
                     }

@@ -1,6 +1,8 @@
 package app.partners.pnsa.core.ui.map
 
+import android.annotation.SuppressLint
 import android.os.Bundle
+import android.view.MotionEvent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -14,15 +16,14 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.partners.pnsa.core.location.LatLngPoint
 import app.partners.pnsa.core.location.RouteTrack
-import app.partners.pnsa.core.location.bearingDegrees
 import app.partners.pnsa.core.location.haversineMeters
+import app.partners.pnsa.core.ui.theme.LocalTabActive
 import app.partners.pnsa.features.structure.domain.models.HealthStructure
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.MapView
 import com.google.android.gms.maps.MapsInitializer
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
-import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
@@ -30,16 +31,17 @@ import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
 
 private class GoogleMapState {
+    var map: GoogleMap? = null
     var lastIds: List<Long?> = emptyList()
     var lastRouteSize: Int = -1
     var lastSelectedId: Long? = null
     var lastUser: LatLngPoint? = null
     var lastFollow = false
     val markers = mutableListOf<Marker>()
-    var outline: Polyline? = null
     var track: Polyline? = null
 }
 
+@SuppressLint("ClickableViewAccessibility")
 @Composable
 actual fun PlatformStructureMap(
     structures: List<HealthStructure>,
@@ -54,11 +56,14 @@ actual fun PlatformStructureMap(
     val points = remember(structures) { structures.filter { it.hasCoordinates } }
     val state = remember { GoogleMapState() }
     val lifecycleOwner = LocalLifecycleOwner.current
+    val tabActive = LocalTabActive.current
     var mapView by remember { mutableStateOf<MapView?>(null) }
 
-    DisposableEffect(lifecycleOwner, mapView) {
+    DisposableEffect(lifecycleOwner, mapView, tabActive) {
         val view = mapView ?: return@DisposableEffect onDispose { }
+        if (tabActive) view.onResume() else view.onPause()
         val observer = LifecycleEventObserver { _, event ->
+            if (!tabActive) return@LifecycleEventObserver
             when (event) {
                 Lifecycle.Event.ON_START -> view.onStart()
                 Lifecycle.Event.ON_RESUME -> view.onResume()
@@ -79,7 +84,15 @@ actual fun PlatformStructureMap(
             MapView(context).apply {
                 onCreate(Bundle())
                 mapView = this
+                setOnTouchListener { touched, event ->
+                    touched.parent?.requestDisallowInterceptTouchEvent(true)
+                    if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
+                        touched.parent?.requestDisallowInterceptTouchEvent(false)
+                    }
+                    false
+                }
                 getMapAsync { googleMap ->
+                    state.map = googleMap
                     configureMap(googleMap)
                     googleMap.setOnCameraMoveStartedListener { reason ->
                         if (reason == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE) {
@@ -95,18 +108,8 @@ actual fun PlatformStructureMap(
                 }
             }
         },
-        update = { view ->
-            view.getMapAsync { googleMap ->
-                googleMap.setOnCameraMoveStartedListener { reason ->
-                    if (reason == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE) {
-                        onFollowInterrupted()
-                    }
-                }
-                googleMap.setOnMarkerClickListener { marker ->
-                    val structure = marker.tag as? HealthStructure ?: return@setOnMarkerClickListener false
-                    onSelect(structure)
-                    true
-                }
+        update = {
+            state.map?.let { googleMap ->
                 bindGoogleMap(state, googleMap, points, selectedId, userLocation, route, followUser)
             }
         },
@@ -114,18 +117,24 @@ actual fun PlatformStructureMap(
 }
 
 private fun configureMap(map: GoogleMap) {
+    map.mapType = GoogleMap.MAP_TYPE_NORMAL
+    map.isBuildingsEnabled = false
+    map.isIndoorEnabled = false
+    map.isTrafficEnabled = false
     map.uiSettings.apply {
         isZoomControlsEnabled = false
         isZoomGesturesEnabled = true
         isScrollGesturesEnabled = true
         isRotateGesturesEnabled = true
-        isTiltGesturesEnabled = true
+        isTiltGesturesEnabled = false
         isCompassEnabled = true
         isMyLocationButtonEnabled = false
         isIndoorLevelPickerEnabled = false
         isMapToolbarEnabled = false
     }
-    map.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(-4.3276, 15.3136), 16.5f))
+    map.setMinZoomPreference(11f)
+    map.setMaxZoomPreference(18f)
+    map.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(-4.3276, 15.3136), 15.8f))
 }
 
 private fun bindGoogleMap(
@@ -175,45 +184,34 @@ private fun bindGoogleMap(
     val routePoints = route?.points.orEmpty()
     if (routePoints.size != state.lastRouteSize) {
         state.lastRouteSize = routePoints.size
-        state.outline?.remove()
         state.track?.remove()
         if (routePoints.size >= 2) {
-            val latLngs = routePoints.map { LatLng(it.latitude, it.longitude) }
-            state.outline = map.addPolyline(
-                PolylineOptions().addAll(latLngs).color(0xFF0B3C8A.toInt()).width(18f).geodesic(true),
-            )
             state.track = map.addPolyline(
-                PolylineOptions().addAll(latLngs).color(0xFF0069E1.toInt()).width(10f).geodesic(true),
+                PolylineOptions()
+                    .addAll(routePoints.map { LatLng(it.latitude, it.longitude) })
+                    .color(0xFF0069E1.toInt())
+                    .width(10f)
+                    .geodesic(false),
             )
         }
     }
 
     if (followUser && userLocation != null) {
-        val moved = state.lastUser == null || haversineMeters(state.lastUser!!, userLocation) >= 1.5
+        val moved = state.lastUser == null || haversineMeters(state.lastUser!!, userLocation) >= 8
         val resumed = followUser && !state.lastFollow
         if (moved || resumed) {
-            val heading = state.lastUser?.let { previous ->
-                if (haversineMeters(previous, userLocation) >= 3) bearingDegrees(previous, userLocation) else null
-            } ?: map.cameraPosition.bearing
-            val zoom = if (resumed || map.cameraPosition.zoom < 15f) 17.2f else map.cameraPosition.zoom.coerceIn(16f, 18.5f)
-            map.animateCamera(
-                CameraUpdateFactory.newCameraPosition(
-                    CameraPosition.Builder()
-                        .target(LatLng(userLocation.latitude, userLocation.longitude))
-                        .zoom(zoom)
-                        .tilt(42f)
-                        .bearing(heading)
-                        .build(),
-                ),
-                380,
-                null,
-            )
+            val target = LatLng(userLocation.latitude, userLocation.longitude)
+            if (resumed) {
+                map.moveCamera(CameraUpdateFactory.newLatLngZoom(target, 16.2f))
+            } else {
+                map.moveCamera(CameraUpdateFactory.newLatLng(target))
+            }
         }
     } else if (selectedId != state.lastSelectedId && !followUser) {
         val selected = structures.firstOrNull { it.id == selectedId }
         if (selected != null) {
-            map.animateCamera(
-                CameraUpdateFactory.newLatLngZoom(LatLng(selected.latitude!!, selected.longitude!!), 15.5f),
+            map.moveCamera(
+                CameraUpdateFactory.newLatLngZoom(LatLng(selected.latitude!!, selected.longitude!!), 15.2f),
             )
         }
     }

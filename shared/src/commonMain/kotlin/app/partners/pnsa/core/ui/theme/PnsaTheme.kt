@@ -88,6 +88,7 @@ private val PnsaShapes = Shapes(
 )
 
 val LocalEmbeddedChrome = compositionLocalOf { false }
+val LocalTabActive = compositionLocalOf { true }
 
 @Composable
 fun PnsaTheme(
