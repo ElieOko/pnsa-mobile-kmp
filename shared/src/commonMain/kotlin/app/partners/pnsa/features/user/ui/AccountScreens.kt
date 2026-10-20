@@ -20,16 +20,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.Badge
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Help
-import androidx.compose.material.icons.filled.LocationCity
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.HorizontalDivider
@@ -93,8 +88,8 @@ fun MoreMenuScreen(navigator: AppNavigator) {
                 subtitle = "Accès rapide aux services PNSA",
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                ShortcutTile("Discussions", "Questions publiques", Icons.Default.Help, { navigator.push(AppDestination.Forum) }, Modifier.weight(1f))
-                ShortcutTile("Conseil", "Espace privé", Icons.Default.Notifications, { navigator.push(AppDestination.Advice) }, Modifier.weight(1f))
+                ShortcutTile("Carte", "Trouver une structure", Icons.Default.Map, { navigator.push(AppDestination.Structures) }, Modifier.weight(1f))
+                ShortcutTile("Messagerie", "Chat avec une structure", Icons.Default.Chat, { navigator.push(AppDestination.Messages) }, Modifier.weight(1f))
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 ShortcutTile("Orientations", "Mes références", Icons.Default.Place, { navigator.push(AppDestination.Orientations) }, Modifier.weight(1f))

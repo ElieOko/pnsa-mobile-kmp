@@ -26,12 +26,14 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.outlined.Chat
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Quiz
+import androidx.compose.material.icons.outlined.Sms
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalDrawerSheet
@@ -141,12 +143,8 @@ fun TikTokBottomBar(
 }
 
 private fun tabIcons(tab: MainTab): Pair<ImageVector, ImageVector> = when (tab) {
-    MainTab.Home -> Icons.Filled.Home to Icons.Outlined.Home
-    MainTab.Learn -> Icons.Filled.Favorite to Icons.Outlined.FavoriteBorder
-    MainTab.Quiz -> Icons.Filled.Quiz to Icons.Outlined.Quiz
     MainTab.Structures -> Icons.Filled.Map to Icons.Outlined.Map
-    MainTab.Forum -> Icons.Filled.Chat to Icons.Outlined.Chat
-    MainTab.Profile -> Icons.Filled.Person to Icons.Outlined.Person
+    MainTab.Messages -> Icons.Filled.Sms to Icons.Outlined.Sms
 }
 
 @Composable
@@ -186,13 +184,9 @@ fun PnsaDrawerContent(
                     Text("Plateforme professionnelle SSR", color = Color.White.copy(alpha = 0.78f), fontSize = 12.sp)
                 }
             }
-            DrawerItem("Accueil", Icons.Default.Home) { onDestination(AppDestination.Home) }
-            DrawerItem("Apprendre", Icons.Default.Favorite) { onDestination(AppDestination.Learn) }
-            DrawerItem("Quiz", Icons.Default.Quiz) { onDestination(AppDestination.Quizzes) }
             DrawerItem("Carte & structures", Icons.Default.Map) { onDestination(AppDestination.Structures) }
-            DrawerItem("Discussions", Icons.Default.Chat) { onDestination(AppDestination.Forum) }
-            HorizontalDivider(color = bagdeColor.copy(alpha = 0.12f), modifier = Modifier.padding(vertical = 8.dp))
-            DrawerItem("Conseil privé", Icons.Default.Shield) { onDestination(AppDestination.Advice) }
+            DrawerItem("Messagerie", Icons.Default.Sms) { onDestination(AppDestination.Messages) }
+            HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 8.dp))
             DrawerItem("Mes orientations", Icons.Default.Place) { onDestination(AppDestination.Orientations) }
             DrawerItem("Profil", Icons.Default.Person) { onDestination(AppDestination.Profile) }
             DrawerItem("Aide", Icons.Default.Help) { onDestination(AppDestination.Help) }

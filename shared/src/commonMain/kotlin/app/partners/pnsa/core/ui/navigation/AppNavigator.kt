@@ -7,12 +7,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 
 enum class MainTab(val label: String) {
-    Home("Accueil"),
-    Learn("Apprendre"),
-    Quiz("Quiz"),
     Structures("Carte"),
-    Forum("Discussions"),
-    Profile("Profil"),
+    Messages("Messages"),
 }
 
 sealed class AppDestination {
@@ -40,6 +36,8 @@ sealed class AppDestination {
     data object ProfileEdit : AppDestination()
     data object Help : AppDestination()
     data object More : AppDestination()
+    data object Messages : AppDestination()
+    data class StructureChat(val structureId: Long) : AppDestination()
 }
 
 class AppNavigator(
@@ -49,7 +47,7 @@ class AppNavigator(
     private val tabStacks: Map<MainTab, SnapshotStateList<AppDestination>> =
         MainTab.entries.associateWith { tab -> mutableStateListOf(rootFor(tab)) }
 
-    var tab by mutableStateOf(MainTab.Home)
+    var tab by mutableStateOf(tabFor(start) ?: MainTab.Structures)
         private set
     var signedIn by mutableStateOf(start is AppDestination.Home || tabFor(start) != null)
 
@@ -109,32 +107,20 @@ class AppNavigator(
     fun title(): String = titleFor(current)
 
     private fun rootFor(tab: MainTab): AppDestination = when (tab) {
-        MainTab.Home -> AppDestination.Home
-        MainTab.Learn -> AppDestination.Learn
-        MainTab.Quiz -> AppDestination.Quizzes
         MainTab.Structures -> AppDestination.Structures
-        MainTab.Forum -> AppDestination.Forum
-        MainTab.Profile -> AppDestination.Profile
+        MainTab.Messages -> AppDestination.Messages
     }
 
     private fun isTabRoot(destination: AppDestination): Boolean = when (destination) {
-        AppDestination.Home,
-        AppDestination.Learn,
-        AppDestination.Quizzes,
         AppDestination.Structures,
-        AppDestination.Forum,
-        AppDestination.Profile,
+        AppDestination.Messages,
         -> true
         else -> false
     }
 
     fun tabFor(destination: AppDestination): MainTab? = when (destination) {
-        AppDestination.Home -> MainTab.Home
-        AppDestination.Learn, is AppDestination.ContentDetail -> MainTab.Learn
-        AppDestination.Quizzes, is AppDestination.QuizPlay -> MainTab.Quiz
         AppDestination.Structures, is AppDestination.StructureDetail -> MainTab.Structures
-        AppDestination.Forum, is AppDestination.ForumDetail, AppDestination.Advice, is AppDestination.AdviceChat -> MainTab.Forum
-        AppDestination.Profile, AppDestination.ProfileEdit, AppDestination.Orientations, is AppDestination.OrientationDetail, is AppDestination.OrientationCreate, AppDestination.Help, AppDestination.More -> MainTab.Profile
+        AppDestination.Messages, is AppDestination.StructureChat -> MainTab.Messages
         else -> null
     }
 }
@@ -162,4 +148,6 @@ fun titleFor(destination: AppDestination): String = when (destination) {
     AppDestination.Profile -> "Profil"
     AppDestination.ProfileEdit -> "Modifier le profil"
     AppDestination.More -> "Menu"
+    AppDestination.Messages -> "Messagerie"
+    is AppDestination.StructureChat -> "Discussion"
 }

@@ -51,12 +51,15 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
 import app.partners.pnsa.core.location.RouteTrack
 import app.partners.pnsa.core.ui.map.MapViewStyle
@@ -66,10 +69,13 @@ import app.partners.pnsa.core.ui.theme.PnsaMuted
 import app.partners.pnsa.core.ui.theme.bagdeColor
 import app.partners.pnsa.core.ui.theme.wsColor
 import app.partners.pnsa.features.structure.domain.models.HealthStructure
+import app.partners.pnsa.resources.Res
+import app.partners.pnsa.resources.map_marker_logo
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
+import org.jetbrains.compose.resources.imageResource
 
 object KinshasaMapMath {
     data class Bounds(
@@ -163,6 +169,7 @@ fun KinshasaGpsMap(
 ) {
     val markers = remember(structures) { structures.filter { it.hasCoordinates } }
     val selected = markers.firstOrNull { it.id == selectedId }
+    val markerLogo = imageResource(Res.drawable.map_marker_logo)
     val projectionBounds = remember(markers, userLat, userLon, route) {
         KinshasaMapMath.boundsFor(markers, userLat, userLon, route)
     }
@@ -314,22 +321,16 @@ fun KinshasaGpsMap(
             markers.forEach { item ->
                 val rawP = KinshasaMapMath.project(item.latitude!!, item.longitude!!, w, h, projectionBounds)
                 val active = item.id == selectedId
-                val p = if (active) Offset(rawP.x, rawP.y + pinBounce) else rawP
-                val scale = if (active) selectionPop else 1f
-                val pin = if (active) bagdeColor else PnsaGreenDeep.copy(alpha = 0.75f)
-                if (active) {
-                    drawCircle(bagdeColor.copy(alpha = pulseAlpha), pulseRadius * 0.85f, rawP)
-                } else {
-                    drawCircle(wsColor, 13f, rawP)
-                }
-                val path = Path().apply {
-                    moveTo(p.x, p.y + 15f * scale)
-                    quadraticTo(p.x - 13f * scale, p.y - 2f * scale, p.x, p.y - 17f * scale)
-                    quadraticTo(p.x + 13f * scale, p.y - 2f * scale, p.x, p.y + 15f * scale)
-                    close()
-                }
-                drawPath(path, pin)
-                drawCircle(Color.White, 4.5f * scale, Offset(p.x, p.y - 7f * scale))
+                if (active) drawCircle(PnsaRed.copy(alpha = 0.3f), 24f, p)
+                drawCircle(Color.White, if (active) 19f else 17f, p)
+                drawCircle(PnsaRed.copy(alpha = 0.12f), if (active) 17f else 15f, p)
+                val markerSize = if (active) 24 else 22
+                drawImage(
+                    image = markerLogo,
+                    dstOffset = IntOffset((p.x - markerSize / 2f).toInt(), (p.y - markerSize / 2f).toInt()),
+                    dstSize = IntSize(markerSize, markerSize),
+                    colorFilter = ColorFilter.tint(PnsaRed),
+                )
             }
 
             drawRoundRect(
@@ -376,32 +377,14 @@ fun GpsPlaceCard(
                 border = BorderStroke(1.5.dp, bagdeColor.copy(alpha = 0.35f)),
                 shadowElevation = 8.dp,
             ) {
-                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier
-                            .size(46.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(wsColor),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(Icons.Default.Place, contentDescription = null, tint = bagdeColor)
-                    }
-                    Spacer(Modifier.size(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(target.displayName, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = PnsaInk)
-                        Text("${target.displayCity} · ${target.structureType ?: "Centre SSR"}", color = PnsaMuted, fontSize = 12.sp)
-                        Text(KinshasaMapMath.formatCoord(target.latitude, target.longitude), color = bagdeColor, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                    Box(
-                        Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(bagdeColor),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(Icons.Default.ArrowForward, contentDescription = "Voir fiche", tint = Color.White, modifier = Modifier.size(18.dp))
-                    }
-                }
+                Icon(Icons.Default.Place, contentDescription = null, tint = PnsaRed)
+            }
+            Spacer(Modifier.size(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(item.displayName, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = PnsaNavy)
+                Text("${item.displayCity} · ${item.structureType ?: "Centre SSR"}", color = PnsaNavy.copy(alpha = 0.65f), fontSize = 12.sp)
+                Text(item.displayAddress, color = PnsaNavy.copy(alpha = 0.58f), fontSize = 11.sp)
+                Text(KinshasaMapMath.formatCoord(item.latitude, item.longitude), color = PnsaBlue, fontSize = 12.sp, fontWeight = FontWeight.Medium)
             }
         }
     }
@@ -410,9 +393,10 @@ fun GpsPlaceCard(
 @Composable
 fun MapLegendRow() {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-        LegendDot(bagdeColor, "Position & Sélection")
-        LegendDot(PnsaGreenDeep, "Centre")
-        LegendDot(wsColor, "Zone SSR")
+        LegendDot(PnsaBlue, "Position")
+        LegendDot(PnsaRed, "Structure")
+        LegendDot(PnsaRed, "Sélection")
+        LegendDot(Color(0xFF0B3C8A), "Itinéraire")
     }
 }
 
