@@ -122,15 +122,17 @@ fun StructureListScreen(navigator: AppNavigator) {
         }
     }
 
+    val normalizedQuery = query.trim().lowercase()
+    val searchActivated = normalizedQuery.length >= 2 || city.isNotBlank()
     val filtered = items.filter { item ->
         val haystack = listOf(item.displayName, item.displayCity, item.displayAddress, item.services, item.structureType)
             .joinToString(" ")
             .lowercase()
-        val matchesQuery = query.isBlank() || haystack.contains(query.lowercase())
+        val matchesQuery = normalizedQuery.isBlank() || haystack.contains(normalizedQuery)
         val matchesCity = city.isBlank() || item.displayCity.contains(city, ignoreCase = true)
         val matchesProvince = province.isBlank() || item.province.orEmpty().contains(province, ignoreCase = true)
         matchesQuery && matchesCity && matchesProvince
-    }
+    }.let { list -> if (searchActivated) list.take(120) else emptyList() }
     val selected = filtered.firstOrNull { it.id == selectedId }
     val navigation = rememberMapNavigation(selected)
     var followUser by remember { mutableStateOf(true) }
@@ -175,6 +177,10 @@ fun StructureListScreen(navigator: AppNavigator) {
                     } else if (navigation.user == null) {
                         Spacer(Modifier.height(8.dp))
                         StatusBanner("Recherche de ta position…")
+                    }
+                    if (!searchActivated) {
+                        Spacer(Modifier.height(8.dp))
+                        StatusBanner("Recherche obligatoire: saisis au moins 2 lettres pour afficher les structures.")
                     }
                 }
                 Box(
@@ -246,6 +252,14 @@ fun StructureListScreen(navigator: AppNavigator) {
                         }
                         if (error != null && filtered.isEmpty()) {
                             item { ErrorState(error.orEmpty(), onRetry = { load() }) }
+                        }
+                        if (!searchActivated) {
+                            item {
+                                EmptyState(
+                                    "Recherche requise",
+                                    "Saisis au moins 2 caractères dans la recherche pour afficher les structures.",
+                                )
+                            }
                         }
                         items(filtered, key = { it.id ?: it.displayName }) { structure ->
                             PnsaCard(onClick = {
