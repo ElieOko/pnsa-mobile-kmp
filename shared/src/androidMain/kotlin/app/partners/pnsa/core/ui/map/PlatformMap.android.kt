@@ -37,6 +37,7 @@ private class GoogleMapState {
     var lastSelectedId: Long? = null
     var lastUser: LatLngPoint? = null
     var lastFollow = false
+    var lastMapStyle: MapViewStyle? = null
     val markers = mutableListOf<Marker>()
     var track: Polyline? = null
 }
@@ -52,6 +53,7 @@ actual fun PlatformStructureMap(
     route: RouteTrack?,
     followUser: Boolean,
     onFollowInterrupted: () -> Unit,
+    mapStyle: MapViewStyle,
 ) {
     val points = remember(structures) { structures.filter { it.hasCoordinates } }
     val state = remember { GoogleMapState() }
@@ -104,13 +106,13 @@ actual fun PlatformStructureMap(
                         onSelect(structure)
                         true
                     }
-                    bindGoogleMap(state, googleMap, points, selectedId, userLocation, route, followUser)
+                    bindGoogleMap(state, googleMap, points, selectedId, userLocation, route, followUser, mapStyle)
                 }
             }
         },
         update = {
             state.map?.let { googleMap ->
-                bindGoogleMap(state, googleMap, points, selectedId, userLocation, route, followUser)
+                bindGoogleMap(state, googleMap, points, selectedId, userLocation, route, followUser, mapStyle)
             }
         },
     )
@@ -145,8 +147,18 @@ private fun bindGoogleMap(
     userLocation: LatLngPoint?,
     route: RouteTrack?,
     followUser: Boolean,
+    mapStyle: MapViewStyle,
 ) {
     runCatching { map.isMyLocationEnabled = userLocation != null }
+
+    if (state.lastMapStyle != mapStyle) {
+        state.lastMapStyle = mapStyle
+        map.mapType = when (mapStyle) {
+            MapViewStyle.Standard -> GoogleMap.MAP_TYPE_NORMAL
+            MapViewStyle.Satellite -> GoogleMap.MAP_TYPE_HYBRID
+            MapViewStyle.Terrain -> GoogleMap.MAP_TYPE_TERRAIN
+        }
+    }
 
     val ids = structures.map { it.id }
     if (ids != state.lastIds) {
@@ -155,7 +167,7 @@ private fun bindGoogleMap(
         state.markers.clear()
         structures.forEach { structure ->
             val hue = if (structure.id == selectedId) {
-                BitmapDescriptorFactory.HUE_RED
+                BitmapDescriptorFactory.HUE_GREEN
             } else {
                 BitmapDescriptorFactory.HUE_AZURE
             }
@@ -173,7 +185,7 @@ private fun bindGoogleMap(
         state.markers.forEach { marker ->
             val structure = marker.tag as? HealthStructure
             val hue = if (structure?.id == selectedId) {
-                BitmapDescriptorFactory.HUE_RED
+                BitmapDescriptorFactory.HUE_GREEN
             } else {
                 BitmapDescriptorFactory.HUE_AZURE
             }
@@ -189,7 +201,7 @@ private fun bindGoogleMap(
             state.track = map.addPolyline(
                 PolylineOptions()
                     .addAll(routePoints.map { LatLng(it.latitude, it.longitude) })
-                    .color(0xFF0069E1.toInt())
+                    .color(0xFF1AB221.toInt())
                     .width(10f)
                     .geodesic(false),
             )
@@ -202,16 +214,16 @@ private fun bindGoogleMap(
         if (moved || resumed) {
             val target = LatLng(userLocation.latitude, userLocation.longitude)
             if (resumed) {
-                map.moveCamera(CameraUpdateFactory.newLatLngZoom(target, 16.2f))
+                map.animateCamera(CameraUpdateFactory.newLatLngZoom(target, 16.2f))
             } else {
-                map.moveCamera(CameraUpdateFactory.newLatLng(target))
+                map.animateCamera(CameraUpdateFactory.newLatLng(target))
             }
         }
-    } else if (selectedId != state.lastSelectedId && !followUser) {
+    } else if (selectedId != state.lastSelectedId) {
         val selected = structures.firstOrNull { it.id == selectedId }
         if (selected != null) {
-            map.moveCamera(
-                CameraUpdateFactory.newLatLngZoom(LatLng(selected.latitude!!, selected.longitude!!), 15.2f),
+            map.animateCamera(
+                CameraUpdateFactory.newLatLngZoom(LatLng(selected.latitude!!, selected.longitude!!), 15.4f),
             )
         }
     }

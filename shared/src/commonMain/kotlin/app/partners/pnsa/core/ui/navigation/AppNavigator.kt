@@ -11,7 +11,8 @@ enum class MainTab(val label: String) {
     Learn("Apprendre"),
     Quiz("Quiz"),
     Structures("Carte"),
-    Forum("Forum"),
+    Forum("Discussions"),
+    Profile("Profil"),
 }
 
 sealed class AppDestination {
@@ -113,6 +114,7 @@ class AppNavigator(
         MainTab.Quiz -> AppDestination.Quizzes
         MainTab.Structures -> AppDestination.Structures
         MainTab.Forum -> AppDestination.Forum
+        MainTab.Profile -> AppDestination.Profile
     }
 
     private fun isTabRoot(destination: AppDestination): Boolean = when (destination) {
@@ -121,6 +123,7 @@ class AppNavigator(
         AppDestination.Quizzes,
         AppDestination.Structures,
         AppDestination.Forum,
+        AppDestination.Profile,
         -> true
         else -> false
     }
@@ -130,7 +133,8 @@ class AppNavigator(
         AppDestination.Learn, is AppDestination.ContentDetail -> MainTab.Learn
         AppDestination.Quizzes, is AppDestination.QuizPlay -> MainTab.Quiz
         AppDestination.Structures, is AppDestination.StructureDetail -> MainTab.Structures
-        AppDestination.Forum, is AppDestination.ForumDetail -> MainTab.Forum
+        AppDestination.Forum, is AppDestination.ForumDetail, AppDestination.Advice, is AppDestination.AdviceChat -> MainTab.Forum
+        AppDestination.Profile, AppDestination.ProfileEdit, AppDestination.Orientations, is AppDestination.OrientationDetail, is AppDestination.OrientationCreate, AppDestination.Help, AppDestination.More -> MainTab.Profile
         else -> null
     }
 }
@@ -151,7 +155,7 @@ fun titleFor(destination: AppDestination): String = when (destination) {
     AppDestination.Orientations -> "Orientations"
     is AppDestination.OrientationDetail -> "Orientation"
     is AppDestination.OrientationCreate -> "Nouvelle orientation"
-    AppDestination.Forum -> "Forum"
+    AppDestination.Forum -> "Discussions"
     is AppDestination.ForumDetail -> "Discussion"
     AppDestination.Advice -> "Conseil"
     is AppDestination.AdviceChat -> "Échange"

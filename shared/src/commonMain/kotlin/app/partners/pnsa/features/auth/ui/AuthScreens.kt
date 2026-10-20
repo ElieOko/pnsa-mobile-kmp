@@ -23,11 +23,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import app.partners.pnsa.core.ui.components.PnsaChip
-import app.partners.pnsa.core.ui.components.PnsaScaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -53,15 +52,20 @@ import androidx.compose.ui.unit.sp
 import app.partners.pnsa.core.config.AppConfig
 import app.partners.pnsa.core.di.LocalAppGraph
 import app.partners.pnsa.core.network.ApiException
+import app.partners.pnsa.core.ui.components.InlineBackHeader
+import app.partners.pnsa.core.ui.components.PnsaCard
+import app.partners.pnsa.core.ui.components.PnsaChip
+import app.partners.pnsa.core.ui.components.PnsaScaffold
 import app.partners.pnsa.core.ui.components.PnsaTextField
-import app.partners.pnsa.core.ui.components.PnsaTopBar
 import app.partners.pnsa.core.ui.components.PrimaryAction
 import app.partners.pnsa.core.ui.components.QuietAction
 import app.partners.pnsa.core.ui.components.SecondaryAction
 import app.partners.pnsa.core.ui.components.StatusBanner
-import app.partners.pnsa.core.ui.theme.PnsaBlue
-import app.partners.pnsa.core.ui.theme.PnsaNavy
-import app.partners.pnsa.core.ui.theme.PnsaRed
+import app.partners.pnsa.core.ui.theme.PnsaGreenDeep
+import app.partners.pnsa.core.ui.theme.PnsaInk
+import app.partners.pnsa.core.ui.theme.PnsaMuted
+import app.partners.pnsa.core.ui.theme.bagdeColor
+import app.partners.pnsa.core.ui.theme.wsColor
 import app.partners.pnsa.core.util.DrcLocations
 import app.partners.pnsa.features.auth.domain.models.ConsentPayload
 import app.partners.pnsa.features.auth.domain.models.RegisterRequest
@@ -96,7 +100,7 @@ fun WelcomeScreen(
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        listOf(Color(0x990A0B10), Color(0x660B3C8A), Color(0xF20A0B10)),
+                        listOf(Color(0x990A1F0D), Color(0x990E7A14), Color(0xF2071409)),
                     ),
                 ),
         )
@@ -163,6 +167,7 @@ fun LoginScreen(
             Modifier
                 .padding(padding)
                 .fillMaxSize()
+                .background(Color.White)
                 .verticalScroll(rememberScrollState()),
         ) {
             AuthHero(
@@ -172,9 +177,9 @@ fun LoginScreen(
                 onBack = onBack,
             )
             Column(Modifier.padding(20.dp)) {
-                Text("Heureux de vous revoir", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = PnsaNavy)
+                Text("Heureux de vous revoir", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = PnsaInk)
                 Spacer(Modifier.height(6.dp))
-                Text("Accédez aux contenus, quiz, forum et à l’annuaire géolocalisé des structures SSR.")
+                Text("Accédez aux contenus, quiz, discussions et à l’annuaire géolocalisé des structures SSR.", color = PnsaMuted)
                 Spacer(Modifier.height(18.dp))
                 PnsaTextField(email, { email = it }, "Adresse e-mail professionnelle")
                 Spacer(Modifier.height(12.dp))
@@ -188,6 +193,7 @@ fun LoginScreen(
                             Icon(
                                 if (hidePassword) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                                 contentDescription = "Afficher le mot de passe",
+                                tint = bagdeColor,
                             )
                         }
                     },
@@ -275,7 +281,7 @@ fun RegisterScreen(
                             .weight(1f)
                             .height(4.dp)
                             .clip(CircleShape)
-                            .background(if (index <= step) PnsaBlue else MaterialTheme.colorScheme.surfaceVariant),
+                            .background(if (index <= step) bagdeColor else wsColor),
                     )
                 }
             }
@@ -288,9 +294,9 @@ fun RegisterScreen(
                 },
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
-                color = PnsaNavy,
+                color = PnsaInk,
             )
-            Text("Tes informations restent confidentielles et sont utilisées pour l’orientation SSR.")
+            Text("Tes informations restent confidentielles et sont utilisées pour l’orientation SSR.", color = PnsaMuted)
             Spacer(Modifier.height(16.dp))
             when (step) {
                 0 -> {
@@ -298,7 +304,7 @@ fun RegisterScreen(
                     Spacer(Modifier.height(10.dp))
                     PnsaTextField(nom, { nom = it }, "Nom")
                     Spacer(Modifier.height(12.dp))
-                    Text("Genre (volontaire)", fontWeight = FontWeight.Medium)
+                    Text("Genre (volontaire)", fontWeight = FontWeight.Medium, color = PnsaInk)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         PnsaChip(label = "Fille", selected = genre == "F", onClick = { genre = "F" })
                         PnsaChip(label = "Garçon", selected = genre == "M", onClick = { genre = "M" })
@@ -409,36 +415,57 @@ private fun ConsentRow(
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.Top,
     ) {
-        Checkbox(checked = checked, onCheckedChange = onChecked)
+        Checkbox(
+            checked = checked,
+            onCheckedChange = onChecked,
+            colors = CheckboxDefaults.colors(checkedColor = bagdeColor),
+        )
         Column(Modifier.padding(top = 10.dp)) {
-            Text(title, fontWeight = FontWeight.SemiBold)
-            Text(body, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(title, fontWeight = FontWeight.SemiBold, color = PnsaInk)
+            Text(body, style = MaterialTheme.typography.bodySmall, color = PnsaMuted)
         }
     }
 }
 
 @Composable
 fun LegalScreen(onBack: () -> Unit) {
-    PnsaScaffold(topBar = { PnsaTopBar("Confidentialité", onBack = onBack) }) { padding ->
+    PnsaScaffold { padding ->
         Column(
             Modifier
                 .padding(padding)
-                .padding(20.dp)
+                .fillMaxSize()
+                .background(Color.White)
+                .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text("Ce que nous collectons", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(8.dp))
-            Text("Le PNSA collecte les informations de compte (nom, e-mail, éventuellement téléphone, province et ville) pour te permettre d’accéder aux contenus, aux quiz, au forum, au conseil et à l’orientation.")
-            Spacer(Modifier.height(12.dp))
-            Text("Tes choix", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(8.dp))
-            Text("Les consentements notifications, orientation et statistiques sont gérés séparément. Un refus n’est jamais enregistré comme une acceptation.")
-            Spacer(Modifier.height(12.dp))
-            Text("Contact", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(8.dp))
-            Text("${AppConfig.contactEmail}\n${AppConfig.contactPhone}\nKinshasa, RDC")
-            Spacer(Modifier.height(12.dp))
-            Text("Ce service n’est pas une urgence médicale. En cas de danger, contacte un service de santé ou les personnes de confiance près de toi.")
+            InlineBackHeader(
+                title = "Confidentialité",
+                subtitle = "Protection des données et conditions d’utilisation",
+                onBack = onBack,
+            )
+            PnsaCard {
+                Text("Ce que nous collectons", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = bagdeColor)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Le PNSA collecte les informations de compte (nom, e-mail, éventuellement téléphone, province et ville) pour te permettre d’accéder aux contenus, aux quiz, aux discussions, au conseil et à l’orientation.",
+                    color = PnsaInk,
+                )
+            }
+            PnsaCard {
+                Text("Tes choix", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = bagdeColor)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Les consentements notifications, orientation et statistiques sont gérés séparément. Un refus n’est jamais enregistré comme une acceptation.",
+                    color = PnsaInk,
+                )
+            }
+            PnsaCard {
+                Text("Contact officiel", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = bagdeColor)
+                Spacer(Modifier.height(6.dp))
+                Text("${AppConfig.contactEmail}\n${AppConfig.contactPhone}\nKinshasa, RDC", color = PnsaInk)
+            }
+            StatusBanner("Ce service n’est pas une urgence médicale. En cas de danger, contacte un service de santé ou les personnes de confiance près de toi.")
         }
     }
 }
@@ -481,11 +508,11 @@ private fun AuthHero(
             Modifier
                 .fillMaxSize()
                 .background(
-                    Brush.verticalGradient(listOf(Color(0x660A0B10), Color(0xCC0B3C8A), Color(0xF20A0B10))),
+                    Brush.verticalGradient(listOf(Color(0x660A1F0D), Color(0xCC0E7A14), Color(0xF2071409))),
                 ),
         )
         Column(Modifier.align(Alignment.BottomStart).padding(20.dp)) {
-            Surface(shape = CircleShape, color = Color.White.copy(alpha = 0.16f), onClick = onBack) {
+            Surface(shape = CircleShape, color = Color.White.copy(alpha = 0.2f), onClick = onBack) {
                 Text("Retour", color = Color.White, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), fontSize = 12.sp)
             }
             Spacer(Modifier.height(10.dp))
@@ -498,7 +525,7 @@ private fun AuthHero(
                 .padding(16.dp)
                 .height(4.dp)
                 .clip(CircleShape)
-                .background(Brush.horizontalGradient(listOf(PnsaBlue, PnsaRed)))
+                .background(Brush.horizontalGradient(listOf(bagdeColor, PnsaGreenDeep)))
                 .fillMaxWidth(0.2f),
         )
     }
