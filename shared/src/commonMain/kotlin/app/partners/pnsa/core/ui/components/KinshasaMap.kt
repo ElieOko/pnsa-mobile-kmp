@@ -47,16 +47,70 @@ import app.partners.pnsa.core.ui.theme.PnsaRed
 import app.partners.pnsa.features.structure.domain.models.HealthStructure
 import kotlin.math.abs
 import kotlin.math.hypot
+import kotlin.math.max
+import kotlin.math.min
 
 object KinshasaMapMath {
-    const val minLat = -4.50
-    const val maxLat = -4.29
-    const val minLon = 15.22
-    const val maxLon = 15.44
+    data class Bounds(
+        val minLat: Double,
+        val maxLat: Double,
+        val minLon: Double,
+        val maxLon: Double,
+    )
+
+    private val defaultBounds = Bounds(
+        minLat = -4.50,
+        maxLat = -4.29,
+        minLon = 15.22,
+        maxLon = 15.44,
+    )
+
+    fun boundsFor(structures: List<HealthStructure>, userLat: Double, userLon: Double, route: RouteTrack?): Bounds {
+        var minLat = Double.POSITIVE_INFINITY
+        var maxLat = Double.NEGATIVE_INFINITY
+        var minLon = Double.POSITIVE_INFINITY
+        var maxLon = Double.NEGATIVE_INFINITY
+
+        fun include(lat: Double, lon: Double) {
+            minLat = min(minLat, lat)
+            maxLat = max(maxLat, lat)
+            minLon = min(minLon, lon)
+            maxLon = max(maxLon, lon)
+        }
+
+        structures.forEach { structure ->
+            val lat = structure.latitude
+            val lon = structure.longitude
+            if (lat != null && lon != null) include(lat, lon)
+        }
+        include(userLat, userLon)
+        route?.points?.forEach { include(it.latitude, it.longitude) }
+
+        if (!minLat.isFinite() || !maxLat.isFinite() || !minLon.isFinite() || !maxLon.isFinite()) {
+            return defaultBounds
+        }
+
+        val latSpan = max(maxLat - minLat, 0.08)
+        val lonSpan = max(maxLon - minLon, 0.08)
+        val latPad = latSpan * 0.12
+        val lonPad = lonSpan * 0.12
+        return Bounds(
+            minLat = (minLat - latPad).coerceIn(-85.0, 85.0),
+            maxLat = (maxLat + latPad).coerceIn(-85.0, 85.0),
+            minLon = (minLon - lonPad).coerceIn(-180.0, 180.0),
+            maxLon = (maxLon + lonPad).coerceIn(-180.0, 180.0),
+        )
+    }
 
     fun project(lat: Double, lon: Double, width: Float, height: Float): Offset {
-        val x = ((lon - minLon) / (maxLon - minLon)).toFloat().coerceIn(0.04f, 0.96f) * width
-        val y = ((maxLat - lat) / (maxLat - minLat)).toFloat().coerceIn(0.06f, 0.94f) * height
+        return project(lat, lon, width, height, defaultBounds)
+    }
+
+    fun project(lat: Double, lon: Double, width: Float, height: Float, bounds: Bounds): Offset {
+        val lonSpan = (bounds.maxLon - bounds.minLon).takeIf { it > 0.0 } ?: 1.0
+        val latSpan = (bounds.maxLat - bounds.minLat).takeIf { it > 0.0 } ?: 1.0
+        val x = ((lon - bounds.minLon) / lonSpan).toFloat().coerceIn(0.04f, 0.96f) * width
+        val y = ((bounds.maxLat - lat) / latSpan).toFloat().coerceIn(0.06f, 0.94f) * height
         return Offset(x, y)
     }
 
@@ -87,6 +141,9 @@ fun KinshasaGpsMap(
 ) {
     val markers = remember(structures) { structures.filter { it.hasCoordinates } }
     val selected = markers.firstOrNull { it.id == selectedId }
+    val projectionBounds = remember(markers, userLat, userLon, route) {
+        KinshasaMapMath.boundsFor(markers, userLat, userLon, route)
+    }
 
     val communes = remember {
         listOf(
@@ -111,13 +168,13 @@ fun KinshasaGpsMap(
         Canvas(
             Modifier
                 .fillMaxSize()
-                .pointerInput(markers) {
+                .pointerInput(markers, projectionBounds) {
                     detectTapGestures { tap ->
                         val hit = markers.minByOrNull { item ->
-                            val p = KinshasaMapMath.project(item.latitude!!, item.longitude!!, size.width.toFloat(), size.height.toFloat())
+                            val p = KinshasaMapMath.project(item.latitude!!, item.longitude!!, size.width.toFloat(), size.height.toFloat(), projectionBounds)
                             hypot((p.x - tap.x).toDouble(), (p.y - tap.y).toDouble())
                         } ?: return@detectTapGestures
-                        val p = KinshasaMapMath.project(hit.latitude!!, hit.longitude!!, size.width.toFloat(), size.height.toFloat())
+                        val p = KinshasaMapMath.project(hit.latitude!!, hit.longitude!!, size.width.toFloat(), size.height.toFloat(), projectionBounds)
                         if (hypot((p.x - tap.x).toDouble(), (p.y - tap.y).toDouble()) < 48.0) onSelect(hit)
                     }
                 },
@@ -160,24 +217,24 @@ fun KinshasaGpsMap(
             drawPath(kasavubu, Color(0x44FFFFFF), style = Stroke(width = 5f, cap = StrokeCap.Round))
 
             communes.forEach { commune ->
-                val p = KinshasaMapMath.project(commune.lat, commune.lon, w, h)
+                val p = KinshasaMapMath.project(commune.lat, commune.lon, w, h, projectionBounds)
                 drawCircle(Color.White.copy(alpha = 0.08f), 18f, p)
             }
 
             route?.points?.zipWithNext { start, end ->
-                val from = KinshasaMapMath.project(start.latitude, start.longitude, w, h)
-                val to = KinshasaMapMath.project(end.latitude, end.longitude, w, h)
+                val from = KinshasaMapMath.project(start.latitude, start.longitude, w, h, projectionBounds)
+                val to = KinshasaMapMath.project(end.latitude, end.longitude, w, h, projectionBounds)
                 drawLine(Color(0xFF0B3C8A), from, to, strokeWidth = 10f, cap = StrokeCap.Round)
                 drawLine(PnsaBlue, from, to, strokeWidth = 6f, cap = StrokeCap.Round)
             }
 
-            val user = KinshasaMapMath.project(userLat, userLon, w, h)
+            val user = KinshasaMapMath.project(userLat, userLon, w, h, projectionBounds)
             drawCircle(PnsaBlue.copy(alpha = 0.18f), 34f, user)
             drawCircle(Color.White, 10f, user)
             drawCircle(PnsaBlue, 6f, user)
 
             markers.forEach { item ->
-                val p = KinshasaMapMath.project(item.latitude!!, item.longitude!!, w, h)
+                val p = KinshasaMapMath.project(item.latitude!!, item.longitude!!, w, h, projectionBounds)
                 val active = item.id == selectedId
                 val pin = if (active) PnsaRed else Color(0xFFFFC107)
                 val halo = if (active) PnsaRed.copy(alpha = 0.28f) else PnsaBlue.copy(alpha = 0.22f)
@@ -201,7 +258,7 @@ fun KinshasaGpsMap(
         }
 
         Text(
-            "Carte locale · Kinshasa",
+            "Carte locale · structures",
             color = Color.White.copy(alpha = 0.9f),
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.align(Alignment.BottomStart).padding(18.dp),

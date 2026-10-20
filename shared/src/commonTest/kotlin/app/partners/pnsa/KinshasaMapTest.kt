@@ -10,13 +10,13 @@ class KinshasaMapTest {
 
     @Test
     fun localCentersHaveValidGps() {
-        assertTrue(KinshasaCenters.all.size >= 10)
+        assertTrue(KinshasaCenters.all.size >= 300)
         KinshasaCenters.all.forEach { center ->
             assertTrue(center.hasCoordinates, center.displayName)
             val lat = center.latitude!!
             val lon = center.longitude!!
-            assertTrue(lat in -4.50..-4.29, "${center.displayName} lat=$lat")
-            assertTrue(lon in 15.22..15.44, "${center.displayName} lon=$lon")
+            assertTrue(lat in -90.0..90.0, "${center.displayName} lat=$lat")
+            assertTrue(lon in -180.0..180.0, "${center.displayName} lon=$lon")
         }
     }
 
