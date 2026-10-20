@@ -27,6 +27,8 @@ val PnsaIce = Color(0xFFF3F6FB)
 val PnsaChrome = Color(0xFF0A0B10)
 val PnsaChromeLift = Color(0xFF161821)
 val PnsaMuted = Color(0xFF667085)
+val BadgeColor = Color(0xFF1AB221)
+val WsColor = BadgeColor.copy(alpha = 0.3f)
 
 val PnsaBlueRed = Brush.linearGradient(listOf(PnsaBlue, Color(0xFF3B82F6), PnsaRed))
 val PnsaHeroBrush = Brush.verticalGradient(
@@ -37,14 +39,14 @@ fun motionTween(duration: Int = 420) = tween<Float>(durationMillis = duration)
 fun motionSpring() = spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
 
 private val LightColors = lightColorScheme(
-    primary = PnsaBlue,
+    primary = BadgeColor,
     onPrimary = Color.White,
-    primaryContainer = PnsaBlueSoft,
-    onPrimaryContainer = PnsaNavy,
-    secondary = PnsaRed,
+    primaryContainer = WsColor,
+    onPrimaryContainer = Color(0xFF0E4D14),
+    secondary = BadgeColor,
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFFFE5E8),
-    onSecondaryContainer = Color(0xFF4A0B12),
+    secondaryContainer = Color(0xFFE8F8EA),
+    onSecondaryContainer = Color(0xFF0E4D14),
     tertiary = PnsaBlueDeep,
     onTertiary = Color.White,
     tertiaryContainer = Color(0xFFD9E6FF),

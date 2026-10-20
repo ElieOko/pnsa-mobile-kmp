@@ -1,5 +1,11 @@
 package app.partners.pnsa.core.ui.components
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -141,6 +147,7 @@ fun KinshasaGpsMap(
     selectedId: Long?,
     onSelect: (HealthStructure) -> Unit,
     modifier: Modifier = Modifier,
+    satelliteView: Boolean = false,
     userLat: Double = -4.3276,
     userLon: Double = 15.3136,
     route: RouteTrack? = null,
@@ -151,6 +158,15 @@ fun KinshasaGpsMap(
     val projectionBounds = remember(markers, userLat, userLon, route) {
         KinshasaMapMath.boundsFor(markers, userLat, userLon, route)
     }
+    val pulse = rememberInfiniteTransition(label = "mapPulse").animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1600, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "pulse",
+    )
 
     val communes = remember {
         listOf(
@@ -190,7 +206,11 @@ fun KinshasaGpsMap(
             val h = size.height
             drawRect(
                 brush = Brush.verticalGradient(
-                    listOf(Color(0xFF0E1A33), Color(0xFF16325C), Color(0xFF1B4A86)),
+                    if (satelliteView) {
+                        listOf(Color(0xFF243828), Color(0xFF335438), Color(0xFF466E42))
+                    } else {
+                        listOf(Color(0xFF0E1A33), Color(0xFF16325C), Color(0xFF1B4A86))
+                    },
                 ),
             )
             val river = Path().apply {
@@ -231,19 +251,24 @@ fun KinshasaGpsMap(
             route?.points?.zipWithNext { start, end ->
                 val from = KinshasaMapMath.project(start.latitude, start.longitude, w, h, projectionBounds)
                 val to = KinshasaMapMath.project(end.latitude, end.longitude, w, h, projectionBounds)
-                drawLine(Color(0xFF0B3C8A), from, to, strokeWidth = 10f, cap = StrokeCap.Round)
-                drawLine(PnsaBlue, from, to, strokeWidth = 6f, cap = StrokeCap.Round)
+                val deepRoute = if (satelliteView) Color(0xFF0D2E0D) else Color(0xFF0B3C8A)
+                val routeColor = if (satelliteView) Color(0xFF1AB221) else PnsaBlue
+                drawLine(deepRoute, from, to, strokeWidth = 10f, cap = StrokeCap.Round)
+                drawLine(routeColor, from, to, strokeWidth = 6f, cap = StrokeCap.Round)
             }
 
             val user = KinshasaMapMath.project(userLat, userLon, w, h, projectionBounds)
-            drawCircle(PnsaBlue.copy(alpha = 0.18f), 34f, user)
+            drawCircle(PnsaBlue.copy(alpha = 0.18f), 30f + pulse.value * 8f, user)
             drawCircle(Color.White, 10f, user)
-            drawCircle(PnsaBlue, 6f, user)
+            drawCircle(if (satelliteView) Color(0xFF1AB221) else PnsaBlue, 6f, user)
 
             markers.forEach { item ->
                 val p = KinshasaMapMath.project(item.latitude!!, item.longitude!!, w, h, projectionBounds)
                 val active = item.id == selectedId
-                if (active) drawCircle(PnsaRed.copy(alpha = 0.3f), 24f, p)
+                if (active) {
+                    drawCircle(PnsaRed.copy(alpha = 0.16f), 21f + pulse.value * 10f, p)
+                    drawCircle(PnsaRed.copy(alpha = 0.3f), 24f, p)
+                }
                 drawCircle(Color.White, if (active) 19f else 17f, p)
                 drawCircle(PnsaRed.copy(alpha = 0.12f), if (active) 17f else 15f, p)
                 val markerSize = if (active) 24 else 22
@@ -264,7 +289,7 @@ fun KinshasaGpsMap(
         }
 
         Text(
-            "Carte locale · structures",
+            if (satelliteView) "Vue satellite · structures" else "Carte locale · structures",
             color = Color.White.copy(alpha = 0.9f),
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.align(Alignment.BottomStart).padding(18.dp),

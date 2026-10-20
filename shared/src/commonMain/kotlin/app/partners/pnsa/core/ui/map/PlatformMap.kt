@@ -12,6 +12,7 @@ expect fun PlatformStructureMap(
     selectedId: Long?,
     onSelect: (HealthStructure) -> Unit,
     modifier: Modifier = Modifier,
+    satelliteView: Boolean = false,
     userLocation: LatLngPoint? = null,
     route: RouteTrack? = null,
     followUser: Boolean = true,

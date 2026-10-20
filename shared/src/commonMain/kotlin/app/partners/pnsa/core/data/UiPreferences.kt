@@ -23,6 +23,10 @@ class UiPreferences(
         get() = store.get(MAP_SELECTED)?.toLongOrNull()
         set(value) { store.put(MAP_SELECTED, value?.toString()) }
 
+    var mapSatellite: Boolean
+        get() = store.get(MAP_SATELLITE) == "1"
+        set(value) { store.put(MAP_SATELLITE, if (value) "1" else "0") }
+
     var lastQuizId: Long?
         get() = store.get(LAST_QUIZ)?.toLongOrNull()
         set(value) { store.put(LAST_QUIZ, value?.toString()) }
@@ -45,6 +49,7 @@ class UiPreferences(
         private const val MAP_QUERY = "pref_map_query"
         private const val MAP_CITY = "pref_map_city"
         private const val MAP_SELECTED = "pref_map_selected"
+        private const val MAP_SATELLITE = "pref_map_satellite"
         private const val LAST_QUIZ = "pref_last_quiz"
         private const val LAST_QUIZ_INDEX = "pref_last_quiz_index"
         private const val CONTENT_CATEGORY = "pref_content_category"

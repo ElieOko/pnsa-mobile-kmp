@@ -39,11 +39,15 @@ import androidx.compose.material.icons.outlined.Chat
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Map
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Quiz
 import androidx.compose.material.icons.outlined.Sms
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -58,11 +62,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.partners.pnsa.core.ui.navigation.AppDestination
 import app.partners.pnsa.core.ui.navigation.MainTab
+import app.partners.pnsa.core.ui.theme.BadgeColor
 import app.partners.pnsa.core.ui.theme.PnsaBlue
 import app.partners.pnsa.core.ui.theme.PnsaChrome
 import app.partners.pnsa.core.ui.theme.PnsaChromeLift
 import app.partners.pnsa.core.ui.theme.PnsaRed
 import app.partners.pnsa.core.ui.theme.PnsaRedHot
+import app.partners.pnsa.core.ui.theme.WsColor
 
 @Composable
 fun TikTokTopBar(
@@ -131,61 +137,49 @@ fun TikTokBottomBar(
     selected: MainTab,
     onSelect: (MainTab) -> Unit,
 ) {
-    Row(
+    NavigationBar(
         modifier = Modifier
             .fillMaxWidth()
-            .background(PnsaChrome)
             .windowInsetsPadding(WindowInsets.navigationBars)
-            .height(52.dp)
-            .padding(horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceEvenly,
+            .height(66.dp),
+        containerColor = Color.White,
     ) {
         MainTab.entries.forEach { tab ->
-            TikTokTabItem(
-                tab = tab,
+            NavigationBarItem(
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = BadgeColor,
+                    selectedTextColor = BadgeColor,
+                    indicatorColor = WsColor,
+                    unselectedIconColor = Color(0xFF76808F),
+                    unselectedTextColor = Color(0xFF76808F),
+                ),
+                alwaysShowLabel = true,
                 selected = selected == tab,
                 onClick = { onSelect(tab) },
+                icon = {
+                    val (filled, outline) = tabIcons(tab)
+                    Icon(
+                        imageVector = if (selected == tab) filled else outline,
+                        contentDescription = tab.label,
+                        modifier = Modifier.size(22.dp),
+                    )
+                },
+                label = {
+                    Text(
+                        tab.label,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                },
             )
         }
-    }
-}
-
-@Composable
-private fun RowScope.TikTokTabItem(
-    tab: MainTab,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val tint = if (selected) PnsaRedHot else Color.White.copy(alpha = 0.55f)
-    val (filled, outline) = tabIcons(tab)
-    Column(
-        modifier = Modifier
-            .weight(1f)
-            .fillMaxHeight()
-            .quietClick(onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Icon(
-            imageVector = if (selected) filled else outline,
-            contentDescription = tab.label,
-            tint = tint,
-            modifier = Modifier.size(22.dp),
-        )
-        Spacer(Modifier.height(2.dp))
-        Text(
-            tab.label,
-            color = tint,
-            fontSize = 9.sp,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-        )
     }
 }
 
 private fun tabIcons(tab: MainTab): Pair<ImageVector, ImageVector> = when (tab) {
     MainTab.Structures -> Icons.Filled.Map to Icons.Outlined.Map
     MainTab.Messages -> Icons.Filled.Sms to Icons.Outlined.Sms
+    MainTab.Profile -> Icons.Filled.Person to Icons.Outlined.Person
 }
 
 @Composable

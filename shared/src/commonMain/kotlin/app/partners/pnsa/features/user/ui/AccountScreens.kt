@@ -31,6 +31,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.partners.pnsa.core.config.AppConfig
@@ -49,6 +50,7 @@ import app.partners.pnsa.core.ui.components.ShortcutTile
 import app.partners.pnsa.core.ui.components.StatusBanner
 import app.partners.pnsa.core.ui.navigation.AppDestination
 import app.partners.pnsa.core.ui.navigation.AppNavigator
+import app.partners.pnsa.core.ui.theme.BadgeColor
 import app.partners.pnsa.features.auth.domain.models.ConsentPayload
 import app.partners.pnsa.features.auth.domain.models.NotificationPreferencesUpdate
 import app.partners.pnsa.features.auth.domain.models.ProfileUpdateRequest
@@ -90,7 +92,7 @@ fun ProfileScreen(navigator: AppNavigator) {
         loading = false
     }
 
-    PnsaScaffold(topBar = { PnsaTopBar("Mon profil", onBack = { navigator.pop() }) }) { padding ->
+    PnsaScaffold(containerColor = Color.White) { padding ->
         if (loading) {
             LoadingState()
             return@PnsaScaffold
@@ -100,32 +102,45 @@ fun ProfileScreen(navigator: AppNavigator) {
                 .padding(padding)
                 .padding(20.dp)
                 .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            AvatarCircle(user?.initials ?: "?")
-            Spacer(Modifier.height(12.dp))
-            Text(user?.displayName ?: "", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text(user?.email ?: "")
-            Text(listOfNotNull(user?.province, user?.ville).joinToString(" · "))
-            Spacer(Modifier.height(16.dp))
+            PnsaCard {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    AvatarCircle(user?.initials ?: "?", modifier = Modifier)
+                    Column(Modifier.weight(1f)) {
+                        Text(user?.displayName ?: "", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Text(user?.email ?: "", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            listOfNotNull(user?.province, user?.ville).joinToString(" · "),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                StatusBanner("Compte professionnel PNSA · paramètres personnels et consentements.")
+            }
             PrimaryAction("Modifier le profil") { navigator.push(AppDestination.ProfileEdit) }
-            Spacer(Modifier.height(10.dp))
             bundle?.consents?.forEach { consent ->
                 PnsaCard(Modifier.padding(bottom = 8.dp)) {
                     Text(consent.consentType ?: "Consentement", fontWeight = FontWeight.SemiBold)
-                    Text(if (consent.granted) "Accepté" else "Refusé")
+                    Text(
+                        if (consent.granted) "Accepté" else "Refusé",
+                        color = if (consent.granted) BadgeColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
             bundle?.notificationPreferences?.let { prefs ->
-                NotificationBlock(prefs) { updated ->
-                    scope.launch {
-                        runCatching { graph.profile.updateNotifications(updated) }
-                            .onSuccess { message = "Préférences enregistrées." }
-                            .onFailure { message = (it as? ApiException)?.userMessage() ?: it.message }
+                PnsaCard {
+                    NotificationBlock(prefs) { updated ->
+                        scope.launch {
+                            runCatching { graph.profile.updateNotifications(updated) }
+                                .onSuccess { message = "Préférences enregistrées." }
+                                .onFailure { message = (it as? ApiException)?.userMessage() ?: it.message }
+                        }
                     }
                 }
             }
             message?.let { StatusBanner(it) }
-            Spacer(Modifier.height(16.dp))
             SecondaryAction("Demander la suppression du compte") {
                 message = "Demande reçue côté application. Écris à ${AppConfig.contactEmail} pour le traitement institutionnel. Nous n’afficherons pas « tout a été supprimé » tant que la procédure n’est pas confirmée."
             }
@@ -143,7 +158,12 @@ private fun NotificationBlock(
     var advice by remember(prefs) { mutableStateOf(prefs.adviceEnabled) }
     var orientation by remember(prefs) { mutableStateOf(prefs.orientationEnabled) }
 
-    Text("Notifications", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    Text("Notifications", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = BadgeColor)
+    Text(
+        "Choisis les alertes que tu souhaites recevoir.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
     PrefSwitch("Notifications générales", push) {
         push = it
         onSave(NotificationPreferencesUpdate(pushEnabled = it, forumEnabled = forum, adviceEnabled = advice, orientationEnabled = orientation))
@@ -165,7 +185,9 @@ private fun NotificationBlock(
 @Composable
 private fun PrefSwitch(label: String, checked: Boolean, onChecked: (Boolean) -> Unit) {
     Row(
-        Modifier.padding(vertical = 6.dp),
+        Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -187,17 +209,21 @@ fun ProfileEditScreen(onBack: () -> Unit) {
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    PnsaScaffold(topBar = { PnsaTopBar("Modifier le profil", onBack = onBack) }) { padding ->
+    PnsaScaffold(containerColor = Color.White) { padding ->
         Column(Modifier.padding(padding).padding(20.dp).verticalScroll(rememberScrollState())) {
-            PnsaTextField(prenom, { prenom = it }, "Prénom")
-            Spacer(Modifier.height(8.dp))
-            PnsaTextField(nom, { nom = it }, "Nom")
-            Spacer(Modifier.height(8.dp))
-            PnsaTextField(phone, { phone = it }, "Téléphone")
-            Spacer(Modifier.height(8.dp))
-            PnsaTextField(province, { province = it }, "Province")
-            Spacer(Modifier.height(8.dp))
-            PnsaTextField(ville, { ville = it }, "Ville")
+            Text("Modifier le profil", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = BadgeColor)
+            Spacer(Modifier.height(12.dp))
+            PnsaCard {
+                PnsaTextField(prenom, { prenom = it }, "Prénom")
+                Spacer(Modifier.height(8.dp))
+                PnsaTextField(nom, { nom = it }, "Nom")
+                Spacer(Modifier.height(8.dp))
+                PnsaTextField(phone, { phone = it }, "Téléphone")
+                Spacer(Modifier.height(8.dp))
+                PnsaTextField(province, { province = it }, "Province")
+                Spacer(Modifier.height(8.dp))
+                PnsaTextField(ville, { ville = it }, "Ville")
+            }
             error?.let {
                 Spacer(Modifier.height(12.dp))
                 StatusBanner(it)

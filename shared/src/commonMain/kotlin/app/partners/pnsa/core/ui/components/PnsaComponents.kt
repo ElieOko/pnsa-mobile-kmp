@@ -56,9 +56,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import app.partners.pnsa.core.ui.theme.LocalEmbeddedChrome
+import app.partners.pnsa.core.ui.theme.BadgeColor
 import app.partners.pnsa.core.ui.theme.PnsaBlue
 import app.partners.pnsa.core.ui.theme.PnsaInk
 import app.partners.pnsa.core.ui.theme.PnsaMuted
+import app.partners.pnsa.core.ui.theme.WsColor
 
 @Composable
 fun PnsaScaffold(
@@ -157,13 +159,13 @@ fun PnsaChip(
     Surface(
         modifier = modifier.quietClick(onClick = onClick),
         shape = CircleShape,
-        color = if (selected) PnsaBlue else Color.White,
-        border = BorderStroke(1.dp, if (selected) PnsaBlue else Color(0xFFC5D0E0)),
+        color = if (selected) WsColor else Color.White,
+        border = BorderStroke(1.dp, if (selected) BadgeColor else Color(0xFFD5E0D3)),
     ) {
         Text(
             text = label,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-            color = if (selected) Color.White else PnsaInk,
+            color = if (selected) BadgeColor else PnsaInk,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
         )

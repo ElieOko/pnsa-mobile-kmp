@@ -50,9 +50,10 @@ import app.partners.pnsa.core.ui.components.PnsaChip
 import app.partners.pnsa.core.ui.components.quietClick
 import app.partners.pnsa.core.ui.navigation.AppDestination
 import app.partners.pnsa.core.ui.navigation.AppNavigator
+import app.partners.pnsa.core.ui.theme.BadgeColor
+import app.partners.pnsa.core.ui.theme.WsColor
 import app.partners.pnsa.features.structure.data.KinshasaCenters
 import app.partners.pnsa.features.structure.data.StructureChatPreview
-import app.partners.pnsa.features.structure.domain.models.HealthStructure
 
 @Composable
 fun StructureConversationsScreen(navigator: AppNavigator) {
@@ -93,28 +94,19 @@ fun StructureConversationsScreen(navigator: AppNavigator) {
         }
     }
 
-    PnsaScaffold(containerColor = Color(0xFFF4F5F7)) { padding ->
+    PnsaScaffold(containerColor = Color.White) { padding ->
         Column(
             Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .background(Color(0xFFF4F5F7)),
+                .background(Color.White),
         ) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF075E54))
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Messagerie", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                Icon(Icons.Default.Search, contentDescription = null, tint = Color.White)
-            }
             Surface(
-                color = Color.White,
+                color = Color(0xFFF8FFF8),
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Messagerie", color = BadgeColor, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                     SearchField(
                         value = query,
                         onValueChange = { query = it },
@@ -124,6 +116,11 @@ fun StructureConversationsScreen(navigator: AppNavigator) {
                         PnsaChip(label = "Toutes", selected = !onlyUnread, onClick = { onlyUnread = false })
                         PnsaChip(label = "Non lues", selected = onlyUnread, onClick = { onlyUnread = true })
                     }
+                    Text(
+                        "${startedPreviews.size} discussion(s) active(s)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                     if (query.isNotBlank() && !canSearch) {
                         Text(
                             "Tape au moins 2 caractères pour lancer la recherche.",
@@ -140,7 +137,7 @@ fun StructureConversationsScreen(navigator: AppNavigator) {
                 )
             } else {
                 LazyColumn(
-                    Modifier.fillMaxSize(),
+                    Modifier.fillMaxSize().padding(top = 4.dp),
                 ) {
                     if (startedPreviews.isNotEmpty()) {
                         item {
@@ -207,7 +204,7 @@ fun StructureChatScreen(structureId: Long, onBack: () -> Unit) {
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex)
     }
 
-    PnsaScaffold(containerColor = Color(0xFFECE5DD)) { padding ->
+    PnsaScaffold(containerColor = Color(0xFFF6FFF6)) { padding ->
         if (structure == null) {
             EmptyState("Structure introuvable", "Retourne à la carte puis réessaie.")
             return@PnsaScaffold
@@ -223,7 +220,7 @@ fun StructureChatScreen(structureId: Long, onBack: () -> Unit) {
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFF075E54))
+                    .background(Color.White)
                     .padding(horizontal = 10.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -231,24 +228,24 @@ fun StructureChatScreen(structureId: Long, onBack: () -> Unit) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Retour",
-                    tint = Color.White,
+                    tint = BadgeColor,
                     modifier = Modifier.quietClick { onBack() },
                 )
                 Box(
                     Modifier
                         .size(34.dp)
-                        .background(Color(0xFF25D366), CircleShape),
+                        .background(BadgeColor, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(structure.displayName.take(1).uppercase(), color = Color.White, fontWeight = FontWeight.Bold)
                 }
                 Column(Modifier.weight(1f)) {
-                    Text(structure.displayName, color = Color.White, fontWeight = FontWeight.SemiBold)
-                    Text("En ligne · ${structure.displayCity}", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
+                    Text(structure.displayName, color = Color(0xFF1C2A1E), fontWeight = FontWeight.SemiBold)
+                    Text("En ligne · ${structure.displayCity}", color = Color(0xFF5C6B5E), style = MaterialTheme.typography.bodySmall)
                 }
-                Icon(Icons.Default.Videocam, contentDescription = null, tint = Color.White)
-                Icon(Icons.Default.Call, contentDescription = null, tint = Color.White)
-                Icon(Icons.Default.MoreVert, contentDescription = null, tint = Color.White)
+                Icon(Icons.Default.Videocam, contentDescription = null, tint = BadgeColor)
+                Icon(Icons.Default.Call, contentDescription = null, tint = BadgeColor)
+                Icon(Icons.Default.MoreVert, contentDescription = null, tint = BadgeColor)
             }
             LazyColumn(
                 modifier = Modifier
@@ -259,16 +256,22 @@ fun StructureChatScreen(structureId: Long, onBack: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 items(messages, key = { it.id }) { message ->
-                    val bubbleColor = if (message.fromStructure) Color.White else Color(0xFFDCF8C6)
+                    val bubbleColor = if (message.fromStructure) Color.White else Color(0xFFE8F8EA)
+                    val bubbleShape = if (message.fromStructure) {
+                        RoundedCornerShape(topStart = 6.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 16.dp)
+                    } else {
+                        RoundedCornerShape(topStart = 16.dp, topEnd = 6.dp, bottomStart = 16.dp, bottomEnd = 16.dp)
+                    }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = if (message.fromStructure) Arrangement.Start else Arrangement.End) {
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
+                            shape = bubbleShape,
                             color = bubbleColor,
-                            tonalElevation = 1.dp,
+                            tonalElevation = if (message.fromStructure) 1.dp else 0.dp,
+                            shadowElevation = if (message.fromStructure) 1.dp else 0.dp,
                             modifier = Modifier.fillMaxWidth(0.86f),
                         ) {
                             Column(Modifier.padding(horizontal = 10.dp, vertical = 7.dp)) {
-                                Text(message.text)
+                                Text(message.text, color = Color(0xFF1C2A1E))
                                 Spacer(Modifier.height(3.dp))
                                 Row(
                                     modifier = Modifier.align(Alignment.End),
@@ -285,7 +288,7 @@ fun StructureChatScreen(structureId: Long, onBack: () -> Unit) {
                                             imageVector = if (message.read) Icons.Default.DoneAll else Icons.Default.Check,
                                             contentDescription = null,
                                             modifier = Modifier.size(14.dp),
-                                            tint = if (message.read) Color(0xFF34B7F1) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            tint = if (message.read) BadgeColor else MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
                                 }
@@ -297,14 +300,14 @@ fun StructureChatScreen(structureId: Long, onBack: () -> Unit) {
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFFF0F0F0))
+                    .background(Color.White)
                     .padding(horizontal = 8.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Surface(
                     shape = RoundedCornerShape(22.dp),
-                    color = Color.White,
+                    color = Color(0xFFF5F7F6),
                     modifier = Modifier.weight(1f),
                 ) {
                     BasicTextField(
@@ -324,7 +327,7 @@ fun StructureChatScreen(structureId: Long, onBack: () -> Unit) {
                 }
                 Surface(
                     shape = CircleShape,
-                    color = Color(0xFF25D366),
+                    color = BadgeColor,
                 ) {
                     IconButton(
                         onClick = {
@@ -349,9 +352,10 @@ private fun SearchField(
     placeholder: String,
 ) {
     Surface(
-        color = Color(0xFFF0F2F5),
+        color = Color.White,
         shape = RoundedCornerShape(26.dp),
         modifier = Modifier.fillMaxWidth(),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD8E7D6)),
     ) {
         Row(
             Modifier
@@ -384,8 +388,11 @@ private fun ConversationRow(
 ) {
     Surface(
         color = Color.White,
+        shape = RoundedCornerShape(18.dp),
+        tonalElevation = 1.dp,
         modifier = Modifier
             .fillMaxWidth()
+            .padding(horizontal = 10.dp, vertical = 4.dp)
             .quietClick(onClick = onClick),
     ) {
         Column {
@@ -399,7 +406,7 @@ private fun ConversationRow(
                 Box(
                     Modifier
                         .size(46.dp)
-                        .background(Color(0xFF25D366), CircleShape),
+                        .background(BadgeColor, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -421,13 +428,13 @@ private fun ConversationRow(
                     Text(
                         preview.lastTime.ifBlank { " " },
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (preview.unreadCount > 0) Color(0xFF25D366) else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (preview.unreadCount > 0) BadgeColor else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     if (preview.unreadCount > 0) {
                         Box(
                             Modifier
                                 .padding(top = 4.dp)
-                                .background(Color(0xFF25D366), CircleShape)
+                                .background(BadgeColor, CircleShape)
                                 .padding(horizontal = 7.dp, vertical = 2.dp),
                         ) {
                             Text(preview.unreadCount.toString(), color = Color.White, style = MaterialTheme.typography.labelSmall)
@@ -435,7 +442,7 @@ private fun ConversationRow(
                     }
                 }
             }
-            HorizontalDivider(color = Color(0xFFE8E8E8))
+            HorizontalDivider(color = WsColor)
         }
     }
 }

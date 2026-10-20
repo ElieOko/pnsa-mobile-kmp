@@ -1,6 +1,7 @@
 package app.partners.pnsa.features.structure.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,7 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.partners.pnsa.core.ui.components.quietClick
-import app.partners.pnsa.core.ui.theme.PnsaBlue
+import app.partners.pnsa.core.ui.theme.BadgeColor
 import app.partners.pnsa.core.di.LocalAppGraph
 import app.partners.pnsa.core.location.LatLngPoint
 import app.partners.pnsa.core.location.RouteTrack
@@ -79,7 +80,9 @@ fun StructureListScreen(navigator: AppNavigator) {
     var loading by remember { mutableStateOf(!graph.screens.structuresLoaded) }
     var error by remember { mutableStateOf<String?>(null) }
     var selectedId by remember { mutableStateOf(graph.prefs.mapSelectedId ?: items.firstOrNull()?.id) }
-    var showMap by remember { mutableStateOf(true) }
+    var showMap by remember { mutableStateOf(graph.prefs.mapShowMap) }
+    var satelliteView by remember { mutableStateOf(graph.prefs.mapSatellite) }
+    var visibleListCount by remember { mutableStateOf(12) }
 
     fun apply(list: List<HealthStructure>) {
         val merged = KinshasaCenters.mergeWith(list)
@@ -134,8 +137,13 @@ fun StructureListScreen(navigator: AppNavigator) {
     val selected = filtered.firstOrNull { it.id == selectedId }
     val navigation = rememberMapNavigation(selected)
     var followUser by remember { mutableStateOf(true) }
+    val visibleStructures = filtered.take(visibleListCount)
 
-    PnsaScaffold(topBar = { PnsaTopBar("Trouver une structure") }) { padding ->
+    LaunchedEffect(query, city, province) {
+        visibleListCount = 12
+    }
+
+    PnsaScaffold { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
             if (showMap) {
                 PlatformStructureMap(
@@ -147,6 +155,7 @@ fun StructureListScreen(navigator: AppNavigator) {
                         marker.id?.let { navigator.push(AppDestination.StructureChat(it)) }
                     },
                     modifier = Modifier.fillMaxSize(),
+                    satelliteView = satelliteView,
                     userLocation = navigation.user,
                     route = navigation.route,
                     followUser = followUser && navigation.granted,
@@ -166,10 +175,18 @@ fun StructureListScreen(navigator: AppNavigator) {
                         })
                     }
                     Spacer(Modifier.height(8.dp))
-                    PnsaTextField(query, {
-                        query = it
-                        graph.prefs.mapQuery = it
-                    }, "Nom, service ou commune")
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PnsaChip(label = "Standard", selected = !satelliteView, onClick = {
+                            satelliteView = false
+                            graph.prefs.mapSatellite = false
+                        })
+                        PnsaChip(label = "Satellite", selected = satelliteView, onClick = {
+                            satelliteView = true
+                            graph.prefs.mapSatellite = true
+                        })
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    StatusBanner("${filtered.size} structures filtrées. Passe en Liste pour affiner la recherche.")
                     if (!navigation.granted) {
                         Spacer(Modifier.height(8.dp))
                         StatusBanner("Autorise la localisation pour suivre ton déplacement.")
@@ -184,14 +201,14 @@ fun StructureListScreen(navigator: AppNavigator) {
                         .padding(end = 12.dp)
                         .size(48.dp)
                         .clip(CircleShape)
-                        .background(if (followUser) PnsaBlue else Color.White)
+                        .background(if (followUser) BadgeColor else Color.White)
                         .quietClick(onClick = { followUser = true }),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         Icons.Default.MyLocation,
                         contentDescription = "Suivre ma position",
-                        tint = if (followUser) Color.White else PnsaBlue,
+                        tint = if (followUser) Color.White else BadgeColor,
                     )
                 }
                 Column(
@@ -200,13 +217,15 @@ fun StructureListScreen(navigator: AppNavigator) {
                         .fillMaxWidth()
                         .padding(12.dp),
                 ) {
-                    if (navigation.route != null) {
-                        StatusBanner("En route · ${navigation.route.summary}")
-                        Spacer(Modifier.height(8.dp))
+                    val route = navigation.route
+                    AnimatedVisibility(visible = route != null) {
+                        StatusBanner("En route · ${route?.summary.orEmpty()}")
                     }
-                    if (selected != null) {
-                        GpsPlaceCard(selected) {
-                            selected.id?.let { navigator.push(AppDestination.StructureDetail(it)) }
+                    val selectedStructure = selected
+                    AnimatedVisibility(visible = selectedStructure != null) {
+                        Spacer(Modifier.height(8.dp))
+                        GpsPlaceCard(selectedStructure ?: return@AnimatedVisibility) {
+                            selectedStructure.id?.let { navigator.push(AppDestination.StructureDetail(it)) }
                         }
                     }
                 }
@@ -244,11 +263,13 @@ fun StructureListScreen(navigator: AppNavigator) {
                             }, "Commune / ville")
                             Spacer(Modifier.height(8.dp))
                             PrimaryAction(if (loading) "Recherche…" else "Actualiser l’annuaire") { load() }
+                            Spacer(Modifier.height(8.dp))
+                            StatusBanner("Affichage limité à $visibleListCount résultats pour garder l’annuaire lisible.")
                         }
                         if (error != null && filtered.isEmpty()) {
                             item { ErrorState(error.orEmpty(), onRetry = { load() }) }
                         }
-                        items(filtered, key = { it.id ?: it.displayName }) { structure ->
+                        items(visibleStructures, key = { it.id ?: it.displayName }) { structure ->
                             PnsaCard(onClick = {
                                 selectedId = structure.id
                                 graph.prefs.mapSelectedId = structure.id
@@ -262,6 +283,13 @@ fun StructureListScreen(navigator: AppNavigator) {
                                 if (structure.hasCoordinates) {
                                     Spacer(Modifier.height(6.dp))
                                     MetaRow(listOf(KinshasaMapMath.formatCoord(structure.latitude, structure.longitude)))
+                                }
+                            }
+                        }
+                        if (filtered.size > visibleListCount) {
+                            item {
+                                PrimaryAction("Afficher plus (${filtered.size - visibleListCount})") {
+                                    visibleListCount = (visibleListCount + 12).coerceAtMost(filtered.size)
                                 }
                             }
                         }

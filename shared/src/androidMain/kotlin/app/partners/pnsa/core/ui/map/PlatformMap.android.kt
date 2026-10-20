@@ -47,6 +47,7 @@ private class GoogleMapState {
     var lastSelectedId: Long? = null
     var lastUser: LatLngPoint? = null
     var lastFollow = false
+    var lastSatellite = false
     val markers = mutableListOf<Marker>()
     var track: Polyline? = null
     var markerIcon: BitmapDescriptor? = null
@@ -60,6 +61,7 @@ actual fun PlatformStructureMap(
     selectedId: Long?,
     onSelect: (HealthStructure) -> Unit,
     modifier: Modifier,
+    satelliteView: Boolean,
     userLocation: LatLngPoint?,
     route: RouteTrack?,
     followUser: Boolean,
@@ -111,7 +113,7 @@ actual fun PlatformStructureMap(
                     if (state.selectedMarkerIcon == null) {
                         state.selectedMarkerIcon = createMarkerIcon(context, selected = true)
                     }
-                    configureMap(googleMap)
+                    configureMap(googleMap, satelliteView)
                     googleMap.setOnCameraMoveStartedListener { reason ->
                         if (reason == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE) {
                             onFollowInterrupted()
@@ -122,20 +124,20 @@ actual fun PlatformStructureMap(
                         onSelect(structure)
                         true
                     }
-                    bindGoogleMap(state, googleMap, points, selectedId, userLocation, route, followUser)
+                    bindGoogleMap(state, googleMap, points, selectedId, satelliteView, userLocation, route, followUser)
                 }
             }
         },
         update = {
             state.map?.let { googleMap ->
-                bindGoogleMap(state, googleMap, points, selectedId, userLocation, route, followUser)
+                bindGoogleMap(state, googleMap, points, selectedId, satelliteView, userLocation, route, followUser)
             }
         },
     )
 }
 
-private fun configureMap(map: GoogleMap) {
-    map.mapType = GoogleMap.MAP_TYPE_NORMAL
+private fun configureMap(map: GoogleMap, satelliteView: Boolean) {
+    map.mapType = if (satelliteView) GoogleMap.MAP_TYPE_HYBRID else GoogleMap.MAP_TYPE_NORMAL
     map.isBuildingsEnabled = false
     map.isIndoorEnabled = false
     map.isTrafficEnabled = false
@@ -160,10 +162,15 @@ private fun bindGoogleMap(
     map: GoogleMap,
     structures: List<HealthStructure>,
     selectedId: Long?,
+    satelliteView: Boolean,
     userLocation: LatLngPoint?,
     route: RouteTrack?,
     followUser: Boolean,
 ) {
+    if (satelliteView != state.lastSatellite) {
+        map.mapType = if (satelliteView) GoogleMap.MAP_TYPE_HYBRID else GoogleMap.MAP_TYPE_NORMAL
+        state.lastSatellite = satelliteView
+    }
     runCatching { map.isMyLocationEnabled = userLocation != null }
 
     val ids = structures.map { it.id }
