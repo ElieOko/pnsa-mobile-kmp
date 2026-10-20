@@ -150,7 +150,7 @@ fun HomeScreen(navigator: AppNavigator) {
                                         .fillMaxSize()
                                         .background(
                                             Brush.horizontalGradient(
-                                                listOf(Color(0xE00B3C8A), Color(0x990069E1), Color(0xB3D01D2A)),
+                                                listOf(Color(0xE00A5C10), Color(0x991AB221), Color(0xB30E7A16)),
                                             ),
                                         ),
                                 )

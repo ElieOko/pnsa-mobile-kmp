@@ -22,7 +22,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import app.partners.pnsa.core.ui.map.MapViewStyle
+import app.partners.pnsa.core.ui.theme.BadgeColor
+import app.partners.pnsa.core.ui.theme.WsGreenDark
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -138,7 +147,21 @@ fun KinshasaGpsMap(
     userLat: Double = -4.3276,
     userLon: Double = 15.3136,
     route: RouteTrack? = null,
+    viewStyle: MapViewStyle = MapViewStyle.Standard,
 ) {
+    // Animation continue : halo pulsant autour du marqueur sélectionné et de la position.
+    val pulseTransition = rememberInfiniteTransition(label = "map-pulse")
+    val pulse by pulseTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(1600), RepeatMode.Restart),
+        label = "map-pulse-value",
+    )
+    val (mapTop, mapBottom, gridColor, roadColor) = when (viewStyle) {
+        MapViewStyle.Standard -> listOf(Color(0xFFEFF7EC), Color(0xFFDDEED6), Color(0x140E7A16), Color(0xFFFFFFFF))
+        MapViewStyle.Satellite -> listOf(Color(0xFF10250F), Color(0xFF1D3D1A), Color(0x22FFFFFF), Color(0x88FFFFFF))
+        MapViewStyle.Relief -> listOf(Color(0xFFF2F0DC), Color(0xFFDCE8C8), Color(0x180E7A16), Color(0xFFFFFFFF))
+    }
     val markers = remember(structures) { structures.filter { it.hasCoordinates } }
     val selected = markers.firstOrNull { it.id == selectedId }
     val projectionBounds = remember(markers, userLat, userLon, route) {
@@ -182,9 +205,7 @@ fun KinshasaGpsMap(
             val w = size.width
             val h = size.height
             drawRect(
-                brush = Brush.verticalGradient(
-                    listOf(Color(0xFF0E1A33), Color(0xFF16325C), Color(0xFF1B4A86)),
-                ),
+                brush = Brush.verticalGradient(listOf(mapTop, mapBottom)),
             )
             val river = Path().apply {
                 moveTo(0f, h * 0.04f)
@@ -199,9 +220,9 @@ fun KinshasaGpsMap(
 
             for (i in 1..8) {
                 val y = h * i / 9f
-                drawLine(Color.White.copy(alpha = 0.06f), Offset(0f, y), Offset(w, y), strokeWidth = 2f)
+                drawLine(gridColor, Offset(0f, y), Offset(w, y), strokeWidth = 2f)
                 val x = w * i / 9f
-                drawLine(Color.White.copy(alpha = 0.05f), Offset(x, 0f), Offset(x, h), strokeWidth = 2f)
+                drawLine(gridColor, Offset(x, 0f), Offset(x, h), strokeWidth = 2f)
             }
 
             val boulevard = Path().apply {
@@ -209,12 +230,12 @@ fun KinshasaGpsMap(
                 cubicTo(w * 0.32f, h * 0.38f, w * 0.48f, h * 0.42f, w * 0.72f, h * 0.58f)
                 cubicTo(w * 0.82f, h * 0.66f, w * 0.88f, h * 0.78f, w * 0.92f, h * 0.9f)
             }
-            drawPath(boulevard, Color(0x66FFFFFF), style = Stroke(width = 7f, cap = StrokeCap.Round))
+            drawPath(boulevard, roadColor, style = Stroke(width = 9f, cap = StrokeCap.Round))
             val kasavubu = Path().apply {
                 moveTo(w * 0.08f, h * 0.36f)
                 cubicTo(w * 0.28f, h * 0.4f, w * 0.46f, h * 0.55f, w * 0.62f, h * 0.82f)
             }
-            drawPath(kasavubu, Color(0x44FFFFFF), style = Stroke(width = 5f, cap = StrokeCap.Round))
+            drawPath(kasavubu, roadColor.copy(alpha = 0.75f), style = Stroke(width = 6f, cap = StrokeCap.Round))
 
             communes.forEach { commune ->
                 val p = KinshasaMapMath.project(commune.lat, commune.lon, w, h, projectionBounds)
@@ -224,21 +245,25 @@ fun KinshasaGpsMap(
             route?.points?.zipWithNext { start, end ->
                 val from = KinshasaMapMath.project(start.latitude, start.longitude, w, h, projectionBounds)
                 val to = KinshasaMapMath.project(end.latitude, end.longitude, w, h, projectionBounds)
-                drawLine(Color(0xFF0B3C8A), from, to, strokeWidth = 10f, cap = StrokeCap.Round)
-                drawLine(PnsaBlue, from, to, strokeWidth = 6f, cap = StrokeCap.Round)
+                drawLine(Color.White, from, to, strokeWidth = 11f, cap = StrokeCap.Round)
+                drawLine(BadgeColor, from, to, strokeWidth = 6f, cap = StrokeCap.Round)
             }
 
             val user = KinshasaMapMath.project(userLat, userLon, w, h, projectionBounds)
-            drawCircle(PnsaBlue.copy(alpha = 0.18f), 34f, user)
-            drawCircle(Color.White, 10f, user)
-            drawCircle(PnsaBlue, 6f, user)
+            drawCircle(BadgeColor.copy(alpha = 0.22f * (1f - pulse)), 26f + 26f * pulse, user)
+            drawCircle(BadgeColor.copy(alpha = 0.18f), 30f, user)
+            drawCircle(Color.White, 11f, user)
+            drawCircle(BadgeColor, 7f, user)
 
             markers.forEach { item ->
                 val p = KinshasaMapMath.project(item.latitude!!, item.longitude!!, w, h, projectionBounds)
                 val active = item.id == selectedId
-                val pin = if (active) PnsaRed else Color(0xFFFFC107)
-                val halo = if (active) PnsaRed.copy(alpha = 0.28f) else PnsaBlue.copy(alpha = 0.22f)
-                drawCircle(halo, if (active) 22f else 14f, p)
+                val pin = if (active) BadgeColor else WsGreenDark
+                if (active) {
+                    drawCircle(BadgeColor.copy(alpha = 0.30f * (1f - pulse)), 20f + 22f * pulse, p)
+                }
+                val halo = if (active) BadgeColor.copy(alpha = 0.25f) else BadgeColor.copy(alpha = 0.16f)
+                drawCircle(halo, if (active) 24f else 14f, p)
                 val path = Path().apply {
                     moveTo(p.x, p.y + 16f)
                     quadraticTo(p.x - 14f, p.y - 2f, p.x, p.y - 18f)
@@ -250,7 +275,7 @@ fun KinshasaGpsMap(
             }
 
             drawRoundRect(
-                Color(0x990A0B10),
+                Color(0xE6FFFFFF),
                 topLeft = Offset(16f, h - 54f),
                 size = Size(210f, 36f),
                 cornerRadius = CornerRadius(18f, 18f),
@@ -258,8 +283,8 @@ fun KinshasaGpsMap(
         }
 
         Text(
-            "Carte locale · structures",
-            color = Color.White.copy(alpha = 0.9f),
+            "Carte locale · ${viewStyle.label}",
+            color = WsGreenDark,
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.align(Alignment.BottomStart).padding(18.dp),
         )
@@ -271,7 +296,7 @@ fun KinshasaGpsMap(
             Icon(
                 Icons.Default.MyLocation,
                 contentDescription = "Position indicative",
-                tint = PnsaBlue,
+                tint = BadgeColor,
                 modifier = Modifier.padding(8.dp).size(18.dp),
             )
         }
@@ -303,10 +328,10 @@ fun GpsPlaceCard(
                 Modifier
                     .size(44.dp)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(PnsaRed.copy(alpha = 0.12f)),
+                    .background(BadgeColor.copy(alpha = 0.14f)),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Default.Place, contentDescription = null, tint = PnsaRed)
+                Icon(Icons.Default.Place, contentDescription = null, tint = BadgeColor)
             }
             Spacer(Modifier.size(12.dp))
             Column(Modifier.weight(1f)) {
@@ -322,9 +347,9 @@ fun GpsPlaceCard(
 fun MapLegendRow() {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
         LegendDot(PnsaBlue, "Position")
-        LegendDot(Color(0xFFFFC107), "Centre")
-        LegendDot(PnsaRed, "Sélection")
-        LegendDot(Color(0xFF0B3C8A), "Itinéraire")
+        LegendDot(WsGreenDark, "Centre")
+        LegendDot(BadgeColor, "Sélection")
+        LegendDot(BadgeColor, "Itinéraire")
     }
 }
 

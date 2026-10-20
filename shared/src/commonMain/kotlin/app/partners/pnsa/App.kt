@@ -3,26 +3,20 @@ package app.partners.pnsa
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import app.partners.pnsa.core.di.AppGraph
 import app.partners.pnsa.core.di.LocalAppGraph
 import app.partners.pnsa.core.ui.components.KeepAlivePane
-import app.partners.pnsa.core.ui.components.PnsaDrawerContent
 import app.partners.pnsa.core.ui.components.PnsaScaffold
 import app.partners.pnsa.core.ui.components.TikTokBottomBar
-import app.partners.pnsa.core.ui.components.TikTokTopBar
 import app.partners.pnsa.core.ui.navigation.AppDestination
 import app.partners.pnsa.core.ui.navigation.AppNavigator
 import app.partners.pnsa.core.ui.navigation.MainTab
@@ -47,7 +41,6 @@ import app.partners.pnsa.features.structure.ui.StructureListScreen
 import app.partners.pnsa.features.user.ui.HelpScreen
 import app.partners.pnsa.features.user.ui.ProfileEditScreen
 import app.partners.pnsa.features.user.ui.ProfileScreen
-import kotlinx.coroutines.launch
 
 @Composable
 fun App() {
@@ -66,70 +59,33 @@ private fun PnsaRoot(graph: AppGraph) {
             openTab(MainTab.Structures)
         }
     }
-
-    val user by graph.session.user.collectAsState()
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
     val visited = remember { mutableStateListOf(navigator.tab) }
-    val showChrome = navigator.current !is AppDestination.QuizPlay
+    val inQuizPlay = navigator.current is AppDestination.QuizPlay
+    // Aucune topbar : seule la bottom bar blanche (racines d'onglets) sert de chrome.
+    val showBottomBar = !inQuizPlay && !navigator.canPop
 
     LaunchedEffect(navigator.tab) {
         if (navigator.tab !in visited) visited += navigator.tab
     }
 
-    val onMapTab = navigator.tab == MainTab.Structures
-    LaunchedEffect(onMapTab) {
-        if (onMapTab && drawerState.isOpen) drawerState.close()
-    }
-
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        gesturesEnabled = !navigator.canPop && !onMapTab,
-        drawerContent = {
-            PnsaDrawerContent(
-                name = user?.displayName ?: "Professionnel PNSA",
-                email = user?.email.orEmpty(),
-                initials = user?.initials ?: "P",
-                onDestination = { dest ->
-                    scope.launch { drawerState.close() }
-                    navigator.push(dest)
-                },
-                showLogout = false,
-                onLogout = {},
-            )
-        },
-    ) {
-        CompositionLocalProvider(LocalEmbeddedChrome provides true) {
-            PnsaScaffold(
-                containerColor = MaterialTheme.colorScheme.background,
-                topBar = {
-                    if (showChrome) {
-                        TikTokTopBar(
-                            title = navigator.title(),
-                            canPop = navigator.canPop,
-                            onMenu = { scope.launch { drawerState.open() } },
-                            onBack = { navigator.pop() },
-                            initials = user?.initials ?: "P",
-                            onAvatar = { navigator.push(AppDestination.Profile) },
-                        )
-                    }
-                },
-                bottomBar = {
-                    if (showChrome) {
-                        TikTokBottomBar(
-                            selected = navigator.tab,
-                            onSelect = { navigator.openTab(it) },
-                        )
-                    }
-                },
-            ) { padding ->
-                Box(Modifier.padding(padding).fillMaxSize()) {
-                    MainTab.entries.forEach { tab ->
-                        if (tab in visited) {
-                            KeepAlivePane(visible = navigator.tab == tab) {
-                                CompositionLocalProvider(LocalTabActive provides (navigator.tab == tab)) {
-                                    SignedInFlow(navigator, tab)
-                                }
+    CompositionLocalProvider(LocalEmbeddedChrome provides true) {
+        PnsaScaffold(
+            containerColor = MaterialTheme.colorScheme.background,
+            bottomBar = {
+                if (showBottomBar) {
+                    TikTokBottomBar(
+                        selected = navigator.tab,
+                        onSelect = { navigator.openTab(it) },
+                    )
+                }
+            },
+        ) { padding ->
+            Box(Modifier.padding(padding).fillMaxSize()) {
+                MainTab.entries.forEach { tab ->
+                    if (tab in visited) {
+                        KeepAlivePane(visible = navigator.tab == tab) {
+                            CompositionLocalProvider(LocalTabActive provides (navigator.tab == tab)) {
+                                SignedInFlow(navigator, tab)
                             }
                         }
                     }
@@ -139,28 +95,52 @@ private fun PnsaRoot(graph: AppGraph) {
     }
 }
 
+/**
+ * La racine de chaque onglet reste toujours composée : quand un détail est poussé,
+ * il s'affiche par-dessus (fond blanc) sans détruire l'écran racine — l'état de la
+ * carte (vue, position, sélection) est donc intégralement conservé au retour.
+ */
 @Composable
 private fun SignedInFlow(navigator: AppNavigator, tab: MainTab) {
-    when (val dest = navigator.currentFor(tab)) {
-        AppDestination.Home -> HomeScreen(navigator)
-        AppDestination.Learn -> ContentListScreen(navigator)
+    val dest = navigator.currentFor(tab)
+    Box(Modifier.fillMaxSize()) {
+        TabRootScreen(navigator, tab)
+        if (navigator.depthFor(tab) > 1) {
+            Surface(Modifier.fillMaxSize(), color = Color.White) {
+                DetailScreen(navigator, dest)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TabRootScreen(navigator: AppNavigator, tab: MainTab) {
+    when (tab) {
+        MainTab.Home -> HomeScreen(navigator)
+        MainTab.Learn -> ContentListScreen(navigator)
+        MainTab.Quiz -> QuizListScreen(navigator)
+        MainTab.Structures -> StructureListScreen(navigator)
+        MainTab.Forum -> ForumListScreen(navigator)
+        MainTab.Profile -> ProfileScreen(navigator)
+    }
+}
+
+@Composable
+private fun DetailScreen(navigator: AppNavigator, dest: AppDestination) {
+    when (dest) {
         is AppDestination.ContentDetail -> ContentDetailScreen(dest.id, onBack = { navigator.pop() })
-        AppDestination.Quizzes -> QuizListScreen(navigator)
         is AppDestination.QuizPlay -> QuizPlayScreen(dest.id, onBack = { navigator.pop() })
-        AppDestination.Structures -> StructureListScreen(navigator)
         is AppDestination.StructureDetail -> StructureDetailScreen(dest.id, navigator, onBack = { navigator.pop() })
         AppDestination.Orientations -> OrientationListScreen(navigator)
         is AppDestination.OrientationDetail -> OrientationDetailScreen(dest.id, onBack = { navigator.pop() })
         is AppDestination.OrientationCreate -> OrientationCreateScreen(dest.structureId, navigator, onBack = { navigator.pop() })
-        AppDestination.Forum -> ForumListScreen(navigator)
         is AppDestination.ForumDetail -> ForumDetailScreen(dest.id, onBack = { navigator.pop() })
         AppDestination.Advice -> AdviceListScreen(navigator)
         is AppDestination.AdviceChat -> AdviceChatScreen(dest.id, onBack = { navigator.pop() })
-        AppDestination.Profile -> ProfileScreen(navigator)
         AppDestination.ProfileEdit -> ProfileEditScreen(onBack = { navigator.pop() })
         AppDestination.Help, AppDestination.PublicHelp -> HelpScreen(onBack = { navigator.pop() })
         AppDestination.PublicLegal -> LegalScreen(onBack = { navigator.pop() })
-        AppDestination.More -> ProfileScreen(navigator)
-        AppDestination.Welcome, AppDestination.Login, AppDestination.Register -> HomeScreen(navigator)
+        AppDestination.Profile, AppDestination.More -> ProfileScreen(navigator)
+        else -> TabRootScreen(navigator, navigator.tab)
     }
 }

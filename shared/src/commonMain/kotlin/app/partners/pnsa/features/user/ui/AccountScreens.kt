@@ -1,5 +1,31 @@
 package app.partners.pnsa.features.user.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import app.partners.pnsa.core.ui.components.SectionTitle
+import app.partners.pnsa.core.ui.components.quietClick
+import app.partners.pnsa.core.ui.theme.BadgeColor
+import app.partners.pnsa.core.ui.theme.WsColor
+import app.partners.pnsa.core.ui.theme.WsGreenDark
+import app.partners.pnsa.core.ui.theme.WsSurfaceSoft
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -89,7 +115,7 @@ fun ProfileScreen(navigator: AppNavigator) {
         loading = false
     }
 
-    PnsaScaffold(topBar = { PnsaTopBar("Mon profil", onBack = { navigator.pop() }) }) { padding ->
+    PnsaScaffold { padding ->
         if (loading) {
             LoadingState()
             return@PnsaScaffold
@@ -97,24 +123,95 @@ fun ProfileScreen(navigator: AppNavigator) {
         Column(
             Modifier
                 .padding(padding)
-                .padding(20.dp)
-                .verticalScroll(rememberScrollState()),
+                .fillMaxSize()
+                .background(Color.White)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            AvatarCircle(user?.initials ?: "?")
-            Spacer(Modifier.height(12.dp))
-            Text(user?.displayName ?: "", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text(user?.email ?: "")
-            Text(listOfNotNull(user?.province, user?.ville).joinToString(" · "))
+            Spacer(Modifier.height(22.dp))
+            AvatarCircle(user?.initials ?: "?", size = 88.dp)
+            Spacer(Modifier.height(14.dp))
+            Text(user?.displayName.orEmpty().ifBlank { "Professionnel PNSA" }, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            if (!user?.email.isNullOrBlank()) {
+                Text(user?.email.orEmpty(), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            val location = listOfNotNull(user?.province, user?.ville).joinToString(" · ")
+            if (location.isNotBlank()) {
+                Text(location, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             Spacer(Modifier.height(16.dp))
-            PrimaryAction("Modifier le profil") { navigator.push(AppDestination.ProfileEdit) }
-            Spacer(Modifier.height(10.dp))
-            bundle?.consents?.forEach { consent ->
-                PnsaCard(Modifier.padding(bottom = 8.dp)) {
-                    Text(consent.consentType ?: "Consentement", fontWeight = FontWeight.SemiBold)
-                    Text(if (consent.granted) "Accepté" else "Refusé")
+            // Carte professionnelle verte.
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = WsSurfaceSoft,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Verified, contentDescription = null, tint = BadgeColor, modifier = Modifier.size(28.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            user?.typeUser?.libelle ?: user?.type ?: "Compte professionnel PNSA",
+                            fontWeight = FontWeight.Bold,
+                            color = WsGreenDark,
+                        )
+                        Text(
+                            listOfNotNull(
+                                user?.matricule?.let { "Matricule $it" },
+                                user?.phone,
+                            ).joinToString(" · ").ifBlank { "Profil vérifié sur la plateforme" },
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
             }
+            Spacer(Modifier.height(16.dp))
+            PrimaryAction("Modifier le profil") { navigator.push(AppDestination.ProfileEdit) }
+            Spacer(Modifier.height(22.dp))
+
+            SectionTitle("Mon compte", Modifier.align(Alignment.Start))
+            ProfileMenuRow(Icons.Default.Place, "Mes orientations", "Références vers les structures") {
+                navigator.push(AppDestination.Orientations)
+            }
+            ProfileMenuRow(Icons.Default.Shield, "Conseil privé", "Échanges confidentiels avec un conseiller") {
+                navigator.push(AppDestination.Advice)
+            }
+            ProfileMenuRow(Icons.Default.Chat, "Discussions", "Forum public et réponses") {
+                navigator.push(AppDestination.Forum)
+            }
+            ProfileMenuRow(Icons.Default.Help, "Aide", "FAQ, contact et limites du service") {
+                navigator.push(AppDestination.Help)
+            }
+            ProfileMenuRow(Icons.Default.Lock, "Confidentialité", "Politique et consentements") {
+                navigator.push(AppDestination.PublicLegal)
+            }
+
+            val consents = bundle?.consents.orEmpty()
+            if (consents.isNotEmpty()) {
+                Spacer(Modifier.height(14.dp))
+                SectionTitle("Consentements", Modifier.align(Alignment.Start))
+                consents.forEach { consent ->
+                    Row(
+                        Modifier.fillMaxWidth().padding(vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            if (consent.granted) Icons.Default.CheckCircle else Icons.Default.Cancel,
+                            contentDescription = null,
+                            tint = if (consent.granted) BadgeColor else MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text(consent.consentType ?: "Consentement", fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                        Text(if (consent.granted) "Accepté" else "Refusé", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+
             bundle?.notificationPreferences?.let { prefs ->
+                Spacer(Modifier.height(14.dp))
                 NotificationBlock(prefs) { updated ->
                     scope.launch {
                         runCatching { graph.profile.updateNotifications(updated) }
@@ -123,12 +220,48 @@ fun ProfileScreen(navigator: AppNavigator) {
                     }
                 }
             }
-            message?.let { StatusBanner(it) }
-            Spacer(Modifier.height(16.dp))
+            message?.let {
+                Spacer(Modifier.height(12.dp))
+                StatusBanner(it)
+            }
+            Spacer(Modifier.height(18.dp))
             SecondaryAction("Demander la suppression du compte") {
                 message = "Demande reçue côté application. Écris à ${AppConfig.contactEmail} pour le traitement institutionnel. Nous n’afficherons pas « tout a été supprimé » tant que la procédure n’est pas confirmée."
             }
+            Spacer(Modifier.height(28.dp))
         }
+    }
+}
+
+@Composable
+private fun ProfileMenuRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+) {
+    Column {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .quietClick(onClick = onClick)
+                .padding(vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier.size(42.dp).clip(CircleShape).background(WsColor.copy(alpha = 0.5f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, contentDescription = null, tint = WsGreenDark, modifier = Modifier.size(21.dp))
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, fontWeight = FontWeight.SemiBold)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        HorizontalDivider(color = Color(0xFFF0F0F0))
     }
 }
 
@@ -169,7 +302,16 @@ private fun PrefSwitch(label: String, checked: Boolean, onChecked: (Boolean) -> 
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(label, modifier = Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onChecked)
+        Switch(
+            checked = checked,
+            onCheckedChange = onChecked,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = BadgeColor,
+                uncheckedThumbColor = Color.White,
+                uncheckedTrackColor = Color(0xFFD8E4D6),
+            ),
+        )
     }
 }
 
@@ -185,55 +327,74 @@ fun ProfileEditScreen(onBack: () -> Unit) {
     var ville by remember(user) { mutableStateOf(user?.ville.orEmpty()) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    val previewInitials = listOfNotNull(prenom.firstOrNull(), nom.firstOrNull()).joinToString("").uppercase().ifBlank { user?.initials ?: "?" }
+    val previewName = listOf(prenom, nom).joinToString(" ").trim().ifBlank { user?.displayName ?: "Ton profil" }
 
     PnsaScaffold(topBar = { PnsaTopBar("Modifier le profil", onBack = onBack) }) { padding ->
-        Column(Modifier.padding(padding).padding(20.dp).verticalScroll(rememberScrollState())) {
-            PnsaTextField(prenom, { prenom = it }, "Prénom")
-            Spacer(Modifier.height(8.dp))
-            PnsaTextField(nom, { nom = it }, "Nom")
-            Spacer(Modifier.height(8.dp))
-            PnsaTextField(phone, { phone = it }, "Téléphone")
-            Spacer(Modifier.height(8.dp))
-            PnsaTextField(province, { province = it }, "Province")
-            Spacer(Modifier.height(8.dp))
-            PnsaTextField(ville, { ville = it }, "Ville")
-            error?.let {
+        Column(
+            Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .background(Color.White)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Spacer(Modifier.height(18.dp))
+            AvatarCircle(previewInitials, size = 76.dp)
+            Spacer(Modifier.height(10.dp))
+            Text(previewName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            Text("Ces informations apparaissent dans tes échanges.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+            Spacer(Modifier.height(20.dp))
+            Column(Modifier.fillMaxWidth()) {
+                PnsaTextField(prenom, { prenom = it }, "Prénom")
+                Spacer(Modifier.height(10.dp))
+                PnsaTextField(nom, { nom = it }, "Nom")
+                Spacer(Modifier.height(10.dp))
+                PnsaTextField(phone, { phone = it }, "Téléphone")
+                Spacer(Modifier.height(10.dp))
+                PnsaTextField(province, { province = it }, "Province")
+                Spacer(Modifier.height(10.dp))
+                PnsaTextField(ville, { ville = it }, "Ville")
+                error?.let {
+                    Spacer(Modifier.height(12.dp))
+                    StatusBanner(it)
+                }
+                Spacer(Modifier.height(20.dp))
+                PrimaryAction(if (loading) "Enregistrement…" else "Enregistrer", enabled = !loading) {
+                    scope.launch {
+                        loading = true
+                        runCatching {
+                            graph.profile.update(
+                                ProfileUpdateRequest(
+                                    nom = nom,
+                                    prenom = prenom,
+                                    phone = phone,
+                                    province = province,
+                                    ville = ville,
+                                    langue = "fr",
+                                ),
+                            )
+                        }.onSuccess { onBack() }
+                            .onFailure { error = (it as? ApiException)?.userMessage() ?: it.message }
+                        loading = false
+                    }
+                }
                 Spacer(Modifier.height(12.dp))
-                StatusBanner(it)
-            }
-            Spacer(Modifier.height(16.dp))
-            PrimaryAction(if (loading) "Enregistrement…" else "Enregistrer", enabled = !loading) {
-                scope.launch {
-                    loading = true
-                    runCatching {
-                        graph.profile.update(
-                            ProfileUpdateRequest(
-                                nom = nom,
-                                prenom = prenom,
-                                phone = phone,
-                                province = province,
-                                ville = ville,
-                                langue = "fr",
-                            ),
-                        )
-                    }.onSuccess { onBack() }
-                        .onFailure { error = (it as? ApiException)?.userMessage() ?: it.message }
-                    loading = false
+                SecondaryAction("Mettre à jour mes consentements") {
+                    scope.launch {
+                        runCatching {
+                            graph.profile.updateConsents(
+                                listOf(
+                                    ConsentPayload("privacy", true, AppConfig.privacyPolicyVersion),
+                                    ConsentPayload("terms", true, AppConfig.termsVersion),
+                                ),
+                            )
+                        }.onSuccess { error = "Consentements mis à jour." }
+                            .onFailure { error = it.message }
+                    }
                 }
-            }
-            Spacer(Modifier.height(12.dp))
-            SecondaryAction("Mettre à jour mes consentements") {
-                scope.launch {
-                    runCatching {
-                        graph.profile.updateConsents(
-                            listOf(
-                                ConsentPayload("privacy", true, AppConfig.privacyPolicyVersion),
-                                ConsentPayload("terms", true, AppConfig.termsVersion),
-                            ),
-                        )
-                    }.onSuccess { error = "Consentements mis à jour." }
-                        .onFailure { error = it.message }
-                }
+                Spacer(Modifier.height(28.dp))
             }
         }
     }

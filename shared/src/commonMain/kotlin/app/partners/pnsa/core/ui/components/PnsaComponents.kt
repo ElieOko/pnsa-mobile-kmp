@@ -55,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.partners.pnsa.core.ui.theme.LocalEmbeddedChrome
 import app.partners.pnsa.core.ui.theme.PnsaBlue
 import app.partners.pnsa.core.ui.theme.PnsaInk
@@ -80,6 +81,11 @@ fun PnsaScaffold(
     )
 }
 
+/**
+ * Plus aucune barre supérieure sur les écrans racines (design vert/blanc sans topbar).
+ * Pour un écran de détail/conversation, on rend uniquement un en-tête blanc minimal
+ * façon WhatsApp : flèche retour verte + titre gras, intégré au fond blanc.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PnsaTopBar(
@@ -87,23 +93,21 @@ fun PnsaTopBar(
     onBack: (() -> Unit)? = null,
     actions: @Composable () -> Unit = {},
 ) {
-    if (LocalEmbeddedChrome.current) return
+    if (onBack == null) return
     TopAppBar(
         title = {
-            Text(title, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(title, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         },
         navigationIcon = {
-            if (onBack != null) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
-                }
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "Retour", tint = app.partners.pnsa.core.ui.theme.BadgeColor)
             }
         },
         actions = { actions() },
         windowInsets = WindowInsets(0, 0, 0, 0),
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.background,
-            titleContentColor = MaterialTheme.colorScheme.onBackground,
+            containerColor = Color.White,
+            titleContentColor = app.partners.pnsa.core.ui.theme.PnsaInk,
         ),
     )
 }
@@ -119,15 +123,7 @@ fun Modifier.quietClick(enabled: Boolean = true, onClick: () -> Unit): Modifier 
 
 @Composable
 fun PageBackdrop(content: @Composable () -> Unit) {
-    Box(Modifier.fillMaxSize()) {
-        Image(
-            painter = painterResource(Res.drawable.hero_bg),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-            alpha = 0.18f,
-        )
-        Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.88f)))
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         content()
     }
 }
@@ -167,15 +163,15 @@ fun PnsaChip(
     Surface(
         modifier = modifier.quietClick(onClick = onClick),
         shape = CircleShape,
-        color = if (selected) PnsaBlue else Color.White,
-        border = BorderStroke(1.dp, if (selected) PnsaBlue else Color(0xFFC5D0E0)),
+        color = if (selected) app.partners.pnsa.core.ui.theme.WsColor else Color(0xFFF0F0F0),
+        border = BorderStroke(1.dp, if (selected) app.partners.pnsa.core.ui.theme.WsColor else Color(0xFFE2E8E0)),
     ) {
         Text(
             text = label,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-            color = if (selected) Color.White else PnsaInk,
+            color = if (selected) app.partners.pnsa.core.ui.theme.WsGreenDark else PnsaInk.copy(alpha = 0.75f),
             style = MaterialTheme.typography.labelMedium,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
         )
     }
 }
@@ -409,15 +405,24 @@ fun QuietAction(text: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun AvatarCircle(initials: String, modifier: Modifier = Modifier) {
+fun AvatarCircle(initials: String, modifier: Modifier = Modifier, size: androidx.compose.ui.unit.Dp = 40.dp) {
     Box(
         modifier
-            .size(40.dp)
+            .size(size)
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.primary),
+            .background(
+                androidx.compose.ui.graphics.Brush.linearGradient(
+                    listOf(app.partners.pnsa.core.ui.theme.WsGreenDark, app.partners.pnsa.core.ui.theme.BadgeColor),
+                ),
+            ),
         contentAlignment = Alignment.Center,
     ) {
-        Text(initials, color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
+        Text(
+            initials,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            fontSize = (size.value * 0.38f).sp,
+        )
     }
 }
 

@@ -498,7 +498,7 @@ private fun AuthHero(
                 .padding(16.dp)
                 .height(4.dp)
                 .clip(CircleShape)
-                .background(Brush.horizontalGradient(listOf(PnsaBlue, PnsaRed)))
+                .background(Brush.horizontalGradient(listOf(app.partners.pnsa.core.ui.theme.WsGreenDark, PnsaBlue)))
                 .fillMaxWidth(0.2f),
         )
     }

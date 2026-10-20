@@ -11,7 +11,8 @@ enum class MainTab(val label: String) {
     Learn("Apprendre"),
     Quiz("Quiz"),
     Structures("Carte"),
-    Forum("Forum"),
+    Forum("Discussions"),
+    Profile("Profil"),
 }
 
 sealed class AppDestination {
@@ -58,6 +59,9 @@ class AppNavigator(
         get() = if (signedIn) tabStacks.getValue(tab).size > 1 else authStack.size > 1
 
     fun currentFor(tab: MainTab): AppDestination = tabStacks.getValue(tab).last()
+
+    /** Profondeur de pile d'un onglet : 1 = racine affichée, > 1 = détail par-dessus la racine conservée. */
+    fun depthFor(tab: MainTab): Int = tabStacks.getValue(tab).size
 
     fun push(destination: AppDestination) {
         val target = tabFor(destination)
@@ -113,6 +117,7 @@ class AppNavigator(
         MainTab.Quiz -> AppDestination.Quizzes
         MainTab.Structures -> AppDestination.Structures
         MainTab.Forum -> AppDestination.Forum
+        MainTab.Profile -> AppDestination.Profile
     }
 
     private fun isTabRoot(destination: AppDestination): Boolean = when (destination) {
@@ -121,6 +126,7 @@ class AppNavigator(
         AppDestination.Quizzes,
         AppDestination.Structures,
         AppDestination.Forum,
+        AppDestination.Profile,
         -> true
         else -> false
     }
@@ -129,8 +135,13 @@ class AppNavigator(
         AppDestination.Home -> MainTab.Home
         AppDestination.Learn, is AppDestination.ContentDetail -> MainTab.Learn
         AppDestination.Quizzes, is AppDestination.QuizPlay -> MainTab.Quiz
-        AppDestination.Structures, is AppDestination.StructureDetail -> MainTab.Structures
-        AppDestination.Forum, is AppDestination.ForumDetail -> MainTab.Forum
+        AppDestination.Structures, is AppDestination.StructureDetail,
+        AppDestination.Orientations, is AppDestination.OrientationDetail, is AppDestination.OrientationCreate,
+        -> MainTab.Structures
+        AppDestination.Forum, is AppDestination.ForumDetail,
+        AppDestination.Advice, is AppDestination.AdviceChat,
+        -> MainTab.Forum
+        AppDestination.Profile, AppDestination.ProfileEdit, AppDestination.Help, AppDestination.More -> MainTab.Profile
         else -> null
     }
 }

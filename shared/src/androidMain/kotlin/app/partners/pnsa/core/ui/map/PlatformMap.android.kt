@@ -37,6 +37,7 @@ private class GoogleMapState {
     var lastSelectedId: Long? = null
     var lastUser: LatLngPoint? = null
     var lastFollow = false
+    var lastStyle: MapViewStyle? = null
     val markers = mutableListOf<Marker>()
     var track: Polyline? = null
 }
@@ -52,6 +53,7 @@ actual fun PlatformStructureMap(
     route: RouteTrack?,
     followUser: Boolean,
     onFollowInterrupted: () -> Unit,
+    viewStyle: MapViewStyle,
 ) {
     val points = remember(structures) { structures.filter { it.hasCoordinates } }
     val state = remember { GoogleMapState() }
@@ -104,13 +106,13 @@ actual fun PlatformStructureMap(
                         onSelect(structure)
                         true
                     }
-                    bindGoogleMap(state, googleMap, points, selectedId, userLocation, route, followUser)
+                    bindGoogleMap(state, googleMap, points, selectedId, userLocation, route, followUser, viewStyle)
                 }
             }
         },
         update = {
             state.map?.let { googleMap ->
-                bindGoogleMap(state, googleMap, points, selectedId, userLocation, route, followUser)
+                bindGoogleMap(state, googleMap, points, selectedId, userLocation, route, followUser, viewStyle)
             }
         },
     )
@@ -145,8 +147,17 @@ private fun bindGoogleMap(
     userLocation: LatLngPoint?,
     route: RouteTrack?,
     followUser: Boolean,
+    viewStyle: MapViewStyle,
 ) {
     runCatching { map.isMyLocationEnabled = userLocation != null }
+    if (state.lastStyle != viewStyle) {
+        state.lastStyle = viewStyle
+        map.mapType = when (viewStyle) {
+            MapViewStyle.Standard -> GoogleMap.MAP_TYPE_NORMAL
+            MapViewStyle.Satellite -> GoogleMap.MAP_TYPE_SATELLITE
+            MapViewStyle.Relief -> GoogleMap.MAP_TYPE_TERRAIN
+        }
+    }
 
     val ids = structures.map { it.id }
     if (ids != state.lastIds) {
@@ -157,7 +168,7 @@ private fun bindGoogleMap(
             val hue = if (structure.id == selectedId) {
                 BitmapDescriptorFactory.HUE_RED
             } else {
-                BitmapDescriptorFactory.HUE_AZURE
+                BitmapDescriptorFactory.HUE_GREEN
             }
             val marker = map.addMarker(
                 MarkerOptions()
@@ -175,7 +186,7 @@ private fun bindGoogleMap(
             val hue = if (structure?.id == selectedId) {
                 BitmapDescriptorFactory.HUE_RED
             } else {
-                BitmapDescriptorFactory.HUE_AZURE
+                BitmapDescriptorFactory.HUE_GREEN
             }
             marker.setIcon(BitmapDescriptorFactory.defaultMarker(hue))
         }
@@ -189,7 +200,7 @@ private fun bindGoogleMap(
             state.track = map.addPolyline(
                 PolylineOptions()
                     .addAll(routePoints.map { LatLng(it.latitude, it.longitude) })
-                    .color(0xFF0069E1.toInt())
+                    .color(0xFF1AB221.toInt())
                     .width(10f)
                     .geodesic(false),
             )
@@ -210,8 +221,10 @@ private fun bindGoogleMap(
     } else if (selectedId != state.lastSelectedId && !followUser) {
         val selected = structures.firstOrNull { it.id == selectedId }
         if (selected != null) {
-            map.moveCamera(
+            map.animateCamera(
                 CameraUpdateFactory.newLatLngZoom(LatLng(selected.latitude!!, selected.longitude!!), 15.2f),
+                600,
+                null,
             )
         }
     }
