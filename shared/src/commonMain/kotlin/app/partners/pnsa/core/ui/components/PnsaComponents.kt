@@ -119,17 +119,7 @@ fun Modifier.quietClick(enabled: Boolean = true, onClick: () -> Unit): Modifier 
 
 @Composable
 fun PageBackdrop(content: @Composable () -> Unit) {
-    Box(Modifier.fillMaxSize()) {
-        Image(
-            painter = painterResource(Res.drawable.hero_bg),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-            alpha = 0.18f,
-        )
-        Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.88f)))
-        content()
-    }
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { content() }
 }
 
 @Composable

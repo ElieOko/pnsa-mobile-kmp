@@ -56,6 +56,7 @@ import app.partners.pnsa.core.ui.components.PnsaCard
 import app.partners.pnsa.core.ui.components.PnsaTextField
 import app.partners.pnsa.core.ui.components.PnsaTopBar
 import app.partners.pnsa.core.ui.components.PrimaryAction
+import app.partners.pnsa.core.ui.components.SecondaryAction
 import app.partners.pnsa.core.ui.components.StatusBanner
 import app.partners.pnsa.core.ui.map.PlatformStructureMap
 import app.partners.pnsa.core.ui.map.usesGoogleMaps
@@ -348,6 +349,10 @@ fun StructureDetailScreen(id: Long, navigator: AppNavigator, onBack: () -> Unit)
                         StatusBanner("Coordonnées GPS non renseignées. La fiche reste consultable.")
                     }
                     Spacer(Modifier.height(20.dp))
+                    SecondaryAction("Discuter avec cette structure", enabled = structure.id != null) {
+                        structure.id?.let { navigator.push(AppDestination.StructureChat(it)) }
+                    }
+                    Spacer(Modifier.height(8.dp))
                     PrimaryAction("Demander une orientation") {
                         navigator.push(AppDestination.OrientationCreate(id))
                     }

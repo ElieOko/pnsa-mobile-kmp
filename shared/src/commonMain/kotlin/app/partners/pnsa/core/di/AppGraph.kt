@@ -13,6 +13,7 @@ import app.partners.pnsa.features.content.data.CatalogRepository
 import app.partners.pnsa.features.forum.data.CommunityRepository
 import app.partners.pnsa.features.quiz.data.QuizAttemptRepository
 import app.partners.pnsa.features.structure.data.OrientationRepository
+import app.partners.pnsa.features.structure.data.StructureMessagingRepository
 import app.partners.pnsa.features.user.data.ProfileRepository
 
 class AppGraph {
@@ -26,6 +27,7 @@ class AppGraph {
     val catalog: CatalogRepository = CatalogRepository(api, cache, session)
     val quizAttempts: QuizAttemptRepository = QuizAttemptRepository(api)
     val orientations: OrientationRepository = OrientationRepository(api)
+    val messaging: StructureMessagingRepository = StructureMessagingRepository()
     val community: CommunityRepository = CommunityRepository(api)
     val profile: ProfileRepository = ProfileRepository(api, session)
     val directions: DirectionsClient = DirectionsClient()
