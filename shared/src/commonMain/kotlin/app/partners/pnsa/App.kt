@@ -6,11 +6,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import app.partners.pnsa.core.di.AppGraph
@@ -18,6 +23,7 @@ import app.partners.pnsa.core.di.LocalAppGraph
 import app.partners.pnsa.core.ui.components.KeepAlivePane
 import app.partners.pnsa.core.ui.components.PnsaScaffold
 import app.partners.pnsa.core.ui.components.TikTokBottomBar
+import app.partners.pnsa.core.ui.components.TikTokTopBar
 import app.partners.pnsa.core.ui.navigation.AppDestination
 import app.partners.pnsa.core.ui.navigation.AppNavigator
 import app.partners.pnsa.core.ui.navigation.MainTab
@@ -41,13 +47,16 @@ import app.partners.pnsa.features.structure.ui.StructureListScreen
 import app.partners.pnsa.features.user.ui.HelpScreen
 import app.partners.pnsa.features.user.ui.ProfileEditScreen
 import app.partners.pnsa.features.user.ui.ProfileScreen
+import kotlinx.coroutines.launch
 
 @Composable
 fun App() {
     val graph = remember { AppGraph() }
     PnsaTheme(darkTheme = false) {
         CompositionLocalProvider(LocalAppGraph provides graph) {
-            PnsaRoot()
+            PnsaRoot(
+                graph = TODO()
+            )
         }
     }
 }

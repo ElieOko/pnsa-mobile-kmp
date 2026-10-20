@@ -66,6 +66,7 @@ import app.partners.pnsa.core.ui.map.MapViewStyle
 import app.partners.pnsa.core.ui.theme.PnsaGreenDeep
 import app.partners.pnsa.core.ui.theme.PnsaInk
 import app.partners.pnsa.core.ui.theme.PnsaMuted
+import app.partners.pnsa.core.ui.theme.PnsaRed
 import app.partners.pnsa.core.ui.theme.bagdeColor
 import app.partners.pnsa.core.ui.theme.wsColor
 import app.partners.pnsa.features.structure.domain.models.HealthStructure
@@ -318,20 +319,12 @@ fun KinshasaGpsMap(
             drawCircle(bagdeColor, 6f, user)
 
             markers.forEach { item ->
-                val rawP = KinshasaMapMath.project(item.latitude!!, item.longitude!!, w, h, projectionBounds)
+                val p = KinshasaMapMath.project(item.latitude!!, item.longitude!!, w, h, projectionBounds)
                 val active = item.id == selectedId
-                val p = if (active) Offset(rawP.x, rawP.y + pinBounce) else rawP
-                val scale = if (active) selectionPop else 1f
-                if (active) {
-                    drawCircle(bagdeColor.copy(alpha = pulseAlpha), pulseRadius * 0.85f, rawP)
-                }
-                drawCircle(Color.White, (if (active) 19f else 17f) * scale, p)
-                drawCircle(
-                    if (active) bagdeColor.copy(alpha = 0.22f) else wsColor,
-                    (if (active) 17f else 15f) * scale,
-                    p,
-                )
-                val markerSize = ((if (active) 24 else 22) * scale).toInt()
+                if (active) drawCircle(PnsaRed.copy(alpha = 0.3f), 24f, p)
+                drawCircle(Color.White, if (active) 19f else 17f, p)
+                drawCircle(PnsaRed.copy(alpha = 0.12f), if (active) 17f else 15f, p)
+                val markerSize = if (active) 24 else 22
                 drawImage(
                     image = markerLogo,
                     dstOffset = IntOffset((p.x - markerSize / 2f).toInt(), (p.y - markerSize / 2f).toInt()),

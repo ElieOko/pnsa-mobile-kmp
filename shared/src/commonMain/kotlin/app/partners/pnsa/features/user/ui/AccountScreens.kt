@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Call
@@ -391,7 +392,7 @@ private fun ProfileActionRow(
             Text(title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = PnsaInk)
             Text(subtitle, fontSize = 12.sp, color = PnsaMuted)
         }
-        Icon(Icons.Default.ArrowForward, contentDescription = null, tint = bagdeColor, modifier = Modifier.size(18.dp))
+        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = bagdeColor, modifier = Modifier.size(18.dp))
     }
 }
 
