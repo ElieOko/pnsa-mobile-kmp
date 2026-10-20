@@ -33,22 +33,28 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
 import app.partners.pnsa.core.location.RouteTrack
 import app.partners.pnsa.core.ui.theme.PnsaBlue
 import app.partners.pnsa.core.ui.theme.PnsaNavy
 import app.partners.pnsa.core.ui.theme.PnsaRed
 import app.partners.pnsa.features.structure.domain.models.HealthStructure
+import app.partners.pnsa.resources.Res
+import app.partners.pnsa.resources.map_marker_logo
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
+import org.jetbrains.compose.resources.imageResource
 
 object KinshasaMapMath {
     data class Bounds(
@@ -141,6 +147,7 @@ fun KinshasaGpsMap(
 ) {
     val markers = remember(structures) { structures.filter { it.hasCoordinates } }
     val selected = markers.firstOrNull { it.id == selectedId }
+    val markerLogo = imageResource(Res.drawable.map_marker_logo)
     val projectionBounds = remember(markers, userLat, userLon, route) {
         KinshasaMapMath.boundsFor(markers, userLat, userLon, route)
     }
@@ -236,17 +243,16 @@ fun KinshasaGpsMap(
             markers.forEach { item ->
                 val p = KinshasaMapMath.project(item.latitude!!, item.longitude!!, w, h, projectionBounds)
                 val active = item.id == selectedId
-                val pin = if (active) PnsaRed else Color(0xFFFFC107)
-                val halo = if (active) PnsaRed.copy(alpha = 0.28f) else PnsaBlue.copy(alpha = 0.22f)
-                drawCircle(halo, if (active) 22f else 14f, p)
-                val path = Path().apply {
-                    moveTo(p.x, p.y + 16f)
-                    quadraticTo(p.x - 14f, p.y - 2f, p.x, p.y - 18f)
-                    quadraticTo(p.x + 14f, p.y - 2f, p.x, p.y + 16f)
-                    close()
-                }
-                drawPath(path, pin)
-                drawCircle(Color.White, 4.5f, Offset(p.x, p.y - 8f))
+                if (active) drawCircle(PnsaRed.copy(alpha = 0.3f), 24f, p)
+                drawCircle(Color.White, if (active) 19f else 17f, p)
+                drawCircle(PnsaRed.copy(alpha = 0.12f), if (active) 17f else 15f, p)
+                val markerSize = if (active) 24 else 22
+                drawImage(
+                    image = markerLogo,
+                    dstOffset = IntOffset((p.x - markerSize / 2f).toInt(), (p.y - markerSize / 2f).toInt()),
+                    dstSize = IntSize(markerSize, markerSize),
+                    colorFilter = ColorFilter.tint(PnsaRed),
+                )
             }
 
             drawRoundRect(
@@ -312,6 +318,7 @@ fun GpsPlaceCard(
             Column(Modifier.weight(1f)) {
                 Text(item.displayName, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = PnsaNavy)
                 Text("${item.displayCity} · ${item.structureType ?: "Centre SSR"}", color = PnsaNavy.copy(alpha = 0.65f), fontSize = 12.sp)
+                Text(item.displayAddress, color = PnsaNavy.copy(alpha = 0.58f), fontSize = 11.sp)
                 Text(KinshasaMapMath.formatCoord(item.latitude, item.longitude), color = PnsaBlue, fontSize = 12.sp, fontWeight = FontWeight.Medium)
             }
         }
@@ -322,7 +329,7 @@ fun GpsPlaceCard(
 fun MapLegendRow() {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
         LegendDot(PnsaBlue, "Position")
-        LegendDot(Color(0xFFFFC107), "Centre")
+        LegendDot(PnsaRed, "Structure")
         LegendDot(PnsaRed, "Sélection")
         LegendDot(Color(0xFF0B3C8A), "Itinéraire")
     }
