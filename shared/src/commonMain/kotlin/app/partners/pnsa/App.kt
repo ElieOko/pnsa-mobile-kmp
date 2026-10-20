@@ -61,12 +61,16 @@ fun App() {
 
 @Composable
 private fun PnsaRoot(graph: AppGraph) {
-    val navigator = remember { AppNavigator(AppDestination.Home) }
+    val navigator = remember {
+        AppNavigator(AppDestination.Home).apply {
+            openTab(MainTab.Structures)
+        }
+    }
 
     val user by graph.session.user.collectAsState()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    val visited = remember { mutableStateListOf(MainTab.Home) }
+    val visited = remember { mutableStateListOf(navigator.tab) }
     val showChrome = navigator.current !is AppDestination.QuizPlay
 
     LaunchedEffect(navigator.tab) {
