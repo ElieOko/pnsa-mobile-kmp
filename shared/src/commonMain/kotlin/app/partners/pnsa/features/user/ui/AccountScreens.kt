@@ -262,13 +262,6 @@ fun ProfileScreen(navigator: AppNavigator) {
                 )
                 HorizontalDivider(color = Color(0xFFF0F5F0), modifier = Modifier.padding(vertical = 6.dp))
                 ProfileActionRow(
-                    icon = Icons.Default.Shield,
-                    title = "Conseil privé confidentiel",
-                    subtitle = "Échanger en privé avec un conseiller habilité",
-                    onClick = { navigator.push(AppDestination.Advice) },
-                )
-                HorizontalDivider(color = Color(0xFFF0F5F0), modifier = Modifier.padding(vertical = 6.dp))
-                ProfileActionRow(
                     icon = Icons.Default.Help,
                     title = "Aide & Questions fréquentes",
                     subtitle = "Guide d’utilisation et contacts officiels PNSA",
@@ -412,13 +405,9 @@ private fun NotificationBlock(
         push = it
         onSave(NotificationPreferencesUpdate(pushEnabled = it, forumEnabled = forum, adviceEnabled = advice, orientationEnabled = orientation))
     }
-    PrefSwitch("Discussions & Forum", forum) {
+    PrefSwitch("Discussions", forum) {
         forum = it
         onSave(NotificationPreferencesUpdate(pushEnabled = push, forumEnabled = it, adviceEnabled = advice, orientationEnabled = orientation))
-    }
-    PrefSwitch("Conseil privé", advice) {
-        advice = it
-        onSave(NotificationPreferencesUpdate(pushEnabled = push, forumEnabled = forum, adviceEnabled = it, orientationEnabled = orientation))
     }
     PrefSwitch("Suivi des orientations", orientation) {
         orientation = it
@@ -552,7 +541,7 @@ fun HelpScreen(onBack: () -> Unit) {
                     onBack = onBack,
                 )
                 Text(
-                    "Cherche une structure sur la carte, échange directement avec une structure ou dans les discussions, et crée une orientation si besoin. Le conseil privé confidentiel est accessible à tout moment.",
+                    "Cherche une structure sur la carte, échange directement avec une structure dans les discussions, et crée une orientation si besoin.",
                     color = PnsaMuted,
                 )
             }

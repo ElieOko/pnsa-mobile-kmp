@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -38,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
@@ -66,8 +68,8 @@ import app.partners.pnsa.features.structure.data.StructureChatPreview
 @Composable
 fun StructureConversationsScreen(navigator: AppNavigator) {
     val graph = LocalAppGraph.current
-    var query by remember { mutableStateOf("") }
-    var onlyUnread by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf(graph.prefs.chatSearchQuery) }
+    var onlyUnread by remember { mutableStateOf(graph.prefs.chatOnlyUnread) }
     val structures = remember(graph.screens.structures) {
         graph.screens.structures
             .ifEmpty { KinshasaCenters.all }
@@ -111,7 +113,7 @@ fun StructureConversationsScreen(navigator: AppNavigator) {
                 .fillMaxSize()
                 .background(Color.White),
         ) {
-            // WhatsApp-style header (no TopBar)
+            // WhatsApp-style header (no TopBar, no "Conseil privé" text)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -119,40 +121,37 @@ fun StructureConversationsScreen(navigator: AppNavigator) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Discussions Structures",
                         color = bagdeColor,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 24.sp,
+                        fontSize = 22.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         text = "Échange direct avec les structures de santé SSR",
                         color = PnsaMuted,
                         fontSize = 12.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
+                Spacer(Modifier.width(8.dp))
                 Surface(
-                    modifier = Modifier.quietClick { navigator.push(AppDestination.Advice) },
-                    shape = RoundedCornerShape(35.dp),
+                    modifier = Modifier
+                        .size(38.dp)
+                        .quietClick { navigator.push(AppDestination.Advice) },
+                    shape = CircleShape,
                     color = wsColor,
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
+                    Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Default.Shield,
-                            contentDescription = "Conseil privé",
+                            contentDescription = "Échange confidentiel",
                             tint = bagdeColor,
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Text(
-                            text = "Conseil privé",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = PnsaInk,
+                            modifier = Modifier.size(18.dp),
                         )
                     }
                 }
@@ -166,12 +165,18 @@ fun StructureConversationsScreen(navigator: AppNavigator) {
             ) {
                 SearchField(
                     value = query,
-                    onValueChange = { query = it },
+                    onValueChange = {
+                        query = it
+                        graph.prefs.chatSearchQuery = it
+                    },
                     placeholder = "Rechercher une structure ou commune",
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     SuggestionChip(
-                        onClick = { onlyUnread = false },
+                        onClick = {
+                            onlyUnread = false
+                            graph.prefs.chatOnlyUnread = false
+                        },
                         label = {
                             Text(
                                 text = "Toutes (${startedPreviews.size})",
@@ -190,7 +195,10 @@ fun StructureConversationsScreen(navigator: AppNavigator) {
                         ),
                     )
                     SuggestionChip(
-                        onClick = { onlyUnread = true },
+                        onClick = {
+                            onlyUnread = true
+                            graph.prefs.chatOnlyUnread = true
+                        },
                         label = {
                             Text(
                                 text = "Non lues",
@@ -227,7 +235,10 @@ fun StructureConversationsScreen(navigator: AppNavigator) {
                 )
             } else {
                 LazyColumn(
-                    Modifier.fillMaxSize(),
+                    Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .clipToBounds(),
                 ) {
                     items(startedPreviews, key = { it.structureId }) { preview ->
                         ConversationRow(
@@ -275,7 +286,7 @@ fun StructureChatScreen(structureId: Long, onBack: () -> Unit) {
     val structure = remember(structureId, structures) {
         structures.firstOrNull { it.id == structureId } ?: KinshasaCenters.byId(structureId)
     }
-    var draft by remember { mutableStateOf("") }
+    var draft by remember(structureId) { mutableStateOf(graph.messaging.draftFor(structureId)) }
     var messages by remember(structure?.id) {
         mutableStateOf(structure?.let { graph.messaging.messagesFor(it) }.orEmpty())
     }
@@ -297,12 +308,14 @@ fun StructureChatScreen(structureId: Long, onBack: () -> Unit) {
             Modifier
                 .padding(padding)
                 .fillMaxSize()
+                .imePadding()
                 .background(PnsaChatCanvas),
         ) {
-            // Clean white WhatsApp conversation header (no TopBar)
+            // Fixed topbar header of the discussion
             Surface(
                 color = Color.White,
                 shadowElevation = 2.dp,
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Box(Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
                     InlineBackHeader(
@@ -313,28 +326,38 @@ fun StructureChatScreen(structureId: Long, onBack: () -> Unit) {
                 }
             }
 
-            LazyColumn(
+            // Messages scroll strictly inside between topbar and composer bar
+            Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                state = listState,
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                    .clipToBounds(),
             ) {
-                items(messages, key = { it.id }) { message ->
-                    ChatMessageBubble(
-                        senderName = if (message.fromStructure) structure.displayName else "Toi",
-                        messageText = message.text,
-                        timeText = message.timeLabel,
-                        isSentByMe = !message.fromStructure,
-                        statusRead = message.read,
-                    )
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(vertical = 8.dp),
+                    state = listState,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    items(messages, key = { it.id }) { message ->
+                        ChatMessageBubble(
+                            senderName = if (message.fromStructure) structure.displayName else "Toi",
+                            messageText = message.text,
+                            timeText = message.timeLabel,
+                            isSentByMe = !message.fromStructure,
+                            statusRead = message.read,
+                        )
+                    }
                 }
             }
 
             WhatsAppComposerBar(
                 value = draft,
-                onValueChange = { draft = it },
+                onValueChange = {
+                    draft = it
+                    graph.messaging.saveDraft(structureId, it)
+                },
                 placeholder = "Écrire un message à la structure…",
                 sending = false,
                 onSend = {
@@ -359,7 +382,10 @@ private fun SearchField(
         shape = RoundedCornerShape(30.dp),
         border = BorderStroke(1.dp, bagdeColor.copy(alpha = 0.25f)),
         shadowElevation = 1.dp,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(30.dp))
+            .clipToBounds(),
     ) {
         Row(
             Modifier
@@ -369,20 +395,34 @@ private fun SearchField(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Icon(Icons.Default.Search, contentDescription = null, tint = bagdeColor, modifier = Modifier.size(18.dp))
-            BasicTextField(
-                value = value,
-                onValueChange = onValueChange,
-                singleLine = true,
-                textStyle = TextStyle(color = PnsaInk, fontSize = 14.sp),
-                cursorBrush = SolidColor(bagdeColor),
-                modifier = Modifier.weight(1f),
-                decorationBox = { inner ->
-                    if (value.isBlank()) {
-                        Text(placeholder, color = PnsaMuted, fontSize = 14.sp)
-                    }
-                    inner()
-                },
-            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clipToBounds(),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                BasicTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    singleLine = true,
+                    maxLines = 1,
+                    textStyle = TextStyle(color = PnsaInk, fontSize = 14.sp),
+                    cursorBrush = SolidColor(bagdeColor),
+                    modifier = Modifier.fillMaxWidth(),
+                    decorationBox = { inner ->
+                        if (value.isBlank()) {
+                            Text(
+                                text = placeholder,
+                                color = PnsaMuted,
+                                fontSize = 14.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        inner()
+                    },
+                )
+            }
         }
     }
 }

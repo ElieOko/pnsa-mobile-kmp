@@ -68,13 +68,41 @@ class UiPreferencesTest {
     fun whatsappThemeColorsAndTabsAreConfigured() {
         assertEquals(Color.Green.copy(0.3f), wsColor)
         assertEquals(Color(0xFF1AB221), bagdeColor)
-        val nav = AppNavigator(AppDestination.Structures)
+        val store = MemoryStore()
+        val prefs = UiPreferences(store)
+        val nav = AppNavigator(AppDestination.Structures, onStateChanged = { })
         assertEquals(MainTab.Structures, nav.tab)
         nav.push(AppDestination.Messages)
         assertEquals(MainTab.Messages, nav.tab)
         nav.push(AppDestination.Profile)
         assertEquals(MainTab.Profile, nav.tab)
         nav.push(AppDestination.Advice)
-        assertEquals(MainTab.Forum, nav.tab)
+        assertEquals(MainTab.Messages, nav.tab)
+        nav.saveTo(prefs)
+
+        val restored = AppNavigator(AppDestination.Structures)
+        restored.restoreFrom(prefs)
+        assertEquals(MainTab.Messages, restored.tab)
+        assertEquals(AppDestination.Advice, restored.current)
+    }
+
+    @Test
+    fun chatMessagingDoesNotAutoReplyAndPersistsAcrossRestarts() {
+        val store = MemoryStore()
+        val repo = app.partners.pnsa.features.structure.data.StructureMessagingRepository(store)
+        val center = app.partners.pnsa.features.structure.data.KinshasaCenters.all.first()
+        val centerId = center.id!!
+        val initialCount = repo.messagesFor(center).size
+        repo.sendToStructure(center, "Bonjour, avez-vous un médecin ?")
+        repo.saveDraft(centerId, "Brouillon test")
+        val afterSend = repo.messagesFor(center)
+        assertEquals(initialCount + 1, afterSend.size)
+        assertEquals(false, afterSend.last().fromStructure)
+        assertEquals("Bonjour, avez-vous un médecin ?", afterSend.last().text)
+
+        val reloadedRepo = app.partners.pnsa.features.structure.data.StructureMessagingRepository(store)
+        assertEquals(afterSend.size, reloadedRepo.messagesFor(center).size)
+        assertEquals("Bonjour, avez-vous un médecin ?", reloadedRepo.messagesFor(center).last().text)
+        assertEquals("Brouillon test", reloadedRepo.draftFor(centerId))
     }
 }
