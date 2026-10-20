@@ -75,16 +75,25 @@ actual fun PlatformStructureMap(
 
     DisposableEffect(lifecycleOwner, mapView, tabActive) {
         val view = mapView ?: return@DisposableEffect onDispose { }
-        if (tabActive) view.onResume() else view.onPause()
+        runCatching {
+            if (tabActive) {
+                view.onStart()
+                view.onResume()
+            } else {
+                view.onPause()
+            }
+        }
         val observer = LifecycleEventObserver { _, event ->
             if (!tabActive) return@LifecycleEventObserver
-            when (event) {
-                Lifecycle.Event.ON_START -> view.onStart()
-                Lifecycle.Event.ON_RESUME -> view.onResume()
-                Lifecycle.Event.ON_PAUSE -> view.onPause()
-                Lifecycle.Event.ON_STOP -> view.onStop()
-                Lifecycle.Event.ON_DESTROY -> view.onDestroy()
-                else -> Unit
+            runCatching {
+                when (event) {
+                    Lifecycle.Event.ON_START -> view.onStart()
+                    Lifecycle.Event.ON_RESUME -> view.onResume()
+                    Lifecycle.Event.ON_PAUSE -> view.onPause()
+                    Lifecycle.Event.ON_STOP -> view.onStop()
+                    Lifecycle.Event.ON_DESTROY -> view.onDestroy()
+                    else -> Unit
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -108,10 +117,10 @@ actual fun PlatformStructureMap(
                 getMapAsync { googleMap ->
                     state.map = googleMap
                     if (state.markerIcon == null) {
-                        state.markerIcon = createMarkerIcon(context, selected = false)
+                        state.markerIcon = runCatching { createMarkerIcon(context, selected = false) }.getOrNull()
                     }
                     if (state.selectedMarkerIcon == null) {
-                        state.selectedMarkerIcon = createMarkerIcon(context, selected = true)
+                        state.selectedMarkerIcon = runCatching { createMarkerIcon(context, selected = true) }.getOrNull()
                     }
                     configureMap(googleMap)
                     googleMap.setOnCameraMoveStartedListener { reason ->
@@ -243,20 +252,20 @@ private fun bindGoogleMap(
 
 private fun markerIconFor(state: GoogleMapState, selected: Boolean): BitmapDescriptor =
     when {
-        selected -> state.selectedMarkerIcon ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
-        else -> state.markerIcon ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
+        selected -> state.selectedMarkerIcon ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)
+        else -> state.markerIcon ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)
     }
 
 private fun createMarkerIcon(context: Context, selected: Boolean): BitmapDescriptor {
     val logo = BitmapFactory.decodeResource(context.resources, R.drawable.map_marker_logo)
-        ?: return BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
+        ?: return BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)
     val size = 96
     val marker = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(marker)
     val center = size / 2f
     val outerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = if (selected) Color.parseColor("#D01D2A") else Color.parseColor("#E43A44")
-        alpha = if (selected) 255 else 220
+        color = if (selected) Color.parseColor("#1AB221") else Color.parseColor("#0F7E15")
+        alpha = if (selected) 255 else 225
     }
     val innerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
     canvas.drawCircle(center, center, 34f, outerPaint)
@@ -266,7 +275,7 @@ private fun createMarkerIcon(context: Context, selected: Boolean): BitmapDescrip
     val left = ((size - iconSize) / 2f)
     val top = ((size - iconSize) / 2f)
     val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        colorFilter = PorterDuffColorFilter(Color.parseColor("#D01D2A"), PorterDuff.Mode.SRC_IN)
+        colorFilter = PorterDuffColorFilter(Color.parseColor("#1AB221"), PorterDuff.Mode.SRC_IN)
     }
     val scaledLogo = Bitmap.createScaledBitmap(logo, iconSize, iconSize, true)
     canvas.drawBitmap(scaledLogo, left, top, iconPaint)

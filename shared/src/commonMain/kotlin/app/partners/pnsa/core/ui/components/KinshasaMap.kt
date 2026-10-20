@@ -33,7 +33,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -57,9 +57,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.partners.pnsa.core.location.RouteTrack
 import app.partners.pnsa.core.ui.map.MapViewStyle
@@ -168,7 +168,6 @@ fun KinshasaGpsMap(
     mapStyle: MapViewStyle = MapViewStyle.Standard,
 ) {
     val markers = remember(structures) { structures.filter { it.hasCoordinates } }
-    val selected = markers.firstOrNull { it.id == selectedId }
     val markerLogo = imageResource(Res.drawable.map_marker_logo)
     val projectionBounds = remember(markers, userLat, userLon, route) {
         KinshasaMapMath.boundsFor(markers, userLat, userLon, route)
@@ -321,15 +320,23 @@ fun KinshasaGpsMap(
             markers.forEach { item ->
                 val rawP = KinshasaMapMath.project(item.latitude!!, item.longitude!!, w, h, projectionBounds)
                 val active = item.id == selectedId
-                if (active) drawCircle(PnsaRed.copy(alpha = 0.3f), 24f, p)
-                drawCircle(Color.White, if (active) 19f else 17f, p)
-                drawCircle(PnsaRed.copy(alpha = 0.12f), if (active) 17f else 15f, p)
-                val markerSize = if (active) 24 else 22
+                val p = if (active) Offset(rawP.x, rawP.y + pinBounce) else rawP
+                val scale = if (active) selectionPop else 1f
+                if (active) {
+                    drawCircle(bagdeColor.copy(alpha = pulseAlpha), pulseRadius * 0.85f, rawP)
+                }
+                drawCircle(Color.White, (if (active) 19f else 17f) * scale, p)
+                drawCircle(
+                    if (active) bagdeColor.copy(alpha = 0.22f) else wsColor,
+                    (if (active) 17f else 15f) * scale,
+                    p,
+                )
+                val markerSize = ((if (active) 24 else 22) * scale).toInt()
                 drawImage(
                     image = markerLogo,
                     dstOffset = IntOffset((p.x - markerSize / 2f).toInt(), (p.y - markerSize / 2f).toInt()),
                     dstSize = IntSize(markerSize, markerSize),
-                    colorFilter = ColorFilter.tint(PnsaRed),
+                    colorFilter = ColorFilter.tint(if (active) bagdeColor else PnsaGreenDeep),
                 )
             }
 
@@ -355,6 +362,7 @@ fun KinshasaGpsMap(
 fun GpsPlaceCard(
     item: HealthStructure,
     modifier: Modifier = Modifier,
+    onChat: (() -> Unit)? = null,
     onOpen: () -> Unit,
 ) {
     AnimatedVisibility(
@@ -377,14 +385,46 @@ fun GpsPlaceCard(
                 border = BorderStroke(1.5.dp, bagdeColor.copy(alpha = 0.35f)),
                 shadowElevation = 8.dp,
             ) {
-                Icon(Icons.Default.Place, contentDescription = null, tint = PnsaRed)
-            }
-            Spacer(Modifier.size(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(item.displayName, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = PnsaNavy)
-                Text("${item.displayCity} · ${item.structureType ?: "Centre SSR"}", color = PnsaNavy.copy(alpha = 0.65f), fontSize = 12.sp)
-                Text(item.displayAddress, color = PnsaNavy.copy(alpha = 0.58f), fontSize = 11.sp)
-                Text(KinshasaMapMath.formatCoord(item.latitude, item.longitude), color = PnsaBlue, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier
+                            .size(46.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(wsColor),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.Default.Place, contentDescription = null, tint = bagdeColor)
+                    }
+                    Spacer(Modifier.size(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(target.displayName, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = PnsaInk)
+                        Text("${target.displayCity} · ${target.structureType ?: "Centre SSR"}", color = PnsaMuted, fontSize = 12.sp)
+                        Text(target.displayAddress, color = PnsaMuted.copy(alpha = 0.85f), fontSize = 11.sp)
+                        Text(KinshasaMapMath.formatCoord(target.latitude, target.longitude), color = bagdeColor, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    if (onChat != null) {
+                        Box(
+                            Modifier
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .background(wsColor)
+                                .quietClick(onClick = onChat),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(Icons.Default.Chat, contentDescription = "Discuter", tint = bagdeColor, modifier = Modifier.size(17.dp))
+                        }
+                        Spacer(Modifier.size(8.dp))
+                    }
+                    Box(
+                        Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(bagdeColor),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.Default.ArrowForward, contentDescription = "Voir fiche", tint = Color.White, modifier = Modifier.size(18.dp))
+                    }
+                }
             }
         }
     }
@@ -393,10 +433,9 @@ fun GpsPlaceCard(
 @Composable
 fun MapLegendRow() {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-        LegendDot(PnsaBlue, "Position")
-        LegendDot(PnsaRed, "Structure")
-        LegendDot(PnsaRed, "Sélection")
-        LegendDot(Color(0xFF0B3C8A), "Itinéraire")
+        LegendDot(bagdeColor, "Position & Sélection")
+        LegendDot(PnsaGreenDeep, "Centre")
+        LegendDot(wsColor, "Zone SSR")
     }
 }
 

@@ -20,11 +20,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Help
+import androidx.compose.material.icons.filled.LocationCity
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.HorizontalDivider
@@ -545,7 +551,7 @@ fun HelpScreen(onBack: () -> Unit) {
                     onBack = onBack,
                 )
                 Text(
-                    "Explore Apprendre, teste un quiz, cherche une structure sur la carte, puis crée une orientation si besoin. Les discussions publiques et le conseil privé sont accessibles à tout moment.",
+                    "Cherche une structure sur la carte, échange directement avec une structure ou dans les discussions, et crée une orientation si besoin. Le conseil privé confidentiel est accessible à tout moment.",
                     color = PnsaMuted,
                 )
             }

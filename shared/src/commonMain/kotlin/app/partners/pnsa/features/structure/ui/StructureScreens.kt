@@ -177,63 +177,24 @@ fun StructureListScreen(navigator: AppNavigator) {
     val navigation = rememberMapNavigation(selected)
     var followUser by remember { mutableStateOf(true) }
 
-    PnsaScaffold(topBar = { PnsaTopBar("Trouver une structure") }) { padding ->
+    PnsaScaffold { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
-            if (showMap) {
-                PlatformStructureMap(
-                    structures = filtered,
-                    selectedId = selectedId,
-                    onSelect = { marker ->
-                        selectedId = marker.id
-                        graph.prefs.mapSelectedId = marker.id
-                        marker.id?.let { navigator.push(AppDestination.StructureChat(it)) }
-                    },
-                    modifier = Modifier.fillMaxSize(),
-                    userLocation = navigation.user,
-                    route = navigation.route,
-                    followUser = followUser && navigation.granted,
-                    onFollowInterrupted = { followUser = false },
-                )
-                Column(
-                    Modifier
-                        .align(Alignment.TopStart)
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        PnsaChip(label = "Carte", selected = true, onClick = {})
-                        PnsaChip(label = "Liste", selected = false, onClick = {
-                            showMap = false
-                            graph.prefs.mapShowMap = false
-                        })
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    PnsaTextField(query, {
-                        query = it
-                        graph.prefs.mapQuery = it
-                    }, "Nom, service ou commune")
-                    if (!navigation.granted) {
-                        Spacer(Modifier.height(8.dp))
-                        StatusBanner("Autorise la localisation pour suivre ton déplacement.")
-                    } else if (navigation.user == null) {
-                        Spacer(Modifier.height(8.dp))
-                        StatusBanner("Recherche de ta position…")
-                    }
-                }
-                Box(
-                    Modifier
-                        .align(Alignment.CenterEnd)
-                        .padding(end = 12.dp)
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(if (followUser) PnsaBlue else Color.White)
-                        .quietClick(onClick = { followUser = true }),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.Default.MyLocation,
-                        contentDescription = "Suivre ma position",
-                        tint = if (followUser) Color.White else PnsaBlue,
+            // Map pane kept alive so camera/state/selection are never lost when switching views
+            KeepAlivePane(visible = showMap) {
+                Box(Modifier.fillMaxSize()) {
+                    PlatformStructureMap(
+                        structures = filtered,
+                        selectedId = selectedId,
+                        onSelect = { marker ->
+                            selectedId = marker.id
+                            graph.prefs.mapSelectedId = marker.id
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                        userLocation = navigation.user,
+                        route = navigation.route,
+                        followUser = followUser && navigation.granted,
+                        onFollowInterrupted = { followUser = false },
+                        mapStyle = mapStyle,
                     )
 
                     // Animated top overlay controls (NO text input on the map!)
@@ -381,7 +342,10 @@ fun StructureListScreen(navigator: AppNavigator) {
                             exit = fadeOut(tween(200)) + slideOutVertically(tween(200)) { it / 2 },
                         ) {
                             if (selected != null) {
-                                GpsPlaceCard(selected) {
+                                GpsPlaceCard(
+                                    item = selected,
+                                    onChat = selected.id?.let { id -> { navigator.push(AppDestination.StructureChat(id)) } },
+                                ) {
                                     selected.id?.let { navigator.push(AppDestination.StructureDetail(it)) }
                                 }
                             }

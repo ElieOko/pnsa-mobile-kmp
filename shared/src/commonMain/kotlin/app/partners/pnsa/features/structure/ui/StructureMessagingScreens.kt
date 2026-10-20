@@ -1,5 +1,6 @@
 package app.partners.pnsa.features.structure.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -18,18 +20,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.DoneAll
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,19 +37,31 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.partners.pnsa.core.di.LocalAppGraph
 import app.partners.pnsa.core.ui.components.EmptyState
+import app.partners.pnsa.core.ui.components.InlineBackHeader
 import app.partners.pnsa.core.ui.components.PnsaScaffold
-import app.partners.pnsa.core.ui.components.PnsaChip
 import app.partners.pnsa.core.ui.components.quietClick
 import app.partners.pnsa.core.ui.navigation.AppDestination
 import app.partners.pnsa.core.ui.navigation.AppNavigator
+import app.partners.pnsa.core.ui.theme.PnsaChatCanvas
+import app.partners.pnsa.core.ui.theme.PnsaGreenSoft
+import app.partners.pnsa.core.ui.theme.PnsaInk
+import app.partners.pnsa.core.ui.theme.PnsaMuted
+import app.partners.pnsa.core.ui.theme.bagdeColor
+import app.partners.pnsa.core.ui.theme.wsColor
+import app.partners.pnsa.features.forum.ui.ChatMessageBubble
+import app.partners.pnsa.features.forum.ui.WhatsAppComposerBar
 import app.partners.pnsa.features.structure.data.KinshasaCenters
 import app.partners.pnsa.features.structure.data.StructureChatPreview
-import app.partners.pnsa.features.structure.domain.models.HealthStructure
 
 @Composable
 fun StructureConversationsScreen(navigator: AppNavigator) {
@@ -70,9 +79,11 @@ fun StructureConversationsScreen(navigator: AppNavigator) {
     val startedPreviews = remember(structures, normalizedQuery, onlyUnread) {
         graph.messaging.previews(
             structures = structures,
-            includeWithoutMessages = false,
+            includeWithoutMessages = true,
         ).filter { preview ->
-            val matches = normalizedQuery.isBlank() || preview.structureName.lowercase().contains(normalizedQuery) || preview.city.lowercase().contains(normalizedQuery)
+            val matches = normalizedQuery.isBlank() ||
+                preview.structureName.lowercase().contains(normalizedQuery) ||
+                preview.city.lowercase().contains(normalizedQuery)
             val unreadOk = !onlyUnread || preview.unreadCount > 0
             matches && unreadOk
         }
@@ -93,65 +104,131 @@ fun StructureConversationsScreen(navigator: AppNavigator) {
         }
     }
 
-    PnsaScaffold(containerColor = Color(0xFFF4F5F7)) { padding ->
+    PnsaScaffold(containerColor = Color.White) { padding ->
         Column(
             Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .background(Color(0xFFF4F5F7)),
+                .background(Color.White),
         ) {
+            // WhatsApp-style header (no TopBar)
             Row(
-                Modifier
+                modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFF075E54))
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Messagerie", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                Icon(Icons.Default.Search, contentDescription = null, tint = Color.White)
-            }
-            Surface(
-                color = Color.White,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SearchField(
-                        value = query,
-                        onValueChange = { query = it },
-                        placeholder = "Rechercher une structure",
+                Column {
+                    Text(
+                        text = "Discussions Structures",
+                        color = bagdeColor,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 24.sp,
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        PnsaChip(label = "Toutes", selected = !onlyUnread, onClick = { onlyUnread = false })
-                        PnsaChip(label = "Non lues", selected = onlyUnread, onClick = { onlyUnread = true })
-                    }
-                    if (query.isNotBlank() && !canSearch) {
+                    Text(
+                        text = "Échange direct avec les structures de santé SSR",
+                        color = PnsaMuted,
+                        fontSize = 12.sp,
+                    )
+                }
+                Surface(
+                    modifier = Modifier.quietClick { navigator.push(AppDestination.Advice) },
+                    shape = RoundedCornerShape(35.dp),
+                    color = wsColor,
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Shield,
+                            contentDescription = "Conseil privé",
+                            tint = bagdeColor,
+                            modifier = Modifier.size(16.dp),
+                        )
                         Text(
-                            "Tape au moins 2 caractères pour lancer la recherche.",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.bodySmall,
+                            text = "Conseil privé",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = PnsaInk,
                         )
                     }
                 }
             }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                SearchField(
+                    value = query,
+                    onValueChange = { query = it },
+                    placeholder = "Rechercher une structure ou commune",
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SuggestionChip(
+                        onClick = { onlyUnread = false },
+                        label = {
+                            Text(
+                                text = "Toutes (${startedPreviews.size})",
+                                fontSize = 12.sp,
+                                fontWeight = if (!onlyUnread) FontWeight.Bold else FontWeight.Medium,
+                                color = if (!onlyUnread) PnsaInk else PnsaMuted,
+                            )
+                        },
+                        shape = RoundedCornerShape(35.dp),
+                        colors = SuggestionChipDefaults.suggestionChipColors(
+                            containerColor = if (!onlyUnread) wsColor else PnsaGreenSoft,
+                        ),
+                        border = SuggestionChipDefaults.suggestionChipBorder(
+                            enabled = true,
+                            borderColor = Color.Transparent,
+                        ),
+                    )
+                    SuggestionChip(
+                        onClick = { onlyUnread = true },
+                        label = {
+                            Text(
+                                text = "Non lues",
+                                fontSize = 12.sp,
+                                fontWeight = if (onlyUnread) FontWeight.Bold else FontWeight.Medium,
+                                color = if (onlyUnread) PnsaInk else PnsaMuted,
+                            )
+                        },
+                        shape = RoundedCornerShape(35.dp),
+                        colors = SuggestionChipDefaults.suggestionChipColors(
+                            containerColor = if (onlyUnread) wsColor else PnsaGreenSoft,
+                        ),
+                        border = SuggestionChipDefaults.suggestionChipBorder(
+                            enabled = true,
+                            borderColor = Color.Transparent,
+                        ),
+                    )
+                }
+                if (query.isNotBlank() && !canSearch) {
+                    Text(
+                        "Tape au moins 2 caractères pour lancer la recherche.",
+                        color = PnsaMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(6.dp))
+
             if (startedPreviews.isEmpty() && discover.isEmpty()) {
                 EmptyState(
                     title = "Aucune conversation",
-                    message = "Recherche une structure pour démarrer un chat.",
+                    message = "Recherche une structure ou sélectionne un centre sur la carte pour démarrer un chat.",
                 )
             } else {
                 LazyColumn(
                     Modifier.fillMaxSize(),
                 ) {
-                    if (startedPreviews.isNotEmpty()) {
-                        item {
-                            Text(
-                                "Discussions",
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
                     items(startedPreviews, key = { it.structureId }) { preview ->
                         ConversationRow(
                             preview = preview,
@@ -161,10 +238,11 @@ fun StructureConversationsScreen(navigator: AppNavigator) {
                     if (discover.isNotEmpty()) {
                         item {
                             Text(
-                                "Résultats de recherche",
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                "Autres structures disponibles",
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
                                 style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = bagdeColor,
+                                fontWeight = FontWeight.Bold,
                             )
                         }
                     }
@@ -207,7 +285,7 @@ fun StructureChatScreen(structureId: Long, onBack: () -> Unit) {
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex)
     }
 
-    PnsaScaffold(containerColor = Color(0xFFECE5DD)) { padding ->
+    PnsaScaffold(containerColor = PnsaChatCanvas) { padding ->
         if (structure == null) {
             EmptyState("Structure introuvable", "Retourne à la carte puis réessaie.")
             return@PnsaScaffold
@@ -218,126 +296,54 @@ fun StructureChatScreen(structureId: Long, onBack: () -> Unit) {
         Column(
             Modifier
                 .padding(padding)
-                .fillMaxSize(),
+                .fillMaxSize()
+                .background(PnsaChatCanvas),
         ) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF075E54))
-                    .padding(horizontal = 10.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            // Clean white WhatsApp conversation header (no TopBar)
+            Surface(
+                color = Color.White,
+                shadowElevation = 2.dp,
             ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Retour",
-                    tint = Color.White,
-                    modifier = Modifier.quietClick { onBack() },
-                )
-                Box(
-                    Modifier
-                        .size(34.dp)
-                        .background(Color(0xFF25D366), CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(structure.displayName.take(1).uppercase(), color = Color.White, fontWeight = FontWeight.Bold)
+                Box(Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+                    InlineBackHeader(
+                        title = structure.displayName,
+                        subtitle = "En ligne · ${structure.displayCity}",
+                        onBack = onBack,
+                    )
                 }
-                Column(Modifier.weight(1f)) {
-                    Text(structure.displayName, color = Color.White, fontWeight = FontWeight.SemiBold)
-                    Text("En ligne · ${structure.displayCity}", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
-                }
-                Icon(Icons.Default.Videocam, contentDescription = null, tint = Color.White)
-                Icon(Icons.Default.Call, contentDescription = null, tint = Color.White)
-                Icon(Icons.Default.MoreVert, contentDescription = null, tint = Color.White)
             }
+
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                    .padding(vertical = 8.dp),
                 state = listState,
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 items(messages, key = { it.id }) { message ->
-                    val bubbleColor = if (message.fromStructure) Color.White else Color(0xFFDCF8C6)
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = if (message.fromStructure) Arrangement.Start else Arrangement.End) {
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = bubbleColor,
-                            tonalElevation = 1.dp,
-                            modifier = Modifier.fillMaxWidth(0.86f),
-                        ) {
-                            Column(Modifier.padding(horizontal = 10.dp, vertical = 7.dp)) {
-                                Text(message.text)
-                                Spacer(Modifier.height(3.dp))
-                                Row(
-                                    modifier = Modifier.align(Alignment.End),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                                ) {
-                                    Text(
-                                        message.timeLabel,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                    if (!message.fromStructure) {
-                                        Icon(
-                                            imageVector = if (message.read) Icons.Default.DoneAll else Icons.Default.Check,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(14.dp),
-                                            tint = if (message.read) Color(0xFF34B7F1) else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFFF0F0F0))
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(22.dp),
-                    color = Color.White,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    BasicTextField(
-                        value = draft,
-                        onValueChange = { draft = it },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
-                        decorationBox = { inner ->
-                            if (draft.isBlank()) {
-                                Text("Message", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            inner()
-                        },
+                    ChatMessageBubble(
+                        senderName = if (message.fromStructure) structure.displayName else "Toi",
+                        messageText = message.text,
+                        timeText = message.timeLabel,
+                        isSentByMe = !message.fromStructure,
+                        statusRead = message.read,
                     )
                 }
-                Surface(
-                    shape = CircleShape,
-                    color = Color(0xFF25D366),
-                ) {
-                    IconButton(
-                        onClick = {
-                            val text = draft.trim()
-                            if (text.isBlank()) return@IconButton
-                            messages = graph.messaging.sendToStructure(structure, text)
-                            draft = ""
-                        },
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Envoyer", tint = Color.White)
-                    }
-                }
             }
+
+            WhatsAppComposerBar(
+                value = draft,
+                onValueChange = { draft = it },
+                placeholder = "Écrire un message à la structure…",
+                sending = false,
+                onSend = {
+                    val text = draft.trim()
+                    if (text.isBlank()) return@WhatsAppComposerBar
+                    messages = graph.messaging.sendToStructure(structure, text)
+                    draft = ""
+                },
+            )
         }
     }
 }
@@ -349,26 +355,30 @@ private fun SearchField(
     placeholder: String,
 ) {
     Surface(
-        color = Color(0xFFF0F2F5),
-        shape = RoundedCornerShape(26.dp),
+        color = Color.White,
+        shape = RoundedCornerShape(30.dp),
+        border = BorderStroke(1.dp, bagdeColor.copy(alpha = 0.25f)),
+        shadowElevation = 1.dp,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+                .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(Icons.Default.Search, contentDescription = null, tint = bagdeColor, modifier = Modifier.size(18.dp))
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
+                singleLine = true,
+                textStyle = TextStyle(color = PnsaInk, fontSize = 14.sp),
+                cursorBrush = SolidColor(bagdeColor),
                 modifier = Modifier.weight(1f),
-                textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
                 decorationBox = { inner ->
                     if (value.isBlank()) {
-                        Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(placeholder, color = PnsaMuted, fontSize = 14.sp)
                     }
                     inner()
                 },
@@ -382,60 +392,96 @@ private fun ConversationRow(
     preview: StructureChatPreview,
     onClick: () -> Unit,
 ) {
-    Surface(
-        color = Color.White,
+    val initials = preview.structureName
+        .split(" ")
+        .mapNotNull { it.firstOrNull()?.uppercaseChar() }
+        .take(2)
+        .joinToString("")
+        .ifEmpty { "ST" }
+
+    Column(
         modifier = Modifier
             .fillMaxWidth()
+            .background(Color.White)
             .quietClick(onClick = onClick),
     ) {
-        Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
             Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Box(
-                    Modifier
-                        .size(46.dp)
-                        .background(Color(0xFF25D366), CircleShape),
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                        .background(wsColor),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        preview.structureName.take(1).uppercase(),
-                        color = Color.White,
+                        text = initials,
+                        color = bagdeColor,
                         fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
                     )
                 }
-                Column(Modifier.weight(1f)) {
-                    Text(preview.structureName, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        preview.lastMessage,
+                        text = preview.structureName,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = PnsaInk,
                         maxLines = 1,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "${preview.city} · ${preview.lastMessage}",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        fontSize = 13.sp,
+                        color = PnsaMuted,
                     )
                 }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        preview.lastTime.ifBlank { " " },
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (preview.unreadCount > 0) Color(0xFF25D366) else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (preview.unreadCount > 0) {
-                        Box(
-                            Modifier
-                                .padding(top = 4.dp)
-                                .background(Color(0xFF25D366), CircleShape)
-                                .padding(horizontal = 7.dp, vertical = 2.dp),
-                        ) {
-                            Text(preview.unreadCount.toString(), color = Color.White, style = MaterialTheme.typography.labelSmall)
-                        }
+            }
+            Spacer(Modifier.width(8.dp))
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(
+                    text = preview.lastTime.ifBlank { "En ligne" },
+                    fontSize = 11.sp,
+                    color = if (preview.unreadCount > 0) bagdeColor else PnsaMuted,
+                    fontWeight = if (preview.unreadCount > 0) FontWeight.Bold else FontWeight.Normal,
+                )
+                if (preview.unreadCount > 0) {
+                    Box(
+                        modifier = Modifier
+                            .size(22.dp)
+                            .clip(CircleShape)
+                            .background(bagdeColor),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = preview.unreadCount.toString(),
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
                     }
                 }
             }
-            HorizontalDivider(color = Color(0xFFE8E8E8))
         }
+        HorizontalDivider(
+            modifier = Modifier.padding(start = 78.dp, end = 14.dp),
+            color = Color(0xFFEEF3EE),
+        )
     }
 }

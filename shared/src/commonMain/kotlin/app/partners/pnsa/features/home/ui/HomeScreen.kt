@@ -202,13 +202,13 @@ fun HomeScreen(navigator: AppNavigator) {
                             item {
                                 SectionTitle("Services rapides")
                                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                                    ShortcutTile("Apprendre", "Articles et fiches", Icons.Default.Favorite, { navigator.push(AppDestination.Learn) }, Modifier.weight(1f))
-                                    ShortcutTile("Quiz", "Tester tes connaissances", Icons.Default.Star, { navigator.push(AppDestination.Quizzes) }, Modifier.weight(1f))
+                                    ShortcutTile("Carte SSR", "Trouver une structure", Icons.Default.Place, { navigator.push(AppDestination.Structures) }, Modifier.weight(1f))
+                                    ShortcutTile("Discussions", "Structures et forum", Icons.Default.Chat, { navigator.push(AppDestination.Messages) }, Modifier.weight(1f))
                                 }
                                 Spacer(Modifier.height(10.dp))
                                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                                    ShortcutTile("Carte SSR", "Trouver une structure", Icons.Default.Place, { navigator.push(AppDestination.Structures) }, Modifier.weight(1f))
-                                    ShortcutTile("Discussions", "Forum et conseil privé", Icons.Default.Chat, { navigator.push(AppDestination.Forum) }, Modifier.weight(1f))
+                                    ShortcutTile("Apprendre", "Articles et fiches", Icons.Default.Favorite, { navigator.push(AppDestination.Learn) }, Modifier.weight(1f))
+                                    ShortcutTile("Forum SSR", "Questions & conseils", Icons.Default.Star, { navigator.push(AppDestination.Forum) }, Modifier.weight(1f))
                                 }
                             }
                             item { SectionTitle("Nouveautés") }

@@ -68,7 +68,10 @@ class UiPreferencesTest {
     fun whatsappThemeColorsAndTabsAreConfigured() {
         assertEquals(Color.Green.copy(0.3f), wsColor)
         assertEquals(Color(0xFF1AB221), bagdeColor)
-        val nav = AppNavigator(AppDestination.Home)
+        val nav = AppNavigator(AppDestination.Structures)
+        assertEquals(MainTab.Structures, nav.tab)
+        nav.push(AppDestination.Messages)
+        assertEquals(MainTab.Messages, nav.tab)
         nav.push(AppDestination.Profile)
         assertEquals(MainTab.Profile, nav.tab)
         nav.push(AppDestination.Advice)

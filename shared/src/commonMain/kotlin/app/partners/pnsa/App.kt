@@ -9,22 +9,28 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import app.partners.pnsa.core.di.AppGraph
 import app.partners.pnsa.core.di.LocalAppGraph
-import app.partners.pnsa.core.ui.components.PnsaDrawerContent
+import app.partners.pnsa.core.ui.components.KeepAlivePane
 import app.partners.pnsa.core.ui.components.PnsaScaffold
 import app.partners.pnsa.core.ui.components.TikTokBottomBar
 import app.partners.pnsa.core.ui.navigation.AppDestination
 import app.partners.pnsa.core.ui.navigation.AppNavigator
 import app.partners.pnsa.core.ui.navigation.MainTab
 import app.partners.pnsa.core.ui.theme.LocalEmbeddedChrome
+import app.partners.pnsa.core.ui.theme.LocalTabActive
 import app.partners.pnsa.core.ui.theme.PnsaTheme
 import app.partners.pnsa.features.auth.ui.LegalScreen
+import app.partners.pnsa.features.content.ui.ContentDetailScreen
+import app.partners.pnsa.features.content.ui.ContentListScreen
+import app.partners.pnsa.features.forum.ui.AdviceChatScreen
+import app.partners.pnsa.features.forum.ui.AdviceListScreen
+import app.partners.pnsa.features.forum.ui.ForumDetailScreen
+import app.partners.pnsa.features.forum.ui.ForumListScreen
 import app.partners.pnsa.features.structure.ui.OrientationCreateScreen
 import app.partners.pnsa.features.structure.ui.OrientationDetailScreen
 import app.partners.pnsa.features.structure.ui.OrientationListScreen
@@ -47,62 +53,38 @@ fun App() {
 }
 
 @Composable
-private fun PnsaRoot(graph: AppGraph) {
+private fun PnsaRoot() {
     val navigator = remember { AppNavigator(AppDestination.Structures) }
+    val visited = remember { mutableStateListOf(navigator.tab) }
 
-    val user by graph.session.user.collectAsState()
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
-    val showChrome = true
-
-    val onMapTab = navigator.tab == MainTab.Structures
-    LaunchedEffect(onMapTab) {
-        if (onMapTab && drawerState.isOpen) drawerState.close()
+    LaunchedEffect(navigator.tab) {
+        if (navigator.tab !in visited) visited += navigator.tab
     }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        gesturesEnabled = !navigator.canPop && !onMapTab,
-        drawerContent = {
-            PnsaDrawerContent(
-                name = user?.displayName ?: "Professionnel PNSA",
-                email = user?.email.orEmpty(),
-                initials = user?.initials ?: "P",
-                onDestination = { dest ->
-                    scope.launch { drawerState.close() }
-                    navigator.push(dest)
-                },
-                showLogout = false,
-                onLogout = {},
-            )
-        },
-    ) {
-        CompositionLocalProvider(LocalEmbeddedChrome provides true) {
-            PnsaScaffold(
-                containerColor = MaterialTheme.colorScheme.background,
-                topBar = {
-                    if (showChrome) {
-                        TikTokTopBar(
-                            title = navigator.title(),
-                            canPop = navigator.canPop,
-                            onMenu = { scope.launch { drawerState.open() } },
-                            onBack = { navigator.pop() },
-                            initials = user?.initials ?: "P",
-                            onAvatar = { navigator.push(AppDestination.Profile) },
-                        )
+    CompositionLocalProvider(LocalEmbeddedChrome provides true) {
+        PnsaScaffold(
+            containerColor = Color.White,
+            bottomBar = {
+                TikTokBottomBar(
+                    selected = navigator.tab,
+                    onSelect = { navigator.openTab(it) },
+                )
+            },
+        ) { padding ->
+            Box(
+                Modifier
+                    .padding(padding)
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .fillMaxSize(),
+            ) {
+                MainTab.entries.forEach { tab ->
+                    if (tab in visited) {
+                        KeepAlivePane(visible = navigator.tab == tab) {
+                            CompositionLocalProvider(LocalTabActive provides (navigator.tab == tab)) {
+                                SignedInFlow(navigator, tab)
+                            }
+                        }
                     }
-                },
-                bottomBar = {
-                    if (showChrome) {
-                        TikTokBottomBar(
-                            selected = navigator.tab,
-                            onSelect = { navigator.openTab(it) },
-                        )
-                    }
-                },
-            ) { padding ->
-                Box(Modifier.padding(padding).fillMaxSize()) {
-                    SignedInFlow(navigator, navigator.tab)
                 }
             }
         }
@@ -116,23 +98,20 @@ private fun SignedInFlow(navigator: AppNavigator, tab: MainTab) {
         is AppDestination.StructureDetail -> StructureDetailScreen(dest.id, navigator, onBack = { navigator.pop() })
         AppDestination.Messages -> StructureConversationsScreen(navigator)
         is AppDestination.StructureChat -> StructureChatScreen(dest.structureId, onBack = { navigator.pop() })
+        AppDestination.Forum -> ForumListScreen(navigator)
+        is AppDestination.ForumDetail -> ForumDetailScreen(dest.id, onBack = { navigator.pop() })
+        AppDestination.Advice -> AdviceListScreen(navigator)
+        is AppDestination.AdviceChat -> AdviceChatScreen(dest.id, onBack = { navigator.pop() })
         AppDestination.Orientations -> OrientationListScreen(navigator)
         is AppDestination.OrientationDetail -> OrientationDetailScreen(dest.id, onBack = { navigator.pop() })
         is AppDestination.OrientationCreate -> OrientationCreateScreen(dest.structureId, navigator, onBack = { navigator.pop() })
-        AppDestination.Profile -> ProfileScreen(navigator)
+        AppDestination.Learn -> ContentListScreen(navigator)
+        is AppDestination.ContentDetail -> ContentDetailScreen(dest.id, onBack = { navigator.pop() })
+        AppDestination.Profile, AppDestination.More -> ProfileScreen(navigator)
         AppDestination.ProfileEdit -> ProfileEditScreen(onBack = { navigator.pop() })
         AppDestination.Help, AppDestination.PublicHelp -> HelpScreen(onBack = { navigator.pop() })
         AppDestination.PublicLegal -> LegalScreen(onBack = { navigator.pop() })
-        AppDestination.More -> ProfileScreen(navigator)
         AppDestination.Home,
-        AppDestination.Learn,
-        is AppDestination.ContentDetail,
-        AppDestination.Quizzes,
-        is AppDestination.QuizPlay,
-        AppDestination.Forum,
-        is AppDestination.ForumDetail,
-        AppDestination.Advice,
-        is AppDestination.AdviceChat,
         AppDestination.Welcome,
         AppDestination.Login,
         AppDestination.Register,
