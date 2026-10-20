@@ -29,8 +29,6 @@ import app.partners.pnsa.features.content.ui.ContentDetailScreen
 import app.partners.pnsa.features.content.ui.ContentListScreen
 import app.partners.pnsa.features.forum.ui.AdviceChatScreen
 import app.partners.pnsa.features.forum.ui.AdviceListScreen
-import app.partners.pnsa.features.forum.ui.ForumDetailScreen
-import app.partners.pnsa.features.forum.ui.ForumListScreen
 import app.partners.pnsa.features.structure.ui.OrientationCreateScreen
 import app.partners.pnsa.features.structure.ui.OrientationDetailScreen
 import app.partners.pnsa.features.structure.ui.OrientationListScreen
@@ -54,11 +52,22 @@ fun App() {
 
 @Composable
 private fun PnsaRoot() {
-    val navigator = remember { AppNavigator(AppDestination.Structures) }
+    val graph = LocalAppGraph.current
+    val navigator = remember {
+        var navRef: AppNavigator? = null
+        AppNavigator(
+            start = AppDestination.Structures,
+            onStateChanged = { navRef?.saveTo(graph.prefs) },
+        ).also { nav ->
+            navRef = nav
+            nav.restoreFrom(graph.prefs)
+        }
+    }
     val visited = remember { mutableStateListOf(navigator.tab) }
 
     LaunchedEffect(navigator.tab) {
         if (navigator.tab !in visited) visited += navigator.tab
+        navigator.saveTo(graph.prefs)
     }
 
     CompositionLocalProvider(LocalEmbeddedChrome provides true) {
@@ -98,8 +107,6 @@ private fun SignedInFlow(navigator: AppNavigator, tab: MainTab) {
         is AppDestination.StructureDetail -> StructureDetailScreen(dest.id, navigator, onBack = { navigator.pop() })
         AppDestination.Messages -> StructureConversationsScreen(navigator)
         is AppDestination.StructureChat -> StructureChatScreen(dest.structureId, onBack = { navigator.pop() })
-        AppDestination.Forum -> ForumListScreen(navigator)
-        is AppDestination.ForumDetail -> ForumDetailScreen(dest.id, onBack = { navigator.pop() })
         AppDestination.Advice -> AdviceListScreen(navigator)
         is AppDestination.AdviceChat -> AdviceChatScreen(dest.id, onBack = { navigator.pop() })
         AppDestination.Orientations -> OrientationListScreen(navigator)

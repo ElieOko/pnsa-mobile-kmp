@@ -5,11 +5,13 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import app.partners.pnsa.core.data.UiPreferences
+import app.partners.pnsa.core.network.AppJson
+import kotlinx.serialization.encodeToString
 
 enum class MainTab(val label: String) {
     Structures("Carte"),
     Messages("Discussions"),
-    Forum("Forum"),
     Profile("Profil"),
 }
 
@@ -28,8 +30,6 @@ sealed class AppDestination {
     data object Orientations : AppDestination()
     data class OrientationDetail(val id: Long) : AppDestination()
     data class OrientationCreate(val structureId: Long) : AppDestination()
-    data object Forum : AppDestination()
-    data class ForumDetail(val id: Long) : AppDestination()
     data object Advice : AppDestination()
     data class AdviceChat(val id: Long) : AppDestination()
     data object Profile : AppDestination()
@@ -42,6 +42,7 @@ sealed class AppDestination {
 
 class AppNavigator(
     start: AppDestination = AppDestination.Structures,
+    private val onStateChanged: (() -> Unit)? = null,
 ) {
     private val authStack = mutableStateListOf(start)
     private val tabStacks: Map<MainTab, SnapshotStateList<AppDestination>> =
@@ -51,12 +52,63 @@ class AppNavigator(
         private set
     var signedIn by mutableStateOf(true)
 
+    init {
+        val startTab = tabFor(start)
+        if (startTab != null && !isTabRoot(start)) {
+            val stack = tabStacks.getValue(startTab)
+            if (stack.lastOrNull() != start) stack += start
+        }
+    }
+
     val current: AppDestination
         get() = if (signedIn) tabStacks.getValue(tab).last() else authStack.last()
     val canPop: Boolean
         get() = if (signedIn) tabStacks.getValue(tab).size > 1 else authStack.size > 1
 
     fun currentFor(tab: MainTab): AppDestination = tabStacks.getValue(tab).last()
+
+    fun stackFor(tab: MainTab): List<AppDestination> = tabStacks.getValue(tab).toList()
+
+    fun restoreState(savedTab: MainTab, savedStacks: Map<MainTab, List<AppDestination>>) {
+        savedStacks.forEach { (t, dests) ->
+            val stack = tabStacks[t] ?: return@forEach
+            stack.clear()
+            val valid = dests.ifEmpty { listOf(rootFor(t)) }
+            if (valid.first() != rootFor(t)) {
+                stack += rootFor(t)
+            }
+            valid.forEach { d ->
+                if (stack.lastOrNull() != d) stack += d
+            }
+        }
+        tab = savedTab
+    }
+
+    fun saveTo(prefs: UiPreferences) {
+        prefs.navTab = tab.name
+        val rawMap: Map<String, List<String>> = MainTab.entries.associate { t ->
+            t.name to stackFor(t).mapNotNull { encodeDestination(it) }
+        }
+        runCatching { AppJson.encodeToString(rawMap) }.onSuccess { prefs.navStacksJson = it }
+    }
+
+    fun restoreFrom(prefs: UiPreferences) {
+        val savedTab = MainTab.entries.firstOrNull { it.name == prefs.navTab } ?: MainTab.Structures
+        val rawJson = prefs.navStacksJson.orEmpty()
+        val savedStacks: Map<MainTab, List<AppDestination>> = if (rawJson.isNotBlank()) {
+            runCatching { AppJson.decodeFromString<Map<String, List<String>>>(rawJson) }
+                .getOrNull()
+                ?.mapNotNull { (key, list) ->
+                    val t = MainTab.entries.firstOrNull { it.name == key } ?: return@mapNotNull null
+                    t to list.mapNotNull { decodeDestination(it) }
+                }
+                ?.toMap()
+                ?: emptyMap()
+        } else {
+            emptyMap()
+        }
+        restoreState(savedTab, savedStacks)
+    }
 
     fun push(destination: AppDestination) {
         val target = tabFor(destination)
@@ -73,6 +125,7 @@ class AppNavigator(
         } else {
             authStack += destination
         }
+        onStateChanged?.invoke()
     }
 
     fun replace(destination: AppDestination) {
@@ -86,15 +139,22 @@ class AppNavigator(
             authStack.clear()
             authStack += destination
         }
+        onStateChanged?.invoke()
     }
 
     fun pop() {
         val stack = if (signedIn) tabStacks.getValue(tab) else authStack
-        if (stack.size > 1) stack.removeAt(stack.lastIndex)
+        if (stack.size > 1) {
+            stack.removeAt(stack.lastIndex)
+            onStateChanged?.invoke()
+        }
     }
 
     fun openTab(next: MainTab) {
-        tab = next
+        if (tab != next) {
+            tab = next
+            onStateChanged?.invoke()
+        }
     }
 
     fun replaceCurrent(destination: AppDestination) {
@@ -102,6 +162,7 @@ class AppNavigator(
         if (stack.isNotEmpty()) stack.removeAt(stack.lastIndex)
         stack += destination
         tabFor(destination)?.let { tab = it }
+        onStateChanged?.invoke()
     }
 
     fun title(): String = titleFor(current)
@@ -109,14 +170,12 @@ class AppNavigator(
     private fun rootFor(tab: MainTab): AppDestination = when (tab) {
         MainTab.Structures -> AppDestination.Structures
         MainTab.Messages -> AppDestination.Messages
-        MainTab.Forum -> AppDestination.Forum
         MainTab.Profile -> AppDestination.Profile
     }
 
     private fun isTabRoot(destination: AppDestination): Boolean = when (destination) {
         AppDestination.Structures,
         AppDestination.Messages,
-        AppDestination.Forum,
         AppDestination.Profile,
         -> true
         else -> false
@@ -124,8 +183,11 @@ class AppNavigator(
 
     fun tabFor(destination: AppDestination): MainTab? = when (destination) {
         AppDestination.Structures, is AppDestination.StructureDetail -> MainTab.Structures
-        AppDestination.Messages, is AppDestination.StructureChat -> MainTab.Messages
-        AppDestination.Forum, is AppDestination.ForumDetail, AppDestination.Advice, is AppDestination.AdviceChat -> MainTab.Forum
+        AppDestination.Messages,
+        is AppDestination.StructureChat,
+        AppDestination.Advice,
+        is AppDestination.AdviceChat,
+        -> MainTab.Messages
         AppDestination.Profile,
         AppDestination.ProfileEdit,
         AppDestination.Orientations,
@@ -157,8 +219,6 @@ fun titleFor(destination: AppDestination): String = when (destination) {
     AppDestination.Orientations -> "Orientations"
     is AppDestination.OrientationDetail -> "Orientation"
     is AppDestination.OrientationCreate -> "Nouvelle orientation"
-    AppDestination.Forum -> "Forum"
-    is AppDestination.ForumDetail -> "Discussion"
     AppDestination.Advice -> "Conseil"
     is AppDestination.AdviceChat -> "Échange"
     AppDestination.Profile -> "Profil"
@@ -166,4 +226,53 @@ fun titleFor(destination: AppDestination): String = when (destination) {
     AppDestination.More -> "Menu"
     AppDestination.Messages -> "Discussions"
     is AppDestination.StructureChat -> "Conversation"
+}
+
+private fun encodeDestination(destination: AppDestination): String? = when (destination) {
+    AppDestination.Structures -> "Structures"
+    is AppDestination.StructureDetail -> "StructureDetail:${destination.id}"
+    AppDestination.Messages -> "Messages"
+    is AppDestination.StructureChat -> "StructureChat:${destination.structureId}"
+    AppDestination.Advice -> "Advice"
+    is AppDestination.AdviceChat -> "AdviceChat:${destination.id}"
+    AppDestination.Orientations -> "Orientations"
+    is AppDestination.OrientationDetail -> "OrientationDetail:${destination.id}"
+    is AppDestination.OrientationCreate -> "OrientationCreate:${destination.structureId}"
+    AppDestination.Learn -> "Learn"
+    is AppDestination.ContentDetail -> "ContentDetail:${destination.id}"
+    AppDestination.Profile -> "Profile"
+    AppDestination.ProfileEdit -> "ProfileEdit"
+    AppDestination.Help -> "Help"
+    AppDestination.PublicHelp -> "PublicHelp"
+    AppDestination.PublicLegal -> "PublicLegal"
+    AppDestination.More -> "More"
+    AppDestination.Home -> "Home"
+    else -> null
+}
+
+private fun decodeDestination(token: String): AppDestination? {
+    val parts = token.split(":", limit = 2)
+    val kind = parts.firstOrNull().orEmpty()
+    val id = parts.getOrNull(1)?.toLongOrNull()
+    return when (kind) {
+        "Structures" -> AppDestination.Structures
+        "StructureDetail" -> id?.let { AppDestination.StructureDetail(it) }
+        "Messages" -> AppDestination.Messages
+        "StructureChat" -> id?.let { AppDestination.StructureChat(it) }
+        "Advice" -> AppDestination.Advice
+        "AdviceChat" -> id?.let { AppDestination.AdviceChat(it) }
+        "Orientations" -> AppDestination.Orientations
+        "OrientationDetail" -> id?.let { AppDestination.OrientationDetail(it) }
+        "OrientationCreate" -> id?.let { AppDestination.OrientationCreate(it) }
+        "Learn" -> AppDestination.Learn
+        "ContentDetail" -> id?.let { AppDestination.ContentDetail(it) }
+        "Profile" -> AppDestination.Profile
+        "ProfileEdit" -> AppDestination.ProfileEdit
+        "Help" -> AppDestination.Help
+        "PublicHelp" -> AppDestination.PublicHelp
+        "PublicLegal" -> AppDestination.PublicLegal
+        "More" -> AppDestination.More
+        "Home" -> AppDestination.Home
+        else -> null
+    }
 }

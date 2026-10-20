@@ -25,6 +25,10 @@ val PnsaGreenSoft = Color(0xFFE8F8E9)
 val PnsaGreenBubbleSent = Color(0xFFDCF8C6)
 val PnsaChatCanvas = Color(0xFFF5F8F5)
 
+val PnsaPink = Color(0xFFE91E63)
+val PnsaPinkDeep = Color(0xFFC2185B)
+val PnsaPinkSoft = Color(0xFFFCE4EC)
+
 val PnsaBlue = bagdeColor
 val PnsaBlueDeep = PnsaGreenDeep
 val PnsaBlueSoft = PnsaGreenSoft

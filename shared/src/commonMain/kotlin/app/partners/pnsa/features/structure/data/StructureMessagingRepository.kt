@@ -1,7 +1,15 @@
 package app.partners.pnsa.features.structure.data
 
+import app.partners.pnsa.core.data.KeyValueStore
+import app.partners.pnsa.core.network.AppJson
 import app.partners.pnsa.features.structure.domain.models.HealthStructure
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.encodeToString
 
+@Serializable
 data class StructureChatMessage(
     val id: Long,
     val structureId: Long,
@@ -20,9 +28,71 @@ data class StructureChatPreview(
     val unreadCount: Int,
 )
 
-class StructureMessagingRepository {
+class StructureMessagingRepository(
+    private val store: KeyValueStore? = null,
+) {
     private var nextId: Long = 1L
     private val threads: MutableMap<Long, MutableList<StructureChatMessage>> = mutableMapOf()
+    private val drafts: MutableMap<Long, String> = mutableMapOf()
+
+    init {
+        loadFromStore()
+    }
+
+    private fun loadFromStore() {
+        val s = store ?: return
+        val rawThreads = s.get(KEY_THREADS)
+        if (!rawThreads.isNullOrBlank()) {
+            runCatching {
+                val serializer = MapSerializer(Long.serializer(), ListSerializer(StructureChatMessage.serializer()))
+                val decoded = AppJson.decodeFromString(serializer, rawThreads)
+                threads.clear()
+                var maxId = 0L
+                decoded.forEach { (k, list) ->
+                    threads[k] = list.toMutableList()
+                    list.forEach { if (it.id > maxId) maxId = it.id }
+                }
+                nextId = maxId + 1L
+            }
+        }
+        val rawDrafts = s.get(KEY_DRAFTS)
+        if (!rawDrafts.isNullOrBlank()) {
+            runCatching {
+                val serializer = MapSerializer(Long.serializer(), String.serializer())
+                val decoded = AppJson.decodeFromString(serializer, rawDrafts)
+                drafts.clear()
+                drafts.putAll(decoded)
+            }
+        }
+    }
+
+    private fun saveThreadsToStore() {
+        val s = store ?: return
+        runCatching {
+            val serializer = MapSerializer(Long.serializer(), ListSerializer(StructureChatMessage.serializer()))
+            val snapshot = threads.mapValues { it.value.toList() }
+            s.put(KEY_THREADS, AppJson.encodeToString(serializer, snapshot))
+        }
+    }
+
+    private fun saveDraftsToStore() {
+        val s = store ?: return
+        runCatching {
+            val serializer = MapSerializer(Long.serializer(), String.serializer())
+            s.put(KEY_DRAFTS, AppJson.encodeToString(serializer, drafts.toMap()))
+        }
+    }
+
+    fun draftFor(structureId: Long): String = drafts[structureId].orEmpty()
+
+    fun saveDraft(structureId: Long, draft: String) {
+        if (draft.isBlank()) {
+            drafts.remove(structureId)
+        } else {
+            drafts[structureId] = draft
+        }
+        saveDraftsToStore()
+    }
 
     fun previews(
         structures: List<HealthStructure>,
@@ -61,6 +131,7 @@ class StructureMessagingRepository {
             }
         }
         threads[structureId] = updated.toMutableList()
+        saveThreadsToStore()
         return updated
     }
 
@@ -68,7 +139,8 @@ class StructureMessagingRepository {
         val structureId = structure.id ?: return emptyList()
         val thread = threadFor(structure)
         thread += newMessage(structureId, fromStructure = false, text = text.trim(), read = true)
-        thread += newMessage(structureId, fromStructure = true, text = autoReply(structure), read = false)
+        saveDraft(structureId, "")
+        saveThreadsToStore()
         return thread.toList()
     }
 
@@ -84,16 +156,6 @@ class StructureMessagingRepository {
                 ),
             )
         }
-    }
-
-    private fun autoReply(structure: HealthStructure): String {
-        val firstService = structure.services
-            ?.split(".")
-            ?.firstOrNull()
-            ?.trim()
-            ?.ifBlank { null }
-        val serviceHint = firstService?.let { " Service prioritaire: $it." }.orEmpty()
-        return "Message reçu par ${structure.displayName}.$serviceHint En cas d'urgence, présentez-vous directement à ${structure.displayAddress}."
     }
 
     private fun newMessage(
@@ -112,5 +174,10 @@ class StructureMessagingRepository {
             timeLabel = "14:$minute",
             read = read,
         )
+    }
+
+    companion object {
+        private const val KEY_THREADS = "persisted_structure_chat_threads"
+        private const val KEY_DRAFTS = "persisted_structure_chat_drafts"
     }
 }
