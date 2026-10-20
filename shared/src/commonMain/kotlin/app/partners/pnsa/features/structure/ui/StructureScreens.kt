@@ -72,7 +72,7 @@ fun StructureListScreen(navigator: AppNavigator) {
     val graph = LocalAppGraph.current
     val scope = rememberCoroutineScope()
     var items by remember { mutableStateOf(graph.screens.structures.ifEmpty { KinshasaCenters.all }) }
-    var province by remember { mutableStateOf("Kinshasa") }
+    var province by remember { mutableStateOf("") }
     var city by remember { mutableStateOf(graph.prefs.mapCity) }
     var query by remember { mutableStateOf(graph.prefs.mapQuery) }
     var loading by remember { mutableStateOf(!graph.screens.structuresLoaded) }
@@ -216,10 +216,10 @@ fun StructureListScreen(navigator: AppNavigator) {
                     ) {
                         item {
                             Spacer(Modifier.height(8.dp))
-                            Text("Annuaire GPS Kinshasa", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text("Annuaire GPS des structures", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Text(
                                 if (usesGoogleMaps()) "Google Maps interactif · suivi de ta position."
-                                else "Carte locale Kinshasa · centres disponibles hors ligne.",
+                                else "Carte locale hors ligne · affichage des structures disponibles.",
                             )
                             Spacer(Modifier.height(8.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
