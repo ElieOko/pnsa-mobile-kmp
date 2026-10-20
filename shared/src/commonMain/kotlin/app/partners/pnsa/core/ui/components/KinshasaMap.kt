@@ -1,5 +1,22 @@
 package app.partners.pnsa.core.ui.components
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -10,12 +27,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Icon
@@ -23,6 +40,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,9 +62,12 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
 import app.partners.pnsa.core.location.RouteTrack
-import app.partners.pnsa.core.ui.theme.PnsaBlue
-import app.partners.pnsa.core.ui.theme.PnsaNavy
-import app.partners.pnsa.core.ui.theme.PnsaRed
+import app.partners.pnsa.core.ui.map.MapViewStyle
+import app.partners.pnsa.core.ui.theme.PnsaGreenDeep
+import app.partners.pnsa.core.ui.theme.PnsaInk
+import app.partners.pnsa.core.ui.theme.PnsaMuted
+import app.partners.pnsa.core.ui.theme.bagdeColor
+import app.partners.pnsa.core.ui.theme.wsColor
 import app.partners.pnsa.features.structure.domain.models.HealthStructure
 import app.partners.pnsa.resources.Res
 import app.partners.pnsa.resources.map_marker_logo
@@ -144,6 +165,7 @@ fun KinshasaGpsMap(
     userLat: Double = -4.3276,
     userLon: Double = 15.3136,
     route: RouteTrack? = null,
+    mapStyle: MapViewStyle = MapViewStyle.Standard,
 ) {
     val markers = remember(structures) { structures.filter { it.hasCoordinates } }
     val selected = markers.firstOrNull { it.id == selectedId }
@@ -151,6 +173,40 @@ fun KinshasaGpsMap(
     val projectionBounds = remember(markers, userLat, userLon, route) {
         KinshasaMapMath.boundsFor(markers, userLat, userLon, route)
     }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "mapPulse")
+    val pulseRadius by infiniteTransition.animateFloat(
+        initialValue = 18f,
+        targetValue = 36f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1400, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "pulseRadius",
+    )
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.45f,
+        targetValue = 0.05f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1400, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "pulseAlpha",
+    )
+    val pinBounce by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = -6f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "pinBounce",
+    )
+    val selectionPop by animateFloatAsState(
+        targetValue = if (selectedId != null) 1.15f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "selectionPop",
+    )
 
     val communes = remember {
         listOf(
@@ -167,10 +223,24 @@ fun KinshasaGpsMap(
         )
     }
 
+    val backgroundColors = when (mapStyle) {
+        MapViewStyle.Standard -> listOf(Color(0xFFF3FAF3), Color(0xFFE5F4E6), Color(0xFFD5ECD7))
+        MapViewStyle.Satellite -> listOf(Color(0xFF0A1D10), Color(0xFF12331B), Color(0xFF1B4A26))
+        MapViewStyle.Terrain -> listOf(Color(0xFFEDF6E8), Color(0xFFDCECD4), Color(0xFFC5E0B9))
+    }
+    val gridColor = when (mapStyle) {
+        MapViewStyle.Satellite -> Color.White.copy(alpha = 0.08f)
+        else -> bagdeColor.copy(alpha = 0.10f)
+    }
+    val roadColor = when (mapStyle) {
+        MapViewStyle.Satellite -> Color.White.copy(alpha = 0.35f)
+        else -> Color.White.copy(alpha = 0.90f)
+    }
+
     Box(
         modifier
-            .clip(RoundedCornerShape(28.dp))
-            .shadow(8.dp, RoundedCornerShape(28.dp)),
+            .clip(RoundedCornerShape(24.dp))
+            .shadow(4.dp, RoundedCornerShape(24.dp)),
     ) {
         Canvas(
             Modifier
@@ -188,11 +258,19 @@ fun KinshasaGpsMap(
         ) {
             val w = size.width
             val h = size.height
-            drawRect(
-                brush = Brush.verticalGradient(
-                    listOf(Color(0xFF0E1A33), Color(0xFF16325C), Color(0xFF1B4A86)),
-                ),
-            )
+            drawRect(brush = Brush.verticalGradient(backgroundColors))
+
+            if (mapStyle == MapViewStyle.Terrain) {
+                for (r in 1..4) {
+                    drawCircle(
+                        color = bagdeColor.copy(alpha = 0.05f),
+                        radius = w * (0.18f * r),
+                        center = Offset(w * 0.35f, h * 0.72f),
+                        style = Stroke(width = 3f),
+                    )
+                }
+            }
+
             val river = Path().apply {
                 moveTo(0f, h * 0.04f)
                 cubicTo(w * 0.22f, h * 0.02f, w * 0.38f, h * 0.12f, w * 0.55f, h * 0.09f)
@@ -201,14 +279,14 @@ fun KinshasaGpsMap(
                 lineTo(0f, 0f)
                 close()
             }
-            drawPath(river, Color(0xFF3BA3FF).copy(alpha = 0.55f))
-            drawPath(river, Color(0xFF9AD4FF).copy(alpha = 0.35f), style = Stroke(width = 10f))
+            drawPath(river, Color(0xFF4FC3F7).copy(alpha = if (mapStyle == MapViewStyle.Satellite) 0.45f else 0.65f))
+            drawPath(river, Color(0xFFB3E5FC).copy(alpha = 0.45f), style = Stroke(width = 8f))
 
             for (i in 1..8) {
                 val y = h * i / 9f
-                drawLine(Color.White.copy(alpha = 0.06f), Offset(0f, y), Offset(w, y), strokeWidth = 2f)
+                drawLine(gridColor, Offset(0f, y), Offset(w, y), strokeWidth = 2f)
                 val x = w * i / 9f
-                drawLine(Color.White.copy(alpha = 0.05f), Offset(x, 0f), Offset(x, h), strokeWidth = 2f)
+                drawLine(gridColor, Offset(x, 0f), Offset(x, h), strokeWidth = 2f)
             }
 
             val boulevard = Path().apply {
@@ -216,32 +294,32 @@ fun KinshasaGpsMap(
                 cubicTo(w * 0.32f, h * 0.38f, w * 0.48f, h * 0.42f, w * 0.72f, h * 0.58f)
                 cubicTo(w * 0.82f, h * 0.66f, w * 0.88f, h * 0.78f, w * 0.92f, h * 0.9f)
             }
-            drawPath(boulevard, Color(0x66FFFFFF), style = Stroke(width = 7f, cap = StrokeCap.Round))
+            drawPath(boulevard, roadColor, style = Stroke(width = 8f, cap = StrokeCap.Round))
             val kasavubu = Path().apply {
                 moveTo(w * 0.08f, h * 0.36f)
                 cubicTo(w * 0.28f, h * 0.4f, w * 0.46f, h * 0.55f, w * 0.62f, h * 0.82f)
             }
-            drawPath(kasavubu, Color(0x44FFFFFF), style = Stroke(width = 5f, cap = StrokeCap.Round))
+            drawPath(kasavubu, roadColor.copy(alpha = 0.65f), style = Stroke(width = 5f, cap = StrokeCap.Round))
 
             communes.forEach { commune ->
                 val p = KinshasaMapMath.project(commune.lat, commune.lon, w, h, projectionBounds)
-                drawCircle(Color.White.copy(alpha = 0.08f), 18f, p)
+                drawCircle(bagdeColor.copy(alpha = 0.10f), 18f, p)
             }
 
             route?.points?.zipWithNext { start, end ->
                 val from = KinshasaMapMath.project(start.latitude, start.longitude, w, h, projectionBounds)
                 val to = KinshasaMapMath.project(end.latitude, end.longitude, w, h, projectionBounds)
-                drawLine(Color(0xFF0B3C8A), from, to, strokeWidth = 10f, cap = StrokeCap.Round)
-                drawLine(PnsaBlue, from, to, strokeWidth = 6f, cap = StrokeCap.Round)
+                drawLine(PnsaGreenDeep, from, to, strokeWidth = 10f, cap = StrokeCap.Round)
+                drawLine(bagdeColor, from, to, strokeWidth = 6f, cap = StrokeCap.Round)
             }
 
             val user = KinshasaMapMath.project(userLat, userLon, w, h, projectionBounds)
-            drawCircle(PnsaBlue.copy(alpha = 0.18f), 34f, user)
+            drawCircle(bagdeColor.copy(alpha = pulseAlpha), pulseRadius, user)
             drawCircle(Color.White, 10f, user)
-            drawCircle(PnsaBlue, 6f, user)
+            drawCircle(bagdeColor, 6f, user)
 
             markers.forEach { item ->
-                val p = KinshasaMapMath.project(item.latitude!!, item.longitude!!, w, h, projectionBounds)
+                val rawP = KinshasaMapMath.project(item.latitude!!, item.longitude!!, w, h, projectionBounds)
                 val active = item.id == selectedId
                 if (active) drawCircle(PnsaRed.copy(alpha = 0.3f), 24f, p)
                 drawCircle(Color.White, if (active) 19f else 17f, p)
@@ -256,39 +334,20 @@ fun KinshasaGpsMap(
             }
 
             drawRoundRect(
-                Color(0x990A0B10),
+                Color.White.copy(alpha = 0.9f),
                 topLeft = Offset(16f, h - 54f),
-                size = Size(210f, 36f),
-                cornerRadius = CornerRadius(18f, 18f),
+                size = Size(220f, 34f),
+                cornerRadius = CornerRadius(17f, 17f),
             )
         }
 
         Text(
-            "Carte locale · structures",
-            color = Color.White.copy(alpha = 0.9f),
+            "Vue ${mapStyle.label} · ${markers.size} structures",
+            color = PnsaInk,
             style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
             modifier = Modifier.align(Alignment.BottomStart).padding(18.dp),
         )
-        Surface(
-            modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
-            shape = CircleShape,
-            color = Color.White.copy(alpha = 0.92f),
-        ) {
-            Icon(
-                Icons.Default.MyLocation,
-                contentDescription = "Position indicative",
-                tint = PnsaBlue,
-                modifier = Modifier.padding(8.dp).size(18.dp),
-            )
-        }
-
-        if (selected != null) {
-            GpsPlaceCard(
-                item = selected,
-                modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp),
-                onOpen = { onSelect(selected) },
-            )
-        }
     }
 }
 
@@ -298,19 +357,25 @@ fun GpsPlaceCard(
     modifier: Modifier = Modifier,
     onOpen: () -> Unit,
 ) {
-    Surface(
-        modifier = modifier.fillMaxWidth().quietClick(onClick = onOpen),
-        shape = RoundedCornerShape(22.dp),
-        color = Color.White,
-        shadowElevation = 10.dp,
+    AnimatedVisibility(
+        visible = true,
+        enter = fadeIn() + slideInVertically { it / 2 },
+        exit = fadeOut() + slideOutVertically { it / 2 },
     ) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(PnsaRed.copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center,
+        AnimatedContent(
+            targetState = item,
+            transitionSpec = {
+                (fadeIn(tween(260)) + slideInVertically { it / 3 }) togetherWith
+                    (fadeOut(tween(180)) + slideOutVertically { it / 3 })
+            },
+            label = "placeCard",
+        ) { target ->
+            Surface(
+                modifier = modifier.fillMaxWidth().quietClick(onClick = onOpen),
+                shape = RoundedCornerShape(22.dp),
+                color = Color.White,
+                border = BorderStroke(1.5.dp, bagdeColor.copy(alpha = 0.35f)),
+                shadowElevation = 8.dp,
             ) {
                 Icon(Icons.Default.Place, contentDescription = null, tint = PnsaRed)
             }
@@ -339,6 +404,6 @@ fun MapLegendRow() {
 private fun LegendDot(color: Color, label: String) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Box(Modifier.size(8.dp).clip(CircleShape).background(color))
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = PnsaMuted)
     }
 }

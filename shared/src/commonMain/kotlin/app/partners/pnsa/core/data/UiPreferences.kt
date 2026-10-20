@@ -11,6 +11,10 @@ class UiPreferences(
         get() = store.get(MAP_SHOW) != "0"
         set(value) { store.put(MAP_SHOW, if (value) "1" else "0") }
 
+    var mapStyle: String
+        get() = store.get(MAP_STYLE) ?: "Standard"
+        set(value) { store.put(MAP_STYLE, value) }
+
     var mapQuery: String
         get() = store.get(MAP_QUERY).orEmpty()
         set(value) { store.put(MAP_QUERY, value) }
@@ -42,6 +46,7 @@ class UiPreferences(
     companion object {
         private const val FORUM_CATEGORY = "pref_forum_category"
         private const val MAP_SHOW = "pref_map_show"
+        private const val MAP_STYLE = "pref_map_style"
         private const val MAP_QUERY = "pref_map_query"
         private const val MAP_CITY = "pref_map_city"
         private const val MAP_SELECTED = "pref_map_selected"

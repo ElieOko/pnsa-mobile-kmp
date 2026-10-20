@@ -1,7 +1,8 @@
 package app.partners.pnsa.features.quiz.ui
 
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,7 +36,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,11 +43,11 @@ import app.partners.pnsa.core.di.LocalAppGraph
 import app.partners.pnsa.core.network.ApiException
 import app.partners.pnsa.core.ui.components.EmptyState
 import app.partners.pnsa.core.ui.components.ErrorState
+import app.partners.pnsa.core.ui.components.InlineBackHeader
 import app.partners.pnsa.core.ui.components.LoadingState
 import app.partners.pnsa.core.ui.components.PageBackdrop
 import app.partners.pnsa.core.ui.components.PnsaCard
 import app.partners.pnsa.core.ui.components.PnsaScaffold
-import app.partners.pnsa.core.ui.components.PnsaTopBar
 import app.partners.pnsa.core.ui.components.PrimaryAction
 import app.partners.pnsa.core.ui.components.QuietAction
 import app.partners.pnsa.core.ui.components.SecondaryAction
@@ -54,17 +55,17 @@ import app.partners.pnsa.core.ui.components.StatusBanner
 import app.partners.pnsa.core.ui.components.quietClick
 import app.partners.pnsa.core.ui.navigation.AppDestination
 import app.partners.pnsa.core.ui.navigation.AppNavigator
-import app.partners.pnsa.core.ui.theme.PnsaBlue
-import app.partners.pnsa.core.ui.theme.PnsaNavy
-import app.partners.pnsa.core.ui.theme.PnsaRed
+import app.partners.pnsa.core.ui.theme.PnsaGreenDeep
+import app.partners.pnsa.core.ui.theme.PnsaGreenSoft
+import app.partners.pnsa.core.ui.theme.PnsaInk
+import app.partners.pnsa.core.ui.theme.PnsaMuted
+import app.partners.pnsa.core.ui.theme.bagdeColor
+import app.partners.pnsa.core.ui.theme.wsColor
 import app.partners.pnsa.core.util.QuizScoring
 import app.partners.pnsa.core.util.excerpt
 import app.partners.pnsa.features.quiz.domain.models.Quiz
 import app.partners.pnsa.features.quiz.domain.models.QuizAttempt
-import app.partners.pnsa.resources.Res
-import app.partners.pnsa.resources.quiz_question
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun QuizListScreen(navigator: AppNavigator) {
@@ -113,37 +114,38 @@ fun QuizListScreen(navigator: AppNavigator) {
 
     val lastId = remember { graph.prefs.lastQuizId }
 
-    PnsaScaffold(topBar = { PnsaTopBar("Quiz") }) { padding ->
+    PnsaScaffold { padding ->
         PageBackdrop {
             when {
                 loading -> LoadingState("Chargement des quiz…")
                 error != null -> ErrorState(error.orEmpty(), onRetry = { load() })
                 quizzes.isEmpty() -> EmptyState("Aucun quiz publié", "Les quiz validés par le PNSA apparaîtront ici.")
                 else -> LazyColumn(
-                    Modifier.padding(padding).padding(horizontal = 16.dp),
+                    Modifier.padding(padding).fillMaxSize().background(Color.White).padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     item {
-                        Box(
-                            Modifier
-                                .fillMaxWidth()
-                                .height(132.dp)
-                                .clip(RoundedCornerShape(22.dp)),
+                        Spacer(Modifier.height(6.dp))
+                        InlineBackHeader(
+                            title = "Quiz SSR",
+                            subtitle = "Évalue et renforce tes connaissances",
+                        )
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(22.dp),
+                            border = BorderStroke(1.dp, bagdeColor.copy(alpha = 0.25f)),
                         ) {
-                            Image(
-                                painterResource(Res.drawable.quiz_question),
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize(),
-                            )
                             Box(
-                                Modifier.fillMaxSize().background(
-                                    Brush.horizontalGradient(listOf(Color(0xCC0069E1), Color(0x99D01D2A))),
-                                ),
-                            )
-                            Column(Modifier.align(Alignment.BottomStart).padding(16.dp)) {
-                                Text("Quiz SSR", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.labelMedium)
-                                Text("Tester tes connaissances", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                                Modifier
+                                    .fillMaxWidth()
+                                    .background(Brush.horizontalGradient(listOf(bagdeColor, PnsaGreenDeep)))
+                                    .padding(18.dp),
+                            ) {
+                                Column {
+                                    Text("Évaluation interactive", color = Color.White.copy(alpha = 0.9f), style = MaterialTheme.typography.labelMedium)
+                                    Spacer(Modifier.height(4.dp))
+                                    Text("Tester tes connaissances SSR", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                                }
                             }
                         }
                     }
@@ -187,11 +189,11 @@ private fun QuizCatalogCard(
         Row(verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
                 if (highlighted) {
-                    Text("Dernier quiz", color = PnsaBlue, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
+                    Text("Dernier quiz", color = bagdeColor, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                 }
-                Text(quiz.title, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium, color = PnsaNavy)
+                Text(quiz.title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = PnsaInk)
                 Spacer(Modifier.height(4.dp))
-                Text(excerpt(quiz.description), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(excerpt(quiz.description), color = PnsaMuted)
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     InfoPill(quiz.nbSecond?.let { "$it sec." } ?: "Libre")
@@ -211,10 +213,10 @@ private fun InfoPill(text: String) {
     Box(
         Modifier
             .clip(CircleShape)
-            .background(Color(0xFFE8F2FF))
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .background(wsColor)
+            .padding(horizontal = 10.dp, vertical = 4.dp),
     ) {
-        Text(text, style = MaterialTheme.typography.labelSmall, color = PnsaBlue)
+        Text(text, style = MaterialTheme.typography.labelSmall, color = PnsaInk, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -224,10 +226,10 @@ private fun ScoreBadge(score: Int, total: Int) {
         Modifier
             .size(52.dp)
             .clip(CircleShape)
-            .background(PnsaBlue.copy(alpha = 0.12f)),
+            .background(wsColor),
         contentAlignment = Alignment.Center,
     ) {
-        Text("$score/$total", fontWeight = FontWeight.Bold, color = PnsaBlue, fontSize = 12.sp)
+        Text("$score/$total", fontWeight = FontWeight.Bold, color = bagdeColor, fontSize = 12.sp)
     }
 }
 
@@ -272,7 +274,7 @@ fun QuizPlayScreen(quizId: Long, onBack: () -> Unit) {
     val current = questions.getOrNull(index)
     val progress = if (questions.isEmpty()) 0f else (index + 1f) / questions.size
 
-    PnsaScaffold(topBar = { PnsaTopBar(quiz?.title ?: "Quiz", onBack = onBack) }) { padding ->
+    PnsaScaffold { padding ->
         PageBackdrop {
             when {
                 loading -> LoadingState("Préparation de ta tentative…")
@@ -287,23 +289,31 @@ fun QuizPlayScreen(quizId: Long, onBack: () -> Unit) {
                 else -> Column(
                     Modifier
                         .padding(padding)
-                        .padding(20.dp)
+                        .fillMaxSize()
+                        .background(Color.White)
+                        .padding(16.dp)
                         .verticalScroll(rememberScrollState()),
                 ) {
+                    InlineBackHeader(
+                        title = quiz?.title ?: "Quiz",
+                        subtitle = "Question ${index + 1} sur ${questions.size}",
+                        onBack = onBack,
+                    )
+                    Spacer(Modifier.height(8.dp))
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text("Question ${index + 1} / ${questions.size}", color = PnsaBlue, fontWeight = FontWeight.SemiBold)
+                        Text("Question ${index + 1} / ${questions.size}", color = bagdeColor, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.weight(1f))
-                        Text("${answers.size} répondues", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("${answers.size} répondues", style = MaterialTheme.typography.labelMedium, color = PnsaMuted)
                     }
                     Spacer(Modifier.height(8.dp))
                     LinearProgressIndicator(
                         progress = { progress },
                         modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
-                        color = PnsaBlue,
-                        trackColor = Color(0xFFE8F2FF),
+                        color = bagdeColor,
+                        trackColor = PnsaGreenSoft,
                     )
                     Spacer(Modifier.height(18.dp))
-                    Text(current.prompt, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = PnsaNavy)
+                    Text(current.prompt, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = PnsaInk)
                     Spacer(Modifier.height(16.dp))
                     current.reponses.forEachIndexed { optionIndex, option ->
                         val selected = current.id != null && answers[current.id] == option.id
@@ -313,7 +323,8 @@ fun QuizPlayScreen(quizId: Long, onBack: () -> Unit) {
                                 .fillMaxWidth()
                                 .padding(bottom = 8.dp)
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(if (selected) PnsaBlue.copy(alpha = 0.12f) else Color.White)
+                                .background(if (selected) wsColor else Color.White)
+                                .border(1.dp, if (selected) bagdeColor else Color(0xFFD5E4D6), RoundedCornerShape(16.dp))
                                 .quietClick {
                                     val qid = current.id ?: return@quietClick
                                     val rid = option.id ?: return@quietClick
@@ -333,13 +344,13 @@ fun QuizPlayScreen(quizId: Long, onBack: () -> Unit) {
                                 Modifier
                                     .size(32.dp)
                                     .clip(CircleShape)
-                                    .background(if (selected) PnsaBlue else Color(0xFFE8F2FF)),
+                                    .background(if (selected) bagdeColor else PnsaGreenSoft),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Text(letter, color = if (selected) Color.White else PnsaBlue, fontWeight = FontWeight.Bold)
+                                Text(letter, color = if (selected) Color.White else bagdeColor, fontWeight = FontWeight.Bold)
                             }
                             Spacer(Modifier.size(12.dp))
-                            Text(option.reponse.orEmpty(), style = MaterialTheme.typography.bodyLarge, color = PnsaNavy)
+                            Text(option.reponse.orEmpty(), style = MaterialTheme.typography.bodyLarge, color = PnsaInk)
                         }
                     }
                     error?.let {
@@ -414,22 +425,23 @@ private fun QuizResultPane(
     Column(
         Modifier
             .fillMaxSize()
+            .background(Color.White)
             .padding(20.dp)
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("Résultat", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = PnsaNavy)
+        Text("Résultat", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = PnsaInk)
         Spacer(Modifier.height(12.dp))
         Box(
             Modifier
                 .size(112.dp)
                 .clip(CircleShape)
-                .background(if (percent >= 60) PnsaBlue.copy(alpha = 0.12f) else PnsaRed.copy(alpha = 0.10f)),
+                .background(wsColor),
             contentAlignment = Alignment.Center,
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("$score / $max", fontWeight = FontWeight.Bold, color = if (percent >= 60) PnsaBlue else PnsaRed, fontSize = 22.sp)
-                Text("$percent %", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("$score / $max", fontWeight = FontWeight.Bold, color = bagdeColor, fontSize = 22.sp)
+                Text("$percent %", style = MaterialTheme.typography.labelMedium, color = PnsaMuted)
             }
         }
         Spacer(Modifier.height(12.dp))
@@ -448,10 +460,10 @@ private fun QuizResultPane(
             val correct = question.reponses.firstOrNull { it.isCorrect }
             val ok = chosen != null && chosen.id == correct?.id
             PnsaCard(Modifier.fillMaxWidth().padding(bottom = 10.dp)) {
-                Text(question.prompt, fontWeight = FontWeight.SemiBold, color = PnsaNavy)
+                Text(question.prompt, fontWeight = FontWeight.Bold, color = PnsaInk)
                 Spacer(Modifier.height(6.dp))
-                Text("Ta réponse : ${chosen?.reponse ?: "non répondue"}", color = if (ok) PnsaBlue else PnsaRed)
-                Text("Bonne réponse : ${correct?.reponse ?: "—"}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Ta réponse : ${chosen?.reponse ?: "non répondue"}", color = if (ok) bagdeColor else Color(0xFFD32F2F), fontWeight = FontWeight.SemiBold)
+                Text("Bonne réponse : ${correct?.reponse ?: "—"}", color = PnsaMuted)
             }
         }
         PrimaryAction("Retour aux quiz", onClick = onBack)

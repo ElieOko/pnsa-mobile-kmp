@@ -17,6 +17,7 @@ actual fun PlatformStructureMap(
     route: RouteTrack?,
     followUser: Boolean,
     onFollowInterrupted: () -> Unit,
+    mapStyle: MapViewStyle,
 ) {
     KinshasaGpsMap(
         structures = structures,
@@ -26,6 +27,7 @@ actual fun PlatformStructureMap(
         userLat = userLocation?.latitude ?: -4.3276,
         userLon = userLocation?.longitude ?: 15.3136,
         route = route,
+        mapStyle = mapStyle,
     )
 }
 

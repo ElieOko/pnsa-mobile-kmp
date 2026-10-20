@@ -141,7 +141,7 @@ fun titleFor(destination: AppDestination): String = when (destination) {
     AppDestination.Orientations -> "Orientations"
     is AppDestination.OrientationDetail -> "Orientation"
     is AppDestination.OrientationCreate -> "Nouvelle orientation"
-    AppDestination.Forum -> "Forum"
+    AppDestination.Forum -> "Discussions"
     is AppDestination.ForumDetail -> "Discussion"
     AppDestination.Advice -> "Conseil"
     is AppDestination.AdviceChat -> "Échange"

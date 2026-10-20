@@ -1,7 +1,6 @@
 package app.partners.pnsa.core.ui.components
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,53 +25,50 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import app.partners.pnsa.resources.Res
-import app.partners.pnsa.resources.hero_bg
-import org.jetbrains.compose.resources.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import app.partners.pnsa.core.ui.theme.LocalEmbeddedChrome
-import app.partners.pnsa.core.ui.theme.PnsaBlue
+import androidx.compose.ui.unit.sp
+import app.partners.pnsa.core.ui.theme.PnsaGreenSoft
 import app.partners.pnsa.core.ui.theme.PnsaInk
 import app.partners.pnsa.core.ui.theme.PnsaMuted
+import app.partners.pnsa.core.ui.theme.bagdeColor
+import app.partners.pnsa.core.ui.theme.wsColor
 
 @Composable
 fun PnsaScaffold(
     modifier: Modifier = Modifier,
     topBar: @Composable () -> Unit = {},
     bottomBar: @Composable () -> Unit = {},
+    floatingActionButton: @Composable () -> Unit = {},
     snackbarHost: @Composable () -> Unit = {},
-    containerColor: Color = MaterialTheme.colorScheme.background,
+    containerColor: Color = Color.White,
     content: @Composable (PaddingValues) -> Unit,
 ) {
     Scaffold(
         modifier = modifier,
-        topBar = topBar,
         bottomBar = bottomBar,
+        floatingActionButton = floatingActionButton,
         snackbarHost = snackbarHost,
         containerColor = containerColor,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -80,32 +76,64 @@ fun PnsaScaffold(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PnsaTopBar(
     title: String,
     onBack: (() -> Unit)? = null,
     actions: @Composable () -> Unit = {},
 ) {
-    if (LocalEmbeddedChrome.current) return
-    TopAppBar(
-        title = {
-            Text(title, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        },
-        navigationIcon = {
-            if (onBack != null) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
+    // TopAppBar suppressed globally in favor of inline headers and WhatsApp-style layout
+}
+
+@Composable
+fun InlineBackHeader(
+    title: String,
+    subtitle: String? = null,
+    onBack: (() -> Unit)? = null,
+    trailing: @Composable (() -> Unit)? = null,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (onBack != null) {
+            Surface(
+                modifier = Modifier
+                    .size(38.dp)
+                    .quietClick(onClick = onBack),
+                shape = CircleShape,
+                color = wsColor,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.ArrowBack,
+                        contentDescription = "Retour",
+                        tint = bagdeColor,
+                        modifier = Modifier.size(20.dp),
+                    )
                 }
             }
-        },
-        actions = { actions() },
-        windowInsets = WindowInsets(0, 0, 0, 0),
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.background,
-            titleContentColor = MaterialTheme.colorScheme.onBackground,
-        ),
-    )
+            Spacer(Modifier.width(12.dp))
+        }
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = bagdeColor,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+            )
+            if (!subtitle.isNullOrBlank()) {
+                Text(
+                    text = subtitle,
+                    color = PnsaMuted,
+                    fontSize = 12.sp,
+                )
+            }
+        }
+        trailing?.invoke()
+    }
 }
 
 fun Modifier.quietClick(enabled: Boolean = true, onClick: () -> Unit): Modifier = this.then(
@@ -130,8 +158,9 @@ fun PnsaCard(
 ) {
     Card(
         modifier = modifier.then(if (onClick != null) Modifier.quietClick(onClick = onClick) else Modifier),
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, bagdeColor.copy(alpha = 0.16f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         content = { Column(Modifier.padding(16.dp), content = content) },
     )
@@ -143,6 +172,7 @@ fun SectionTitle(text: String, modifier: Modifier = Modifier) {
         text = text,
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.Bold,
+        color = PnsaInk,
         modifier = modifier.padding(vertical = 8.dp),
     )
 }
@@ -153,21 +183,37 @@ fun PnsaChip(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
-    Surface(
-        modifier = modifier.quietClick(onClick = onClick),
-        shape = CircleShape,
-        color = if (selected) PnsaBlue else Color.White,
-        border = BorderStroke(1.dp, if (selected) PnsaBlue else Color(0xFFC5D0E0)),
-    ) {
-        Text(
-            text = label,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-            color = if (selected) Color.White else PnsaInk,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-        )
-    }
+    SuggestionChip(
+        modifier = modifier,
+        enabled = enabled,
+        shape = RoundedCornerShape(35.dp),
+        label = {
+            Text(
+                text = label,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            )
+        },
+        onClick = onClick,
+        border = SuggestionChipDefaults.suggestionChipBorder(
+            enabled = enabled,
+            borderColor = if (selected) bagdeColor else Color(0xFFD5E4D6),
+        ),
+        colors = if (selected) {
+            SuggestionChipDefaults.suggestionChipColors(
+                containerColor = wsColor,
+                labelColor = PnsaInk,
+                disabledContainerColor = wsColor,
+                disabledLabelColor = wsColor,
+            )
+        } else {
+            SuggestionChipDefaults.suggestionChipColors(
+                containerColor = Color.White,
+                labelColor = PnsaMuted,
+            )
+        },
+    )
 }
 
 @Composable
@@ -175,13 +221,14 @@ fun Pill(text: String, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier,
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.primaryContainer,
+        color = wsColor,
     ) {
         Text(
             text = text,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            fontWeight = FontWeight.SemiBold,
+            color = PnsaInk,
         )
     }
 }
@@ -190,25 +237,26 @@ fun Pill(text: String, modifier: Modifier = Modifier) {
 fun StatusBanner(text: String, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer,
+        shape = RoundedCornerShape(14.dp),
+        color = PnsaGreenSoft,
+        border = BorderStroke(1.dp, bagdeColor.copy(alpha = 0.25f)),
     ) {
         Text(
             text = text,
             modifier = Modifier.padding(12.dp),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            color = PnsaInk,
         )
     }
 }
 
 @Composable
 fun LoadingState(label: String = "Chargement…") {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize().background(Color.White), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CircularProgressIndicator()
+            CircularProgressIndicator(color = bagdeColor)
             Spacer(Modifier.height(12.dp))
-            Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(label, color = PnsaMuted)
         }
     }
 }
@@ -231,7 +279,7 @@ fun ErrorState(
     offline: Boolean = false,
 ) {
     FeedbackState(
-        icon = if (offline) Icons.Default.Warning else Icons.Default.Warning,
+        icon = Icons.Default.Warning,
         title = if (offline) "Pas de connexion" else "Impossible de continuer",
         message = message,
         actionLabel = if (onRetry != null) "Réessayer" else null,
@@ -253,22 +301,25 @@ private fun FeedbackState(
                 Modifier
                     .size(72.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
+                    .background(wsColor),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Icon(icon, contentDescription = null, tint = bagdeColor)
             }
             Spacer(Modifier.height(16.dp))
-            Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = PnsaInk)
             Spacer(Modifier.height(8.dp))
             Text(
                 message,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = PnsaMuted,
             )
             if (actionLabel != null && onAction != null) {
                 Spacer(Modifier.height(16.dp))
-                Button(onClick = onAction) {
+                Button(
+                    onClick = onAction,
+                    colors = ButtonDefaults.buttonColors(containerColor = bagdeColor, contentColor = Color.White),
+                ) {
                     Icon(Icons.Default.Refresh, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text(actionLabel)
@@ -308,13 +359,13 @@ fun PnsaTextField(
             focusedTextColor = PnsaInk,
             unfocusedTextColor = PnsaInk,
             disabledTextColor = PnsaMuted,
-            cursorColor = PnsaBlue,
+            cursorColor = bagdeColor,
             focusedContainerColor = Color.White,
             unfocusedContainerColor = Color.White,
             disabledContainerColor = Color.White,
-            focusedBorderColor = PnsaBlue,
-            unfocusedBorderColor = Color(0xFFC5D0E0),
-            focusedLabelColor = PnsaBlue,
+            focusedBorderColor = bagdeColor,
+            unfocusedBorderColor = Color(0xFFD5E4D6),
+            focusedLabelColor = bagdeColor,
             unfocusedLabelColor = PnsaMuted,
         ),
     )
@@ -330,8 +381,9 @@ fun ShortcutTile(
 ) {
     Card(
         modifier = modifier.quietClick(onClick = onClick),
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, bagdeColor.copy(alpha = 0.18f)),
         elevation = CardDefaults.cardElevation(1.dp),
     ) {
         Column(Modifier.padding(14.dp)) {
@@ -339,17 +391,17 @@ fun ShortcutTile(
                 Modifier
                     .size(40.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.primaryContainer),
+                    .background(wsColor),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Icon(icon, contentDescription = null, tint = bagdeColor)
             }
             Spacer(Modifier.height(12.dp))
-            Text(title, fontWeight = FontWeight.SemiBold)
+            Text(title, fontWeight = FontWeight.SemiBold, color = PnsaInk)
             Text(
                 subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = PnsaMuted,
                 maxLines = 2,
             )
         }
@@ -371,11 +423,17 @@ fun PrimaryAction(text: String, enabled: Boolean = true, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.fillMaxWidth().height(52.dp),
-        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth().height(50.dp),
+        shape = RoundedCornerShape(25.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = bagdeColor,
+            contentColor = Color.White,
+            disabledContainerColor = bagdeColor.copy(alpha = 0.4f),
+            disabledContentColor = Color.White.copy(alpha = 0.8f),
+        ),
         contentPadding = PaddingValues(horizontal = 20.dp),
     ) {
-        Text(text, fontWeight = FontWeight.SemiBold)
+        Text(text, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -384,17 +442,21 @@ fun SecondaryAction(text: String, enabled: Boolean = true, onClick: () -> Unit) 
     FilledTonalButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.fillMaxWidth().height(52.dp),
-        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth().height(50.dp),
+        shape = RoundedCornerShape(25.dp),
+        colors = ButtonDefaults.filledTonalButtonColors(
+            containerColor = wsColor,
+            contentColor = PnsaInk,
+        ),
     ) {
-        Text(text)
+        Text(text, fontWeight = FontWeight.SemiBold)
     }
 }
 
 @Composable
 fun QuietAction(text: String, onClick: () -> Unit) {
     TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Text(text)
+        Text(text, color = bagdeColor, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -402,12 +464,12 @@ fun QuietAction(text: String, onClick: () -> Unit) {
 fun AvatarCircle(initials: String, modifier: Modifier = Modifier) {
     Box(
         modifier
-            .size(40.dp)
+            .size(42.dp)
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.primary),
+            .background(bagdeColor),
         contentAlignment = Alignment.Center,
     ) {
-        Text(initials, color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
+        Text(initials, color = Color.White, fontWeight = FontWeight.Bold)
     }
 }
 

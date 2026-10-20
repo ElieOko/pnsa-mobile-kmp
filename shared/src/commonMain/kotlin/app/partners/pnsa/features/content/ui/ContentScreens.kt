@@ -1,5 +1,6 @@
 package app.partners.pnsa.features.content.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -12,9 +13,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import app.partners.pnsa.core.ui.components.PageBackdrop
-import app.partners.pnsa.core.ui.components.PnsaChip
-import app.partners.pnsa.core.ui.components.PnsaScaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,20 +22,27 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.partners.pnsa.core.di.LocalAppGraph
 import app.partners.pnsa.core.network.ApiException
 import app.partners.pnsa.core.ui.components.EmptyState
 import app.partners.pnsa.core.ui.components.ErrorState
+import app.partners.pnsa.core.ui.components.InlineBackHeader
 import app.partners.pnsa.core.ui.components.LoadingState
 import app.partners.pnsa.core.ui.components.MetaRow
+import app.partners.pnsa.core.ui.components.PageBackdrop
 import app.partners.pnsa.core.ui.components.PnsaCard
+import app.partners.pnsa.core.ui.components.PnsaChip
+import app.partners.pnsa.core.ui.components.PnsaScaffold
 import app.partners.pnsa.core.ui.components.PnsaTextField
-import app.partners.pnsa.core.ui.components.PnsaTopBar
 import app.partners.pnsa.core.ui.components.StatusBanner
 import app.partners.pnsa.core.ui.navigation.AppDestination
 import app.partners.pnsa.core.ui.navigation.AppNavigator
+import app.partners.pnsa.core.ui.theme.PnsaInk
+import app.partners.pnsa.core.ui.theme.PnsaMuted
+import app.partners.pnsa.core.ui.theme.bagdeColor
 import app.partners.pnsa.core.util.excerpt
 import app.partners.pnsa.core.util.formatIsoDate
 import app.partners.pnsa.features.content.domain.models.Contenu
@@ -93,47 +98,57 @@ fun ContentListScreen(navigator: AppNavigator) {
         matchesCategory && (query.isBlank() || haystack.contains(query.lowercase()))
     }
 
-    PnsaScaffold(topBar = { PnsaTopBar("Apprendre") }) { padding ->
+    PnsaScaffold { padding ->
         PageBackdrop {
-        Column(Modifier.padding(padding).fillMaxSize().padding(horizontal = 16.dp)) {
-            PnsaTextField(query, {
-                query = it
-                graph.prefs.contentQuery = it
-            }, "Rechercher un thème, un mot-clé…")
-            Spacer(Modifier.height(8.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(categories) { label ->
-                    PnsaChip(
-                        label = label,
-                        selected = category == label,
-                        onClick = {
-                            category = label
-                            graph.prefs.contentCategory = label
-                        },
-                    )
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            when {
-                loading -> LoadingState("Chargement du catalogue…")
-                error != null -> ErrorState(error.orEmpty(), onRetry = { load() })
-                filtered.isEmpty() -> EmptyState(
-                    "Aucun contenu",
-                    if (query.isNotBlank()) "Aucun résultat pour « $query ». Modifie ta recherche." else "Le catalogue publié est vide pour le moment.",
+            Column(Modifier.padding(padding).fillMaxSize().background(Color.White).padding(horizontal = 16.dp)) {
+                Spacer(Modifier.height(6.dp))
+                InlineBackHeader(
+                    title = "Apprendre",
+                    subtitle = "Catalogue éducatif et fiches SSR",
                 )
-                else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(filtered, key = { it.id ?: it.title }) { item ->
-                        PnsaCard(onClick = { item.id?.let { navigator.push(AppDestination.ContentDetail(it)) } }) {
-                            MetaRow(listOfNotNull(item.categoryLabel, item.langue?.uppercase(), item.extension?.uppercase()))
-                            Spacer(Modifier.height(8.dp))
-                            Text(item.title, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
-                            Text(excerpt(item.description), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
+                PnsaTextField(
+                    value = query,
+                    onValueChange = {
+                        query = it
+                        graph.prefs.contentQuery = it
+                    },
+                    label = "Rechercher un thème, un mot-clé…",
+                )
+                Spacer(Modifier.height(8.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(categories) { label ->
+                        PnsaChip(
+                            label = label,
+                            selected = category == label,
+                            onClick = {
+                                category = label
+                                graph.prefs.contentCategory = label
+                            },
+                        )
                     }
-                    item { Spacer(Modifier.height(24.dp)) }
+                }
+                Spacer(Modifier.height(8.dp))
+                when {
+                    loading -> LoadingState("Chargement du catalogue…")
+                    error != null -> ErrorState(error.orEmpty(), onRetry = { load() })
+                    filtered.isEmpty() -> EmptyState(
+                        "Aucun contenu",
+                        if (query.isNotBlank()) "Aucun résultat pour « $query ». Modifie ta recherche." else "Le catalogue publié est vide pour le moment.",
+                    )
+                    else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(filtered, key = { it.id ?: it.title }) { item ->
+                            PnsaCard(onClick = { item.id?.let { navigator.push(AppDestination.ContentDetail(it)) } }) {
+                                MetaRow(listOfNotNull(item.categoryLabel, item.langue?.uppercase(), item.extension?.uppercase()))
+                                Spacer(Modifier.height(8.dp))
+                                Text(item.title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = PnsaInk)
+                                Spacer(Modifier.height(4.dp))
+                                Text(excerpt(item.description), color = PnsaMuted)
+                            }
+                        }
+                        item { Spacer(Modifier.height(24.dp)) }
+                    }
                 }
             }
-        }
         }
     }
 }
@@ -159,7 +174,7 @@ fun ContentDetailScreen(id: Long, onBack: () -> Unit) {
         loading = false
     }
 
-    PnsaScaffold(topBar = { PnsaTopBar(item?.title ?: "Contenu", onBack = onBack) }) { padding ->
+    PnsaScaffold { padding ->
         when {
             loading -> LoadingState()
             error != null -> ErrorState(error.orEmpty(), onRetry = {
@@ -178,9 +193,17 @@ fun ContentDetailScreen(id: Long, onBack: () -> Unit) {
                 Column(
                     Modifier
                         .padding(padding)
-                        .padding(20.dp)
+                        .fillMaxSize()
+                        .background(Color.White)
+                        .padding(16.dp)
                         .verticalScroll(rememberScrollState()),
                 ) {
+                    InlineBackHeader(
+                        title = content.title,
+                        subtitle = "Mis à jour le ${formatIsoDate(content.updatedAt)}",
+                        onBack = onBack,
+                    )
+                    Spacer(Modifier.height(8.dp))
                     MetaRow(
                         listOfNotNull(
                             content.categoryLabel,
@@ -189,17 +212,18 @@ fun ContentDetailScreen(id: Long, onBack: () -> Unit) {
                             content.langue?.uppercase(),
                         ),
                     )
-                    Spacer(Modifier.height(8.dp))
-                    Text("Mis à jour le ${formatIsoDate(content.updatedAt)}", style = MaterialTheme.typography.labelMedium)
                     if (content.allowOffline == true) {
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(10.dp))
                         StatusBanner("Consultation hors connexion autorisée pour ce contenu.")
                     }
                     Spacer(Modifier.height(16.dp))
-                    Text(
-                        content.description.orEmpty().replace("\r\n", "\n"),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
+                    PnsaCard {
+                        Text(
+                            content.description.orEmpty().replace("\r\n", "\n"),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = PnsaInk,
+                        )
+                    }
                     if (content.filePath.isNullOrBlank().not()) {
                         Spacer(Modifier.height(16.dp))
                         StatusBanner("Un support associé est disponible (${content.extension ?: "fichier"}). Le téléchargement complet n’est confirmé qu’après réception.")

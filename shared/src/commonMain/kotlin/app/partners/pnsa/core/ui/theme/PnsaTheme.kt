@@ -16,66 +16,75 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-val PnsaBlue = Color(0xFF0069E1)
-val PnsaBlueDeep = Color(0xFF0B3C8A)
-val PnsaBlueSoft = Color(0xFFE8F2FF)
-val PnsaRed = Color(0xFFD01D2A)
-val PnsaRedHot = Color(0xFFFF2D55)
-val PnsaNavy = Color(0xFF1A2744)
-val PnsaInk = Color(0xFF101828)
-val PnsaIce = Color(0xFFF3F6FB)
-val PnsaChrome = Color(0xFF0A0B10)
-val PnsaChromeLift = Color(0xFF161821)
-val PnsaMuted = Color(0xFF667085)
+val wsColor = Color.Green.copy(0.3f)
+val bagdeColor = Color(0xFF1AB221)
+val badgeColor = bagdeColor
 
-val PnsaBlueRed = Brush.linearGradient(listOf(PnsaBlue, Color(0xFF3B82F6), PnsaRed))
+val PnsaGreenDeep = Color(0xFF0E7A14)
+val PnsaGreenSoft = Color(0xFFE8F8E9)
+val PnsaGreenBubbleSent = Color(0xFFDCF8C6)
+val PnsaChatCanvas = Color(0xFFF5F8F5)
+
+val PnsaBlue = bagdeColor
+val PnsaBlueDeep = PnsaGreenDeep
+val PnsaBlueSoft = PnsaGreenSoft
+val PnsaRed = Color(0xFF138A19)
+val PnsaRedHot = bagdeColor
+val PnsaNavy = Color(0xFF0D1F10)
+val PnsaInk = Color(0xFF111B13)
+val PnsaIce = Color(0xFFFFFFFF)
+val PnsaChrome = Color.White
+val PnsaChromeLift = Color(0xFFF6FBF6)
+val PnsaMuted = Color(0xFF5C6B5E)
+
+val PnsaBlueRed = Brush.linearGradient(listOf(bagdeColor, Color(0xFF28C930), PnsaGreenDeep))
 val PnsaHeroBrush = Brush.verticalGradient(
-    listOf(Color(0xCC0A0B10), Color(0x990B3C8A), Color(0xE60A0B10)),
+    listOf(Color(0xCC0D1F10), Color(0x990E7A14), Color(0xE60D1F10)),
 )
 
 fun motionTween(duration: Int = 420) = tween<Float>(durationMillis = duration)
 fun motionSpring() = spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
 
 private val LightColors = lightColorScheme(
-    primary = PnsaBlue,
+    primary = bagdeColor,
     onPrimary = Color.White,
-    primaryContainer = PnsaBlueSoft,
+    primaryContainer = PnsaGreenSoft,
     onPrimaryContainer = PnsaNavy,
-    secondary = PnsaRed,
+    secondary = PnsaGreenDeep,
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFFFE5E8),
-    onSecondaryContainer = Color(0xFF4A0B12),
-    tertiary = PnsaBlueDeep,
+    secondaryContainer = Color(0xFFE2F5E3),
+    onSecondaryContainer = Color(0xFF0A2E0D),
+    tertiary = PnsaGreenDeep,
     onTertiary = Color.White,
-    tertiaryContainer = Color(0xFFD9E6FF),
-    onTertiaryContainer = Color(0xFF0A2048),
-    background = PnsaIce,
+    tertiaryContainer = PnsaGreenSoft,
+    onTertiaryContainer = Color(0xFF0A2E0D),
+    background = Color.White,
     onBackground = PnsaInk,
     surface = Color.White,
     onSurface = PnsaInk,
-    surfaceVariant = Color(0xFFE6EEF8),
-    onSurfaceVariant = Color(0xFF3D4B63),
-    outline = Color(0xFFC5D0E0),
-    error = PnsaRed,
+    surfaceVariant = Color(0xFFF1F7F1),
+    onSurfaceVariant = Color(0xFF3E4E40),
+    outline = Color(0xFFD5E4D6),
+    error = Color(0xFFD32F2F),
 )
 
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFF5BA8FF),
-    onPrimary = Color(0xFF001A3D),
-    primaryContainer = Color(0xFF0B3C8A),
-    onPrimaryContainer = Color(0xFFD6E7FF),
-    secondary = Color(0xFFFF6B7A),
-    onSecondary = Color(0xFF3D0610),
-    secondaryContainer = Color(0xFF5C1018),
-    onSecondaryContainer = Color(0xFFFFD9DD),
-    tertiary = Color(0xFF8BB4FF),
-    background = Color(0xFF070A12),
-    onBackground = Color(0xFFE8EEF8),
-    surface = Color(0xFF121826),
-    onSurface = Color(0xFFE8EEF8),
-    surfaceVariant = Color(0xFF1C2436),
-    onSurfaceVariant = Color(0xFFB7C3D6),
-    outline = Color(0xFF3A4558),
+    primary = bagdeColor,
+    onPrimary = Color.White,
+    primaryContainer = PnsaGreenDeep,
+    onPrimaryContainer = PnsaGreenSoft,
+    secondary = Color(0xFF4CD953),
+    onSecondary = Color(0xFF062408),
+    secondaryContainer = Color(0xFF134E17),
+    onSecondaryContainer = Color(0xFFD7FAD9),
+    tertiary = Color(0xFF7BE881),
+    background = Color(0xFF0B140C),
+    onBackground = Color(0xFFEAF4EB),
+    surface = Color(0xFF122014),
+    onSurface = Color(0xFFEAF4EB),
+    surfaceVariant = Color(0xFF1A2D1C),
+    onSurfaceVariant = Color(0xFFB7C9B9),
+    outline = Color(0xFF354A37),
     error = Color(0xFFFF6B7A),
 )
 
