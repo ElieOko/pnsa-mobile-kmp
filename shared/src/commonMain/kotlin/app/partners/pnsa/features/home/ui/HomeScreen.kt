@@ -18,7 +18,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -203,12 +202,12 @@ fun HomeScreen(navigator: AppNavigator) {
                                 SectionTitle("Services rapides")
                                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                                     ShortcutTile("Carte SSR", "Trouver une structure", Icons.Default.Place, { navigator.push(AppDestination.Structures) }, Modifier.weight(1f))
-                                    ShortcutTile("Discussions", "Structures et forum", Icons.Default.Chat, { navigator.push(AppDestination.Messages) }, Modifier.weight(1f))
+                                    ShortcutTile("Discussions", "Structures SSR", Icons.Default.Chat, { navigator.push(AppDestination.Messages) }, Modifier.weight(1f))
                                 }
                                 Spacer(Modifier.height(10.dp))
                                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                                     ShortcutTile("Apprendre", "Articles et fiches", Icons.Default.Favorite, { navigator.push(AppDestination.Learn) }, Modifier.weight(1f))
-                                    ShortcutTile("Forum SSR", "Questions & conseils", Icons.Default.Star, { navigator.push(AppDestination.Forum) }, Modifier.weight(1f))
+                                    ShortcutTile("Orientations", "Suivre les références", Icons.Default.Place, { navigator.push(AppDestination.Orientations) }, Modifier.weight(1f))
                                 }
                             }
                             item { SectionTitle("Nouveautés") }

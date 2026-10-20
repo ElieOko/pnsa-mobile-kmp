@@ -1,7 +1,13 @@
 package app.partners.pnsa.features.structure.data
 
+import app.partners.pnsa.core.data.KeyValueStore
+import app.partners.pnsa.core.network.AppJson
 import app.partners.pnsa.features.structure.domain.models.HealthStructure
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 
+@Serializable
 data class StructureChatMessage(
     val id: Long,
     val structureId: Long,
@@ -20,9 +26,27 @@ data class StructureChatPreview(
     val unreadCount: Int,
 )
 
-class StructureMessagingRepository {
+@Serializable
+private data class PersistedThread(
+    val structureId: Long,
+    val messages: List<StructureChatMessage>,
+)
+
+@Serializable
+private data class PersistedMessagingState(
+    val nextId: Long,
+    val threads: List<PersistedThread>,
+)
+
+class StructureMessagingRepository(
+    private val store: KeyValueStore,
+) {
     private var nextId: Long = 1L
     private val threads: MutableMap<Long, MutableList<StructureChatMessage>> = mutableMapOf()
+
+    init {
+        restore()
+    }
 
     fun previews(
         structures: List<HealthStructure>,
@@ -61,6 +85,7 @@ class StructureMessagingRepository {
             }
         }
         threads[structureId] = updated.toMutableList()
+        persist()
         return updated
     }
 
@@ -68,32 +93,13 @@ class StructureMessagingRepository {
         val structureId = structure.id ?: return emptyList()
         val thread = threadFor(structure)
         thread += newMessage(structureId, fromStructure = false, text = text.trim(), read = true)
-        thread += newMessage(structureId, fromStructure = true, text = autoReply(structure), read = false)
+        persist()
         return thread.toList()
     }
 
     private fun threadFor(structure: HealthStructure): MutableList<StructureChatMessage> {
         val structureId = structure.id ?: return mutableListOf()
-        return threads.getOrPut(structureId) {
-            mutableListOf(
-                newMessage(
-                    structureId = structureId,
-                    fromStructure = true,
-                    text = "Bonjour, vous êtes en ligne avec ${structure.displayName}. Décrivez votre besoin et un point focal vous répondra.",
-                    read = false,
-                ),
-            )
-        }
-    }
-
-    private fun autoReply(structure: HealthStructure): String {
-        val firstService = structure.services
-            ?.split(".")
-            ?.firstOrNull()
-            ?.trim()
-            ?.ifBlank { null }
-        val serviceHint = firstService?.let { " Service prioritaire: $it." }.orEmpty()
-        return "Message reçu par ${structure.displayName}.$serviceHint En cas d'urgence, présentez-vous directement à ${structure.displayAddress}."
+        return threads.getOrPut(structureId) { mutableListOf() }
     }
 
     private fun newMessage(
@@ -112,5 +118,33 @@ class StructureMessagingRepository {
             timeLabel = "14:$minute",
             read = read,
         )
+    }
+
+    private fun persist() {
+        val payload = PersistedMessagingState(
+            nextId = nextId,
+            threads = threads.map { (structureId, messages) ->
+                PersistedThread(structureId = structureId, messages = messages.toList())
+            },
+        )
+        store.put(KEY_MESSAGING_STATE, AppJson.encodeToString(payload))
+    }
+
+    private fun restore() {
+        val raw = store.get(KEY_MESSAGING_STATE) ?: return
+        val state = runCatching { AppJson.decodeFromString<PersistedMessagingState>(raw) }.getOrNull() ?: return
+        nextId = state.nextId.coerceAtLeast(1L)
+        threads.clear()
+        state.threads.forEach { thread ->
+            threads[thread.structureId] = thread.messages.toMutableList()
+        }
+        val maxKnownId = threads.values.asSequence().flatten().maxOfOrNull { it.id } ?: 0L
+        if (nextId <= maxKnownId) {
+            nextId = maxKnownId + 1
+        }
+    }
+
+    companion object {
+        private const val KEY_MESSAGING_STATE = "pref_structure_messaging_state"
     }
 }

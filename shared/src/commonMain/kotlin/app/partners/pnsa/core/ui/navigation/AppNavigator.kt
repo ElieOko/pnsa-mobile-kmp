@@ -9,7 +9,6 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 enum class MainTab(val label: String) {
     Structures("Carte"),
     Messages("Discussions"),
-    Forum("Forum"),
     Profile("Profil"),
 }
 
@@ -109,14 +108,12 @@ class AppNavigator(
     private fun rootFor(tab: MainTab): AppDestination = when (tab) {
         MainTab.Structures -> AppDestination.Structures
         MainTab.Messages -> AppDestination.Messages
-        MainTab.Forum -> AppDestination.Forum
         MainTab.Profile -> AppDestination.Profile
     }
 
     private fun isTabRoot(destination: AppDestination): Boolean = when (destination) {
         AppDestination.Structures,
         AppDestination.Messages,
-        AppDestination.Forum,
         AppDestination.Profile,
         -> true
         else -> false
@@ -125,7 +122,7 @@ class AppNavigator(
     fun tabFor(destination: AppDestination): MainTab? = when (destination) {
         AppDestination.Structures, is AppDestination.StructureDetail -> MainTab.Structures
         AppDestination.Messages, is AppDestination.StructureChat -> MainTab.Messages
-        AppDestination.Forum, is AppDestination.ForumDetail, AppDestination.Advice, is AppDestination.AdviceChat -> MainTab.Forum
+        AppDestination.Advice, is AppDestination.AdviceChat -> MainTab.Messages
         AppDestination.Profile,
         AppDestination.ProfileEdit,
         AppDestination.Orientations,

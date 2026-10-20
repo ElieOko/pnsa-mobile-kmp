@@ -77,6 +77,8 @@ import kotlin.math.max
 import kotlin.math.min
 import org.jetbrains.compose.resources.imageResource
 
+private val MapMarkerPink = Color(0xFFE91E63)
+
 object KinshasaMapMath {
     data class Bounds(
         val minLat: Double,
@@ -229,7 +231,7 @@ fun KinshasaGpsMap(
     }
     val gridColor = when (mapStyle) {
         MapViewStyle.Satellite -> Color.White.copy(alpha = 0.08f)
-        else -> bagdeColor.copy(alpha = 0.10f)
+        else -> MapMarkerPink.copy(alpha = 0.10f)
     }
     val roadColor = when (mapStyle) {
         MapViewStyle.Satellite -> Color.White.copy(alpha = 0.35f)
@@ -262,7 +264,7 @@ fun KinshasaGpsMap(
             if (mapStyle == MapViewStyle.Terrain) {
                 for (r in 1..4) {
                     drawCircle(
-                        color = bagdeColor.copy(alpha = 0.05f),
+                        color = MapMarkerPink.copy(alpha = 0.05f),
                         radius = w * (0.18f * r),
                         center = Offset(w * 0.35f, h * 0.72f),
                         style = Stroke(width = 3f),
@@ -302,20 +304,20 @@ fun KinshasaGpsMap(
 
             communes.forEach { commune ->
                 val p = KinshasaMapMath.project(commune.lat, commune.lon, w, h, projectionBounds)
-                drawCircle(bagdeColor.copy(alpha = 0.10f), 18f, p)
+                drawCircle(MapMarkerPink.copy(alpha = 0.10f), 18f, p)
             }
 
             route?.points?.zipWithNext { start, end ->
                 val from = KinshasaMapMath.project(start.latitude, start.longitude, w, h, projectionBounds)
                 val to = KinshasaMapMath.project(end.latitude, end.longitude, w, h, projectionBounds)
                 drawLine(PnsaGreenDeep, from, to, strokeWidth = 10f, cap = StrokeCap.Round)
-                drawLine(bagdeColor, from, to, strokeWidth = 6f, cap = StrokeCap.Round)
+                drawLine(MapMarkerPink, from, to, strokeWidth = 6f, cap = StrokeCap.Round)
             }
 
             val user = KinshasaMapMath.project(userLat, userLon, w, h, projectionBounds)
-            drawCircle(bagdeColor.copy(alpha = pulseAlpha), pulseRadius, user)
+            drawCircle(MapMarkerPink.copy(alpha = pulseAlpha), pulseRadius, user)
             drawCircle(Color.White, 10f, user)
-            drawCircle(bagdeColor, 6f, user)
+            drawCircle(MapMarkerPink, 6f, user)
 
             markers.forEach { item ->
                 val rawP = KinshasaMapMath.project(item.latitude!!, item.longitude!!, w, h, projectionBounds)
@@ -323,11 +325,11 @@ fun KinshasaGpsMap(
                 val p = if (active) Offset(rawP.x, rawP.y + pinBounce) else rawP
                 val scale = if (active) selectionPop else 1f
                 if (active) {
-                    drawCircle(bagdeColor.copy(alpha = pulseAlpha), pulseRadius * 0.85f, rawP)
+                    drawCircle(MapMarkerPink.copy(alpha = pulseAlpha), pulseRadius * 0.85f, rawP)
                 }
                 drawCircle(Color.White, (if (active) 19f else 17f) * scale, p)
                 drawCircle(
-                    if (active) bagdeColor.copy(alpha = 0.22f) else wsColor,
+                    if (active) MapMarkerPink.copy(alpha = 0.22f) else wsColor,
                     (if (active) 17f else 15f) * scale,
                     p,
                 )
@@ -336,7 +338,7 @@ fun KinshasaGpsMap(
                     image = markerLogo,
                     dstOffset = IntOffset((p.x - markerSize / 2f).toInt(), (p.y - markerSize / 2f).toInt()),
                     dstSize = IntSize(markerSize, markerSize),
-                    colorFilter = ColorFilter.tint(if (active) bagdeColor else PnsaGreenDeep),
+                    colorFilter = ColorFilter.tint(if (active) MapMarkerPink else MapMarkerPink.copy(alpha = 0.9f)),
                 )
             }
 
@@ -380,49 +382,52 @@ fun GpsPlaceCard(
         ) { target ->
             Surface(
                 modifier = modifier.fillMaxWidth().quietClick(onClick = onOpen),
-                shape = RoundedCornerShape(22.dp),
+                shape = RoundedCornerShape(16.dp),
                 color = Color.White,
-                border = BorderStroke(1.5.dp, bagdeColor.copy(alpha = 0.35f)),
-                shadowElevation = 8.dp,
+                border = BorderStroke(1.dp, MapMarkerPink.copy(alpha = 0.35f)),
+                shadowElevation = 5.dp,
             ) {
-                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         Modifier
-                            .size(46.dp)
-                            .clip(RoundedCornerShape(14.dp))
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
                             .background(wsColor),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(Icons.Default.Place, contentDescription = null, tint = bagdeColor)
+                        Icon(Icons.Default.Place, contentDescription = null, tint = MapMarkerPink, modifier = Modifier.size(18.dp))
                     }
-                    Spacer(Modifier.size(12.dp))
+                    Spacer(Modifier.size(8.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(target.displayName, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = PnsaInk)
-                        Text("${target.displayCity} · ${target.structureType ?: "Centre SSR"}", color = PnsaMuted, fontSize = 12.sp)
-                        Text(target.displayAddress, color = PnsaMuted.copy(alpha = 0.85f), fontSize = 11.sp)
-                        Text(KinshasaMapMath.formatCoord(target.latitude, target.longitude), color = bagdeColor, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text(target.displayName, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = PnsaInk, maxLines = 1)
+                        Text(
+                            "${target.displayCity} · ${target.structureType ?: "Centre SSR"}",
+                            color = PnsaMuted,
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                        )
                     }
                     if (onChat != null) {
                         Box(
                             Modifier
-                                .size(34.dp)
+                                .size(30.dp)
                                 .clip(CircleShape)
                                 .background(wsColor)
                                 .quietClick(onClick = onChat),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Icon(Icons.Default.Chat, contentDescription = "Discuter", tint = bagdeColor, modifier = Modifier.size(17.dp))
+                            Icon(Icons.Default.Chat, contentDescription = "Discuter", tint = MapMarkerPink, modifier = Modifier.size(15.dp))
                         }
-                        Spacer(Modifier.size(8.dp))
+                        Spacer(Modifier.size(6.dp))
                     }
                     Box(
                         Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(bagdeColor),
+                            .size(30.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(MapMarkerPink),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(Icons.Default.ArrowForward, contentDescription = "Voir fiche", tint = Color.White, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.ArrowForward, contentDescription = "Voir fiche", tint = Color.White, modifier = Modifier.size(16.dp))
                     }
                 }
             }

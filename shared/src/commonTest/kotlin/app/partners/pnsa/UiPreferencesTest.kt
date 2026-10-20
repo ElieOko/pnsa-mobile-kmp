@@ -32,19 +32,29 @@ class UiPreferencesTest {
         prefs.mapStyle = MapViewStyle.Satellite.name
         prefs.mapCity = "Gombe"
         prefs.mapQuery = "SSR"
+        prefs.mapImmersiveMode = true
+        prefs.mapServiceFilter = "Centre SSR"
+        prefs.messageSearchQuery = "Mama"
+        prefs.messageOnlyUnread = true
         prefs.lastQuizId = 12
         prefs.lastQuizQuestionIndex = 3
         prefs.contentCategory = "Santé"
         prefs.contentQuery = "contraception"
+        prefs.activeMainTab = MainTab.Messages.name
         assertEquals("Puberté", prefs.forumCategory)
         assertEquals(false, prefs.mapShowMap)
         assertEquals("Satellite", prefs.mapStyle)
         assertEquals("Gombe", prefs.mapCity)
         assertEquals("SSR", prefs.mapQuery)
+        assertEquals(true, prefs.mapImmersiveMode)
+        assertEquals("Centre SSR", prefs.mapServiceFilter)
+        assertEquals("Mama", prefs.messageSearchQuery)
+        assertEquals(true, prefs.messageOnlyUnread)
         assertEquals(12L, prefs.lastQuizId)
         assertEquals(3, prefs.lastQuizQuestionIndex)
         assertEquals("Santé", prefs.contentCategory)
         assertEquals("contraception", prefs.contentQuery)
+        assertEquals(MainTab.Messages.name, prefs.activeMainTab)
     }
 
     @Test
@@ -75,6 +85,6 @@ class UiPreferencesTest {
         nav.push(AppDestination.Profile)
         assertEquals(MainTab.Profile, nav.tab)
         nav.push(AppDestination.Advice)
-        assertEquals(MainTab.Forum, nav.tab)
+        assertEquals(MainTab.Messages, nav.tab)
     }
 }

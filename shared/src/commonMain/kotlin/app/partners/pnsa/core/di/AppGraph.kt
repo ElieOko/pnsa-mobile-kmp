@@ -27,7 +27,7 @@ class AppGraph {
     val catalog: CatalogRepository = CatalogRepository(api, cache, session)
     val quizAttempts: QuizAttemptRepository = QuizAttemptRepository(api)
     val orientations: OrientationRepository = OrientationRepository(api)
-    val messaging: StructureMessagingRepository = StructureMessagingRepository()
+    val messaging: StructureMessagingRepository = StructureMessagingRepository(store)
     val community: CommunityRepository = CommunityRepository(api)
     val profile: ProfileRepository = ProfileRepository(api, session)
     val directions: DirectionsClient = DirectionsClient()

@@ -8,6 +8,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,6 +16,9 @@ import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -599,54 +603,57 @@ fun ChatMessageBubble(
             .padding(horizontal = 12.dp, vertical = 4.dp),
         horizontalAlignment = if (isSentByMe) Alignment.End else Alignment.Start,
     ) {
-        Surface(
-            modifier = Modifier.widthIn(min = 90.dp, max = 300.dp),
-            shape = RoundedCornerShape(
-                topStart = 18.dp,
-                topEnd = 18.dp,
-                bottomStart = if (isSentByMe) 18.dp else 4.dp,
-                bottomEnd = if (isSentByMe) 4.dp else 18.dp,
-            ),
-            color = if (isSentByMe) PnsaGreenBubbleSent else Color.White,
-            border = BorderStroke(
-                width = 1.dp,
-                color = if (isSentByMe) bagdeColor.copy(alpha = 0.28f) else Color(0xFFE2ECE3),
-            ),
-            shadowElevation = 1.dp,
-        ) {
-            Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                if (!isSentByMe && senderName.isNotBlank()) {
-                    Text(
-                        text = senderName,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
-                        color = bagdeColor,
-                    )
-                    Spacer(Modifier.height(2.dp))
-                }
-                Text(
-                    text = messageText,
-                    color = PnsaInk,
-                    fontSize = 14.sp,
-                )
-                Spacer(Modifier.height(4.dp))
-                Row(
-                    modifier = Modifier.align(Alignment.End),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Text(
-                        text = timeText,
-                        color = Color.Black.copy(alpha = 0.45f),
-                        fontSize = 10.sp,
-                    )
-                    if (isSentByMe) {
-                        Icon(
-                            imageVector = if (statusRead == true) Icons.Default.DoneAll else Icons.Default.Check,
-                            contentDescription = null,
-                            tint = if (statusRead == true) bagdeColor else Color.Black.copy(alpha = 0.45f),
-                            modifier = Modifier.size(14.dp),
+        BoxWithConstraints {
+            val bubbleMaxWidth = maxWidth * 0.82f
+            Surface(
+                modifier = Modifier.widthIn(min = 90.dp, max = bubbleMaxWidth),
+                shape = RoundedCornerShape(
+                    topStart = 18.dp,
+                    topEnd = 18.dp,
+                    bottomStart = if (isSentByMe) 18.dp else 4.dp,
+                    bottomEnd = if (isSentByMe) 4.dp else 18.dp,
+                ),
+                color = if (isSentByMe) PnsaGreenBubbleSent else Color.White,
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = if (isSentByMe) bagdeColor.copy(alpha = 0.28f) else Color(0xFFE2ECE3),
+                ),
+                shadowElevation = 1.dp,
+            ) {
+                Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    if (!isSentByMe && senderName.isNotBlank()) {
+                        Text(
+                            text = senderName,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            color = bagdeColor,
                         )
+                        Spacer(Modifier.height(2.dp))
+                    }
+                    Text(
+                        text = messageText,
+                        color = PnsaInk,
+                        fontSize = 14.sp,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier.align(Alignment.End),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(
+                            text = timeText,
+                            color = Color.Black.copy(alpha = 0.45f),
+                            fontSize = 10.sp,
+                        )
+                        if (isSentByMe) {
+                            Icon(
+                                imageVector = if (statusRead == true) Icons.Default.DoneAll else Icons.Default.Check,
+                                contentDescription = null,
+                                tint = if (statusRead == true) bagdeColor else Color.Black.copy(alpha = 0.45f),
+                                modifier = Modifier.size(14.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -666,6 +673,8 @@ fun WhatsAppComposerBar(
         modifier = Modifier
             .fillMaxWidth()
             .background(Color.White)
+            .navigationBarsPadding()
+            .imePadding()
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -684,8 +693,11 @@ fun WhatsAppComposerBar(
                 BasicTextField(
                     value = value,
                     onValueChange = onValueChange,
+                    maxLines = 4,
                     textStyle = TextStyle(color = PnsaInk, fontSize = 15.sp),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 20.dp, max = 96.dp),
                 )
                 if (value.isEmpty()) {
                     Text(
@@ -976,24 +988,7 @@ fun AdviceChatScreen(id: Long, onBack: () -> Unit) {
     var loading by remember { mutableStateOf(true) }
     var sending by remember { mutableStateOf(false) }
 
-    val fallbackMessages = remember(id) {
-        mutableStateListOf(
-            Message(
-                id = 1L,
-                msg = "Bonjour ! Bienvenue sur l’espace de conseil confidentiel du PNSA. Comment puis-je t’orienter aujourd’hui ?",
-                userId = 99L,
-                createdAt = "15:10",
-                status = true,
-            ),
-            Message(
-                id = 2L,
-                msg = "Tes échanges restent strictement privés.",
-                userId = 99L,
-                createdAt = "15:12",
-                status = true,
-            ),
-        )
-    }
+    val fallbackMessages = remember(id) { mutableStateListOf<Message>() }
 
     fun load() {
         scope.launch {

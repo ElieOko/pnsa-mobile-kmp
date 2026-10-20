@@ -218,7 +218,7 @@ private fun bindGoogleMap(
             state.track = map.addPolyline(
                 PolylineOptions()
                     .addAll(routePoints.map { LatLng(it.latitude, it.longitude) })
-                    .color(0xFF1AB221.toInt())
+                    .color(0xFFE91E63.toInt())
                     .width(10f)
                     .geodesic(false),
             )
@@ -252,19 +252,19 @@ private fun bindGoogleMap(
 
 private fun markerIconFor(state: GoogleMapState, selected: Boolean): BitmapDescriptor =
     when {
-        selected -> state.selectedMarkerIcon ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)
-        else -> state.markerIcon ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)
+        selected -> state.selectedMarkerIcon ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ROSE)
+        else -> state.markerIcon ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ROSE)
     }
 
 private fun createMarkerIcon(context: Context, selected: Boolean): BitmapDescriptor {
     val logo = BitmapFactory.decodeResource(context.resources, R.drawable.map_marker_logo)
-        ?: return BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)
+        ?: return BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ROSE)
     val size = 96
     val marker = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(marker)
     val center = size / 2f
     val outerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = if (selected) Color.parseColor("#1AB221") else Color.parseColor("#0F7E15")
+        color = if (selected) Color.parseColor("#E91E63") else Color.parseColor("#D81B60")
         alpha = if (selected) 255 else 225
     }
     val innerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
@@ -275,7 +275,7 @@ private fun createMarkerIcon(context: Context, selected: Boolean): BitmapDescrip
     val left = ((size - iconSize) / 2f)
     val top = ((size - iconSize) / 2f)
     val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        colorFilter = PorterDuffColorFilter(Color.parseColor("#1AB221"), PorterDuff.Mode.SRC_IN)
+        colorFilter = PorterDuffColorFilter(Color.parseColor("#E91E63"), PorterDuff.Mode.SRC_IN)
     }
     val scaledLogo = Bitmap.createScaledBitmap(logo, iconSize, iconSize, true)
     canvas.drawBitmap(scaledLogo, left, top, iconPaint)

@@ -21,7 +21,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -66,8 +65,8 @@ import app.partners.pnsa.features.structure.data.StructureChatPreview
 @Composable
 fun StructureConversationsScreen(navigator: AppNavigator) {
     val graph = LocalAppGraph.current
-    var query by remember { mutableStateOf("") }
-    var onlyUnread by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf(graph.prefs.messageSearchQuery) }
+    var onlyUnread by remember { mutableStateOf(graph.prefs.messageOnlyUnread) }
     val structures = remember(graph.screens.structures) {
         graph.screens.structures
             .ifEmpty { KinshasaCenters.all }
@@ -116,7 +115,7 @@ fun StructureConversationsScreen(navigator: AppNavigator) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column {
@@ -132,30 +131,6 @@ fun StructureConversationsScreen(navigator: AppNavigator) {
                         fontSize = 12.sp,
                     )
                 }
-                Surface(
-                    modifier = Modifier.quietClick { navigator.push(AppDestination.Advice) },
-                    shape = RoundedCornerShape(35.dp),
-                    color = wsColor,
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Shield,
-                            contentDescription = "Conseil privé",
-                            tint = bagdeColor,
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Text(
-                            text = "Conseil privé",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = PnsaInk,
-                        )
-                    }
-                }
             }
 
             Column(
@@ -166,12 +141,18 @@ fun StructureConversationsScreen(navigator: AppNavigator) {
             ) {
                 SearchField(
                     value = query,
-                    onValueChange = { query = it },
+                    onValueChange = {
+                        query = it
+                        graph.prefs.messageSearchQuery = it
+                    },
                     placeholder = "Rechercher une structure ou commune",
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     SuggestionChip(
-                        onClick = { onlyUnread = false },
+                        onClick = {
+                            onlyUnread = false
+                            graph.prefs.messageOnlyUnread = false
+                        },
                         label = {
                             Text(
                                 text = "Toutes (${startedPreviews.size})",
@@ -190,7 +171,10 @@ fun StructureConversationsScreen(navigator: AppNavigator) {
                         ),
                     )
                     SuggestionChip(
-                        onClick = { onlyUnread = true },
+                        onClick = {
+                            onlyUnread = true
+                            graph.prefs.messageOnlyUnread = true
+                        },
                         label = {
                             Text(
                                 text = "Non lues",
@@ -275,7 +259,7 @@ fun StructureChatScreen(structureId: Long, onBack: () -> Unit) {
     val structure = remember(structureId, structures) {
         structures.firstOrNull { it.id == structureId } ?: KinshasaCenters.byId(structureId)
     }
-    var draft by remember { mutableStateOf("") }
+    var draft by remember(structureId) { mutableStateOf(graph.prefs.structureChatDraft(structureId)) }
     var messages by remember(structure?.id) {
         mutableStateOf(structure?.let { graph.messaging.messagesFor(it) }.orEmpty())
     }
@@ -334,7 +318,10 @@ fun StructureChatScreen(structureId: Long, onBack: () -> Unit) {
 
             WhatsAppComposerBar(
                 value = draft,
-                onValueChange = { draft = it },
+                onValueChange = {
+                    draft = it
+                    graph.prefs.saveStructureChatDraft(structureId, it)
+                },
                 placeholder = "Écrire un message à la structure…",
                 sending = false,
                 onSend = {
@@ -342,6 +329,7 @@ fun StructureChatScreen(structureId: Long, onBack: () -> Unit) {
                     if (text.isBlank()) return@WhatsAppComposerBar
                     messages = graph.messaging.sendToStructure(structure, text)
                     draft = ""
+                    graph.prefs.saveStructureChatDraft(structureId, "")
                 },
             )
         }
