@@ -12,9 +12,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Help
-import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.MaterialTheme
 import app.partners.pnsa.core.ui.components.PnsaScaffold
@@ -61,8 +62,8 @@ fun MoreMenuScreen(navigator: AppNavigator) {
     PnsaScaffold(topBar = { PnsaTopBar("Plus") }) { padding ->
         Column(Modifier.padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                ShortcutTile("Forum", "Questions publiques", Icons.Default.Help, { navigator.push(AppDestination.Forum) }, Modifier.weight(1f))
-                ShortcutTile("Conseil", "Espace privé", Icons.Default.Notifications, { navigator.push(AppDestination.Advice) }, Modifier.weight(1f))
+                ShortcutTile("Carte", "Trouver une structure", Icons.Default.Map, { navigator.push(AppDestination.Structures) }, Modifier.weight(1f))
+                ShortcutTile("Messagerie", "Chat avec une structure", Icons.Default.Chat, { navigator.push(AppDestination.Messages) }, Modifier.weight(1f))
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 ShortcutTile("Orientations", "Mes références", Icons.Default.Place, { navigator.push(AppDestination.Orientations) }, Modifier.weight(1f))
