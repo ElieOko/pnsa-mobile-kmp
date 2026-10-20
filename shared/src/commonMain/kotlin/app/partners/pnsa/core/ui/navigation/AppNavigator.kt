@@ -7,11 +7,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 
 enum class MainTab(val label: String) {
-    Home("Accueil"),
-    Learn("Apprendre"),
-    Quiz("Quiz"),
     Structures("Carte"),
-    Forum("Discussions"),
+    Messages("Discussions"),
+    Forum("Forum"),
     Profile("Profil"),
 }
 
@@ -25,8 +23,6 @@ sealed class AppDestination {
     data object Home : AppDestination()
     data object Learn : AppDestination()
     data class ContentDetail(val id: Long) : AppDestination()
-    data object Quizzes : AppDestination()
-    data class QuizPlay(val id: Long) : AppDestination()
     data object Structures : AppDestination()
     data class StructureDetail(val id: Long) : AppDestination()
     data object Orientations : AppDestination()
@@ -40,18 +36,20 @@ sealed class AppDestination {
     data object ProfileEdit : AppDestination()
     data object Help : AppDestination()
     data object More : AppDestination()
+    data object Messages : AppDestination()
+    data class StructureChat(val structureId: Long) : AppDestination()
 }
 
 class AppNavigator(
-    start: AppDestination,
+    start: AppDestination = AppDestination.Structures,
 ) {
     private val authStack = mutableStateListOf(start)
     private val tabStacks: Map<MainTab, SnapshotStateList<AppDestination>> =
         MainTab.entries.associateWith { tab -> mutableStateListOf(rootFor(tab)) }
 
-    var tab by mutableStateOf(MainTab.Home)
+    var tab by mutableStateOf(tabFor(start) ?: MainTab.Structures)
         private set
-    var signedIn by mutableStateOf(start is AppDestination.Home || tabFor(start) != null)
+    var signedIn by mutableStateOf(true)
 
     val current: AppDestination
         get() = if (signedIn) tabStacks.getValue(tab).last() else authStack.last()
@@ -83,7 +81,7 @@ class AppNavigator(
             tab = target
             val stack = tabStacks.getValue(target)
             stack.clear()
-            stack += if (isTabRoot(destination)) destination else destination
+            stack += destination
         } else {
             authStack.clear()
             authStack += destination
@@ -109,19 +107,15 @@ class AppNavigator(
     fun title(): String = titleFor(current)
 
     private fun rootFor(tab: MainTab): AppDestination = when (tab) {
-        MainTab.Home -> AppDestination.Home
-        MainTab.Learn -> AppDestination.Learn
-        MainTab.Quiz -> AppDestination.Quizzes
         MainTab.Structures -> AppDestination.Structures
+        MainTab.Messages -> AppDestination.Messages
         MainTab.Forum -> AppDestination.Forum
         MainTab.Profile -> AppDestination.Profile
     }
 
     private fun isTabRoot(destination: AppDestination): Boolean = when (destination) {
-        AppDestination.Home,
-        AppDestination.Learn,
-        AppDestination.Quizzes,
         AppDestination.Structures,
+        AppDestination.Messages,
         AppDestination.Forum,
         AppDestination.Profile,
         -> true
@@ -129,12 +123,22 @@ class AppNavigator(
     }
 
     fun tabFor(destination: AppDestination): MainTab? = when (destination) {
-        AppDestination.Home -> MainTab.Home
-        AppDestination.Learn, is AppDestination.ContentDetail -> MainTab.Learn
-        AppDestination.Quizzes, is AppDestination.QuizPlay -> MainTab.Quiz
         AppDestination.Structures, is AppDestination.StructureDetail -> MainTab.Structures
+        AppDestination.Messages, is AppDestination.StructureChat -> MainTab.Messages
         AppDestination.Forum, is AppDestination.ForumDetail, AppDestination.Advice, is AppDestination.AdviceChat -> MainTab.Forum
-        AppDestination.Profile, AppDestination.ProfileEdit, AppDestination.Orientations, is AppDestination.OrientationDetail, is AppDestination.OrientationCreate, AppDestination.Help, AppDestination.More -> MainTab.Profile
+        AppDestination.Profile,
+        AppDestination.ProfileEdit,
+        AppDestination.Orientations,
+        is AppDestination.OrientationDetail,
+        is AppDestination.OrientationCreate,
+        AppDestination.Help,
+        AppDestination.More,
+        AppDestination.PublicHelp,
+        AppDestination.PublicLegal,
+        AppDestination.Learn,
+        is AppDestination.ContentDetail,
+        AppDestination.Home,
+        -> MainTab.Profile
         else -> null
     }
 }
@@ -148,18 +152,18 @@ fun titleFor(destination: AppDestination): String = when (destination) {
     AppDestination.Home -> "PNSA"
     AppDestination.Learn -> "Apprendre"
     is AppDestination.ContentDetail -> "Contenu"
-    AppDestination.Quizzes -> "Quiz"
-    is AppDestination.QuizPlay -> "Quiz"
     AppDestination.Structures -> "Carte"
     is AppDestination.StructureDetail -> "Structure"
     AppDestination.Orientations -> "Orientations"
     is AppDestination.OrientationDetail -> "Orientation"
     is AppDestination.OrientationCreate -> "Nouvelle orientation"
-    AppDestination.Forum -> "Discussions"
+    AppDestination.Forum -> "Forum"
     is AppDestination.ForumDetail -> "Discussion"
     AppDestination.Advice -> "Conseil"
     is AppDestination.AdviceChat -> "Échange"
     AppDestination.Profile -> "Profil"
     AppDestination.ProfileEdit -> "Modifier le profil"
     AppDestination.More -> "Menu"
+    AppDestination.Messages -> "Discussions"
+    is AppDestination.StructureChat -> "Conversation"
 }

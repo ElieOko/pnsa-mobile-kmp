@@ -1,6 +1,14 @@
 package app.partners.pnsa.core.ui.map
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import android.os.Bundle
 import android.view.MotionEvent
 import androidx.compose.runtime.Composable
@@ -23,12 +31,14 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.MapView
 import com.google.android.gms.maps.MapsInitializer
+import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
+import app.partners.pnsa.shared.R
 
 private class GoogleMapState {
     var map: GoogleMap? = null
@@ -40,6 +50,8 @@ private class GoogleMapState {
     var lastMapStyle: MapViewStyle? = null
     val markers = mutableListOf<Marker>()
     var track: Polyline? = null
+    var markerIcon: BitmapDescriptor? = null
+    var selectedMarkerIcon: BitmapDescriptor? = null
 }
 
 @SuppressLint("ClickableViewAccessibility")
@@ -63,16 +75,25 @@ actual fun PlatformStructureMap(
 
     DisposableEffect(lifecycleOwner, mapView, tabActive) {
         val view = mapView ?: return@DisposableEffect onDispose { }
-        if (tabActive) view.onResume() else view.onPause()
+        runCatching {
+            if (tabActive) {
+                view.onStart()
+                view.onResume()
+            } else {
+                view.onPause()
+            }
+        }
         val observer = LifecycleEventObserver { _, event ->
             if (!tabActive) return@LifecycleEventObserver
-            when (event) {
-                Lifecycle.Event.ON_START -> view.onStart()
-                Lifecycle.Event.ON_RESUME -> view.onResume()
-                Lifecycle.Event.ON_PAUSE -> view.onPause()
-                Lifecycle.Event.ON_STOP -> view.onStop()
-                Lifecycle.Event.ON_DESTROY -> view.onDestroy()
-                else -> Unit
+            runCatching {
+                when (event) {
+                    Lifecycle.Event.ON_START -> view.onStart()
+                    Lifecycle.Event.ON_RESUME -> view.onResume()
+                    Lifecycle.Event.ON_PAUSE -> view.onPause()
+                    Lifecycle.Event.ON_STOP -> view.onStop()
+                    Lifecycle.Event.ON_DESTROY -> view.onDestroy()
+                    else -> Unit
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -95,6 +116,12 @@ actual fun PlatformStructureMap(
                 }
                 getMapAsync { googleMap ->
                     state.map = googleMap
+                    if (state.markerIcon == null) {
+                        state.markerIcon = runCatching { createMarkerIcon(context, selected = false) }.getOrNull()
+                    }
+                    if (state.selectedMarkerIcon == null) {
+                        state.selectedMarkerIcon = runCatching { createMarkerIcon(context, selected = true) }.getOrNull()
+                    }
                     configureMap(googleMap)
                     googleMap.setOnCameraMoveStartedListener { reason ->
                         if (reason == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE) {
@@ -166,17 +193,12 @@ private fun bindGoogleMap(
         state.markers.forEach { it.remove() }
         state.markers.clear()
         structures.forEach { structure ->
-            val hue = if (structure.id == selectedId) {
-                BitmapDescriptorFactory.HUE_GREEN
-            } else {
-                BitmapDescriptorFactory.HUE_AZURE
-            }
             val marker = map.addMarker(
                 MarkerOptions()
                     .position(LatLng(structure.latitude!!, structure.longitude!!))
                     .title(structure.displayName)
                     .snippet(listOfNotNull(structure.displayCity, structure.structureType).joinToString(" · "))
-                    .icon(BitmapDescriptorFactory.defaultMarker(hue)),
+                    .icon(markerIconFor(state, structure.id == selectedId)),
             )
             marker?.tag = structure
             if (marker != null) state.markers.add(marker)
@@ -184,12 +206,7 @@ private fun bindGoogleMap(
     } else if (selectedId != state.lastSelectedId) {
         state.markers.forEach { marker ->
             val structure = marker.tag as? HealthStructure
-            val hue = if (structure?.id == selectedId) {
-                BitmapDescriptorFactory.HUE_GREEN
-            } else {
-                BitmapDescriptorFactory.HUE_AZURE
-            }
-            marker.setIcon(BitmapDescriptorFactory.defaultMarker(hue))
+            marker.setIcon(markerIconFor(state, structure?.id == selectedId))
         }
     }
 
@@ -231,6 +248,38 @@ private fun bindGoogleMap(
     state.lastSelectedId = selectedId
     state.lastUser = userLocation
     state.lastFollow = followUser
+}
+
+private fun markerIconFor(state: GoogleMapState, selected: Boolean): BitmapDescriptor =
+    when {
+        selected -> state.selectedMarkerIcon ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)
+        else -> state.markerIcon ?: BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)
+    }
+
+private fun createMarkerIcon(context: Context, selected: Boolean): BitmapDescriptor {
+    val logo = BitmapFactory.decodeResource(context.resources, R.drawable.map_marker_logo)
+        ?: return BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)
+    val size = 96
+    val marker = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(marker)
+    val center = size / 2f
+    val outerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = if (selected) Color.parseColor("#1AB221") else Color.parseColor("#0F7E15")
+        alpha = if (selected) 255 else 225
+    }
+    val innerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
+    canvas.drawCircle(center, center, 34f, outerPaint)
+    canvas.drawCircle(center, center, 30f, innerPaint)
+
+    val iconSize = if (selected) 40 else 36
+    val left = ((size - iconSize) / 2f)
+    val top = ((size - iconSize) / 2f)
+    val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        colorFilter = PorterDuffColorFilter(Color.parseColor("#1AB221"), PorterDuff.Mode.SRC_IN)
+    }
+    val scaledLogo = Bitmap.createScaledBitmap(logo, iconSize, iconSize, true)
+    canvas.drawBitmap(scaledLogo, left, top, iconPaint)
+    return BitmapDescriptorFactory.fromBitmap(marker)
 }
 
 actual fun usesGoogleMaps(): Boolean = true

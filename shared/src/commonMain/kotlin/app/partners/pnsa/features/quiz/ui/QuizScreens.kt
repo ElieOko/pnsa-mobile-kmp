@@ -164,7 +164,6 @@ fun QuizListScreen(navigator: AppNavigator) {
                                         graph.prefs.lastQuizQuestionIndex = 0
                                     }
                                     graph.prefs.lastQuizId = it
-                                    navigator.push(AppDestination.QuizPlay(it))
                                 }
                             },
                         )

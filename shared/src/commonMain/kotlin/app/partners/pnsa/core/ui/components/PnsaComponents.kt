@@ -147,9 +147,7 @@ fun Modifier.quietClick(enabled: Boolean = true, onClick: () -> Unit): Modifier 
 
 @Composable
 fun PageBackdrop(content: @Composable () -> Unit) {
-    Box(Modifier.fillMaxSize().background(Color.White)) {
-        content()
-    }
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { content() }
 }
 
 @Composable

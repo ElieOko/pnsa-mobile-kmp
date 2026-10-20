@@ -178,8 +178,8 @@ fun StructureListScreen(navigator: AppNavigator) {
     var followUser by remember { mutableStateOf(true) }
 
     PnsaScaffold { padding ->
-        Box(Modifier.padding(padding).fillMaxSize().background(Color.White)) {
-            // Map pane kept alive permanently so its state (camera, markers, gestures) is never destroyed
+        Box(Modifier.padding(padding).fillMaxSize()) {
+            // Map pane kept alive so camera/state/selection are never lost when switching views
             KeepAlivePane(visible = showMap) {
                 Box(Modifier.fillMaxSize()) {
                     PlatformStructureMap(
@@ -188,7 +188,6 @@ fun StructureListScreen(navigator: AppNavigator) {
                         onSelect = { marker ->
                             selectedId = marker.id
                             graph.prefs.mapSelectedId = marker.id
-                            followUser = false
                         },
                         modifier = Modifier.fillMaxSize(),
                         userLocation = navigation.user,
@@ -343,7 +342,10 @@ fun StructureListScreen(navigator: AppNavigator) {
                             exit = fadeOut(tween(200)) + slideOutVertically(tween(200)) { it / 2 },
                         ) {
                             if (selected != null) {
-                                GpsPlaceCard(selected) {
+                                GpsPlaceCard(
+                                    item = selected,
+                                    onChat = selected.id?.let { id -> { navigator.push(AppDestination.StructureChat(id)) } },
+                                ) {
                                     selected.id?.let { navigator.push(AppDestination.StructureDetail(it)) }
                                 }
                             }
@@ -607,6 +609,10 @@ fun StructureDetailScreen(id: Long, navigator: AppNavigator, onBack: () -> Unit)
                         StatusBanner("Coordonnées GPS non renseignées. La fiche reste consultable.")
                     }
                     Spacer(Modifier.height(20.dp))
+                    SecondaryAction("Discuter avec cette structure", enabled = structure.id != null) {
+                        structure.id?.let { navigator.push(AppDestination.StructureChat(it)) }
+                    }
+                    Spacer(Modifier.height(8.dp))
                     PrimaryAction("Demander une orientation") {
                         navigator.push(AppDestination.OrientationCreate(id))
                     }

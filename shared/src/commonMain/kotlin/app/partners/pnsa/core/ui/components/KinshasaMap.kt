@@ -33,7 +33,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -51,11 +51,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.partners.pnsa.core.location.RouteTrack
@@ -66,10 +69,13 @@ import app.partners.pnsa.core.ui.theme.PnsaMuted
 import app.partners.pnsa.core.ui.theme.bagdeColor
 import app.partners.pnsa.core.ui.theme.wsColor
 import app.partners.pnsa.features.structure.domain.models.HealthStructure
+import app.partners.pnsa.resources.Res
+import app.partners.pnsa.resources.map_marker_logo
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
+import org.jetbrains.compose.resources.imageResource
 
 object KinshasaMapMath {
     data class Bounds(
@@ -162,7 +168,7 @@ fun KinshasaGpsMap(
     mapStyle: MapViewStyle = MapViewStyle.Standard,
 ) {
     val markers = remember(structures) { structures.filter { it.hasCoordinates } }
-    val selected = markers.firstOrNull { it.id == selectedId }
+    val markerLogo = imageResource(Res.drawable.map_marker_logo)
     val projectionBounds = remember(markers, userLat, userLon, route) {
         KinshasaMapMath.boundsFor(markers, userLat, userLon, route)
     }
@@ -316,20 +322,22 @@ fun KinshasaGpsMap(
                 val active = item.id == selectedId
                 val p = if (active) Offset(rawP.x, rawP.y + pinBounce) else rawP
                 val scale = if (active) selectionPop else 1f
-                val pin = if (active) bagdeColor else PnsaGreenDeep.copy(alpha = 0.75f)
                 if (active) {
                     drawCircle(bagdeColor.copy(alpha = pulseAlpha), pulseRadius * 0.85f, rawP)
-                } else {
-                    drawCircle(wsColor, 13f, rawP)
                 }
-                val path = Path().apply {
-                    moveTo(p.x, p.y + 15f * scale)
-                    quadraticTo(p.x - 13f * scale, p.y - 2f * scale, p.x, p.y - 17f * scale)
-                    quadraticTo(p.x + 13f * scale, p.y - 2f * scale, p.x, p.y + 15f * scale)
-                    close()
-                }
-                drawPath(path, pin)
-                drawCircle(Color.White, 4.5f * scale, Offset(p.x, p.y - 7f * scale))
+                drawCircle(Color.White, (if (active) 19f else 17f) * scale, p)
+                drawCircle(
+                    if (active) bagdeColor.copy(alpha = 0.22f) else wsColor,
+                    (if (active) 17f else 15f) * scale,
+                    p,
+                )
+                val markerSize = ((if (active) 24 else 22) * scale).toInt()
+                drawImage(
+                    image = markerLogo,
+                    dstOffset = IntOffset((p.x - markerSize / 2f).toInt(), (p.y - markerSize / 2f).toInt()),
+                    dstSize = IntSize(markerSize, markerSize),
+                    colorFilter = ColorFilter.tint(if (active) bagdeColor else PnsaGreenDeep),
+                )
             }
 
             drawRoundRect(
@@ -354,6 +362,7 @@ fun KinshasaGpsMap(
 fun GpsPlaceCard(
     item: HealthStructure,
     modifier: Modifier = Modifier,
+    onChat: (() -> Unit)? = null,
     onOpen: () -> Unit,
 ) {
     AnimatedVisibility(
@@ -390,7 +399,21 @@ fun GpsPlaceCard(
                     Column(Modifier.weight(1f)) {
                         Text(target.displayName, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = PnsaInk)
                         Text("${target.displayCity} · ${target.structureType ?: "Centre SSR"}", color = PnsaMuted, fontSize = 12.sp)
+                        Text(target.displayAddress, color = PnsaMuted.copy(alpha = 0.85f), fontSize = 11.sp)
                         Text(KinshasaMapMath.formatCoord(target.latitude, target.longitude), color = bagdeColor, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    if (onChat != null) {
+                        Box(
+                            Modifier
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .background(wsColor)
+                                .quietClick(onClick = onChat),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(Icons.Default.Chat, contentDescription = "Discuter", tint = bagdeColor, modifier = Modifier.size(17.dp))
+                        }
+                        Spacer(Modifier.size(8.dp))
                     }
                     Box(
                         Modifier

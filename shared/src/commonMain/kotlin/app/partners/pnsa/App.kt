@@ -31,12 +31,11 @@ import app.partners.pnsa.features.forum.ui.AdviceChatScreen
 import app.partners.pnsa.features.forum.ui.AdviceListScreen
 import app.partners.pnsa.features.forum.ui.ForumDetailScreen
 import app.partners.pnsa.features.forum.ui.ForumListScreen
-import app.partners.pnsa.features.home.ui.HomeScreen
-import app.partners.pnsa.features.quiz.ui.QuizListScreen
-import app.partners.pnsa.features.quiz.ui.QuizPlayScreen
 import app.partners.pnsa.features.structure.ui.OrientationCreateScreen
 import app.partners.pnsa.features.structure.ui.OrientationDetailScreen
 import app.partners.pnsa.features.structure.ui.OrientationListScreen
+import app.partners.pnsa.features.structure.ui.StructureChatScreen
+import app.partners.pnsa.features.structure.ui.StructureConversationsScreen
 import app.partners.pnsa.features.structure.ui.StructureDetailScreen
 import app.partners.pnsa.features.structure.ui.StructureListScreen
 import app.partners.pnsa.features.user.ui.HelpScreen
@@ -55,14 +54,8 @@ fun App() {
 
 @Composable
 private fun PnsaRoot() {
-    val navigator = remember {
-        AppNavigator(AppDestination.Home).apply {
-            openTab(MainTab.Structures)
-        }
-    }
-
+    val navigator = remember { AppNavigator(AppDestination.Structures) }
     val visited = remember { mutableStateListOf(navigator.tab) }
-    val showChrome = navigator.current !is AppDestination.QuizPlay
 
     LaunchedEffect(navigator.tab) {
         if (navigator.tab !in visited) visited += navigator.tab
@@ -72,12 +65,10 @@ private fun PnsaRoot() {
         PnsaScaffold(
             containerColor = Color.White,
             bottomBar = {
-                if (showChrome) {
-                    TikTokBottomBar(
-                        selected = navigator.tab,
-                        onSelect = { navigator.openTab(it) },
-                    )
-                }
+                TikTokBottomBar(
+                    selected = navigator.tab,
+                    onSelect = { navigator.openTab(it) },
+                )
             },
         ) { padding ->
             Box(
@@ -103,25 +94,27 @@ private fun PnsaRoot() {
 @Composable
 private fun SignedInFlow(navigator: AppNavigator, tab: MainTab) {
     when (val dest = navigator.currentFor(tab)) {
-        AppDestination.Home -> HomeScreen(navigator)
-        AppDestination.Learn -> ContentListScreen(navigator)
-        is AppDestination.ContentDetail -> ContentDetailScreen(dest.id, onBack = { navigator.pop() })
-        AppDestination.Quizzes -> QuizListScreen(navigator)
-        is AppDestination.QuizPlay -> QuizPlayScreen(dest.id, onBack = { navigator.pop() })
         AppDestination.Structures -> StructureListScreen(navigator)
         is AppDestination.StructureDetail -> StructureDetailScreen(dest.id, navigator, onBack = { navigator.pop() })
-        AppDestination.Orientations -> OrientationListScreen(navigator)
-        is AppDestination.OrientationDetail -> OrientationDetailScreen(dest.id, onBack = { navigator.pop() })
-        is AppDestination.OrientationCreate -> OrientationCreateScreen(dest.structureId, navigator, onBack = { navigator.pop() })
+        AppDestination.Messages -> StructureConversationsScreen(navigator)
+        is AppDestination.StructureChat -> StructureChatScreen(dest.structureId, onBack = { navigator.pop() })
         AppDestination.Forum -> ForumListScreen(navigator)
         is AppDestination.ForumDetail -> ForumDetailScreen(dest.id, onBack = { navigator.pop() })
         AppDestination.Advice -> AdviceListScreen(navigator)
         is AppDestination.AdviceChat -> AdviceChatScreen(dest.id, onBack = { navigator.pop() })
-        AppDestination.Profile -> ProfileScreen(navigator)
+        AppDestination.Orientations -> OrientationListScreen(navigator)
+        is AppDestination.OrientationDetail -> OrientationDetailScreen(dest.id, onBack = { navigator.pop() })
+        is AppDestination.OrientationCreate -> OrientationCreateScreen(dest.structureId, navigator, onBack = { navigator.pop() })
+        AppDestination.Learn -> ContentListScreen(navigator)
+        is AppDestination.ContentDetail -> ContentDetailScreen(dest.id, onBack = { navigator.pop() })
+        AppDestination.Profile, AppDestination.More -> ProfileScreen(navigator)
         AppDestination.ProfileEdit -> ProfileEditScreen(onBack = { navigator.pop() })
         AppDestination.Help, AppDestination.PublicHelp -> HelpScreen(onBack = { navigator.pop() })
         AppDestination.PublicLegal -> LegalScreen(onBack = { navigator.pop() })
-        AppDestination.More -> ProfileScreen(navigator)
-        AppDestination.Welcome, AppDestination.Login, AppDestination.Register -> HomeScreen(navigator)
+        AppDestination.Home,
+        AppDestination.Welcome,
+        AppDestination.Login,
+        AppDestination.Register,
+        -> StructureListScreen(navigator)
     }
 }
