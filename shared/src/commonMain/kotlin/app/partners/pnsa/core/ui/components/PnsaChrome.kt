@@ -195,6 +195,7 @@ fun PnsaDrawerContent(
     email: String,
     initials: String,
     onDestination: (AppDestination) -> Unit,
+    showLogout: Boolean = true,
     onLogout: () -> Unit,
 ) {
     ModalDrawerSheet(
@@ -236,8 +237,10 @@ fun PnsaDrawerContent(
             DrawerItem("Profil", Icons.Default.Person) { onDestination(AppDestination.Profile) }
             DrawerItem("Aide", Icons.Default.Help) { onDestination(AppDestination.Help) }
             DrawerItem("Confidentialité", Icons.Default.Shield) { onDestination(AppDestination.PublicLegal) }
-            HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 8.dp))
-            DrawerItem("Se déconnecter", Icons.Default.Logout, tint = PnsaRedHot, onClick = onLogout)
+            if (showLogout) {
+                HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 8.dp))
+                DrawerItem("Se déconnecter", Icons.Default.Logout, tint = PnsaRedHot, onClick = onLogout)
+            }
             Spacer(Modifier.height(24.dp))
         }
     }

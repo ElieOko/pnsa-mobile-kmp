@@ -30,9 +30,6 @@ import app.partners.pnsa.core.ui.theme.LocalEmbeddedChrome
 import app.partners.pnsa.core.ui.theme.LocalTabActive
 import app.partners.pnsa.core.ui.theme.PnsaTheme
 import app.partners.pnsa.features.auth.ui.LegalScreen
-import app.partners.pnsa.features.auth.ui.LoginScreen
-import app.partners.pnsa.features.auth.ui.RegisterScreen
-import app.partners.pnsa.features.auth.ui.WelcomeScreen
 import app.partners.pnsa.features.content.ui.ContentDetailScreen
 import app.partners.pnsa.features.content.ui.ContentListScreen
 import app.partners.pnsa.features.forum.ui.AdviceChatScreen
@@ -64,16 +61,7 @@ fun App() {
 
 @Composable
 private fun PnsaRoot(graph: AppGraph) {
-    val token by graph.session.token.collectAsState()
-    val signedIn = !token.isNullOrBlank()
-    val navigator = remember(signedIn) {
-        AppNavigator(if (signedIn) AppDestination.Home else AppDestination.Welcome)
-    }
-
-    if (!signedIn) {
-        AuthFlow(navigator)
-        return
-    }
+    val navigator = remember { AppNavigator(AppDestination.Home) }
 
     val user by graph.session.user.collectAsState()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -83,15 +71,6 @@ private fun PnsaRoot(graph: AppGraph) {
 
     LaunchedEffect(navigator.tab) {
         if (navigator.tab !in visited) visited += navigator.tab
-    }
-
-    fun logout() {
-        scope.launch {
-            drawerState.close()
-            graph.auth.logout()
-            graph.cache.clear()
-            graph.screens.clear()
-        }
     }
 
     val onMapTab = navigator.tab == MainTab.Structures
@@ -111,7 +90,8 @@ private fun PnsaRoot(graph: AppGraph) {
                     scope.launch { drawerState.close() }
                     navigator.push(dest)
                 },
-                onLogout = { logout() },
+                showLogout = false,
+                onLogout = {},
             )
         },
     ) {
@@ -144,7 +124,7 @@ private fun PnsaRoot(graph: AppGraph) {
                         if (tab in visited) {
                             KeepAlivePane(visible = navigator.tab == tab) {
                                 CompositionLocalProvider(LocalTabActive provides (navigator.tab == tab)) {
-                                    SignedInFlow(navigator, tab) { logout() }
+                                    SignedInFlow(navigator, tab)
                                 }
                             }
                         }
@@ -156,38 +136,7 @@ private fun PnsaRoot(graph: AppGraph) {
 }
 
 @Composable
-private fun AuthFlow(navigator: AppNavigator) {
-    when (val dest = navigator.current) {
-            AppDestination.Welcome -> WelcomeScreen(
-                onLogin = { navigator.push(AppDestination.Login) },
-                onRegister = { navigator.push(AppDestination.Register) },
-                onHelp = { navigator.push(AppDestination.PublicHelp) },
-                onLegal = { navigator.push(AppDestination.PublicLegal) },
-            )
-            AppDestination.Login -> LoginScreen(
-                onBack = { navigator.pop() },
-                onLoggedIn = { navigator.replace(AppDestination.Home) },
-                onRegister = { navigator.replaceCurrent(AppDestination.Register) },
-                onHelp = { navigator.push(AppDestination.PublicHelp) },
-            )
-            AppDestination.Register -> RegisterScreen(
-                onBack = { navigator.pop() },
-                onRegistered = { navigator.replace(AppDestination.Home) },
-                onLegal = { navigator.push(AppDestination.PublicLegal) },
-            )
-            AppDestination.PublicHelp -> HelpScreen(onBack = { navigator.pop() })
-            AppDestination.PublicLegal -> LegalScreen(onBack = { navigator.pop() })
-            else -> WelcomeScreen(
-                onLogin = { navigator.push(AppDestination.Login) },
-                onRegister = { navigator.push(AppDestination.Register) },
-                onHelp = { navigator.push(AppDestination.PublicHelp) },
-                onLegal = { navigator.push(AppDestination.PublicLegal) },
-            )
-        }
-}
-
-@Composable
-private fun SignedInFlow(navigator: AppNavigator, tab: MainTab, onLoggedOut: () -> Unit) {
+private fun SignedInFlow(navigator: AppNavigator, tab: MainTab) {
     when (val dest = navigator.currentFor(tab)) {
         AppDestination.Home -> HomeScreen(navigator)
         AppDestination.Learn -> ContentListScreen(navigator)
@@ -203,11 +152,11 @@ private fun SignedInFlow(navigator: AppNavigator, tab: MainTab, onLoggedOut: () 
         is AppDestination.ForumDetail -> ForumDetailScreen(dest.id, onBack = { navigator.pop() })
         AppDestination.Advice -> AdviceListScreen(navigator)
         is AppDestination.AdviceChat -> AdviceChatScreen(dest.id, onBack = { navigator.pop() })
-        AppDestination.Profile -> ProfileScreen(navigator, onLoggedOut)
+        AppDestination.Profile -> ProfileScreen(navigator)
         AppDestination.ProfileEdit -> ProfileEditScreen(onBack = { navigator.pop() })
         AppDestination.Help, AppDestination.PublicHelp -> HelpScreen(onBack = { navigator.pop() })
         AppDestination.PublicLegal -> LegalScreen(onBack = { navigator.pop() })
-        AppDestination.More -> ProfileScreen(navigator, onLoggedOut)
+        AppDestination.More -> ProfileScreen(navigator)
         AppDestination.Welcome, AppDestination.Login, AppDestination.Register -> HomeScreen(navigator)
     }
 }

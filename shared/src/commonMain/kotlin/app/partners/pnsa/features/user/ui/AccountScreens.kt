@@ -43,7 +43,6 @@ import app.partners.pnsa.core.ui.components.PnsaCard
 import app.partners.pnsa.core.ui.components.PnsaTextField
 import app.partners.pnsa.core.ui.components.PnsaTopBar
 import app.partners.pnsa.core.ui.components.PrimaryAction
-import app.partners.pnsa.core.ui.components.QuietAction
 import app.partners.pnsa.core.ui.components.SecondaryAction
 import app.partners.pnsa.core.ui.components.ShortcutTile
 import app.partners.pnsa.core.ui.components.StatusBanner
@@ -76,7 +75,7 @@ fun MoreMenuScreen(navigator: AppNavigator) {
 }
 
 @Composable
-fun ProfileScreen(navigator: AppNavigator, onLoggedOut: () -> Unit) {
+fun ProfileScreen(navigator: AppNavigator) {
     val graph = LocalAppGraph.current
     val user by graph.session.user.collectAsState()
     val scope = rememberCoroutineScope()
@@ -126,15 +125,7 @@ fun ProfileScreen(navigator: AppNavigator, onLoggedOut: () -> Unit) {
             }
             message?.let { StatusBanner(it) }
             Spacer(Modifier.height(16.dp))
-            SecondaryAction("Se déconnecter") {
-                scope.launch {
-                    graph.auth.logout()
-                    graph.cache.clear()
-                    graph.screens.clear()
-                    onLoggedOut()
-                }
-            }
-            QuietAction("Demander la suppression du compte") {
+            SecondaryAction("Demander la suppression du compte") {
                 message = "Demande reçue côté application. Écris à ${AppConfig.contactEmail} pour le traitement institutionnel. Nous n’afficherons pas « tout a été supprimé » tant que la procédure n’est pas confirmée."
             }
         }
