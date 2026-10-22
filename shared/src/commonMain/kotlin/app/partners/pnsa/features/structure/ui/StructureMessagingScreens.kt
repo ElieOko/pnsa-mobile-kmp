@@ -5,15 +5,22 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -42,14 +49,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import app.partners.pnsa.core.di.LocalAppGraph
 import app.partners.pnsa.core.ui.components.EmptyState
-import app.partners.pnsa.core.ui.components.InlineBackHeader
 import app.partners.pnsa.core.ui.components.PnsaScaffold
 import app.partners.pnsa.core.ui.components.quietClick
 import app.partners.pnsa.core.ui.navigation.AppDestination
@@ -61,6 +69,7 @@ import app.partners.pnsa.core.ui.theme.PnsaMuted
 import app.partners.pnsa.core.ui.theme.bagdeColor
 import app.partners.pnsa.core.ui.theme.wsColor
 import app.partners.pnsa.features.forum.ui.ChatMessageBubble
+import app.partners.pnsa.features.forum.ui.InlineConversationHeader
 import app.partners.pnsa.features.forum.ui.WhatsAppComposerBar
 import app.partners.pnsa.features.structure.data.KinshasaCenters
 import app.partners.pnsa.features.structure.data.StructureChatPreview
@@ -291,83 +300,100 @@ fun StructureChatScreen(structureId: Long, onBack: () -> Unit) {
         mutableStateOf(structure?.let { graph.messaging.messagesFor(it) }.orEmpty())
     }
     val listState = rememberLazyListState()
+    val density = LocalDensity.current
+    val imeVisible = WindowInsets.ime.getBottom(density) > 0
 
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex)
+    if (structure == null) {
+        EmptyState("Structure introuvable", "Retourne à la carte puis réessaie.")
+        return
     }
 
-    PnsaScaffold(containerColor = PnsaChatCanvas) { padding ->
-        if (structure == null) {
-            EmptyState("Structure introuvable", "Retourne à la carte puis réessaie.")
-            return@PnsaScaffold
+    LaunchedEffect(structure.id) {
+        messages = graph.messaging.messagesFor(structure)
+    }
+
+    LaunchedEffect(messages.size, imeVisible) {
+        if (messages.isNotEmpty()) {
+            listState.animateScrollToItem(messages.lastIndex)
         }
-        LaunchedEffect(structure.id) {
-            messages = graph.messaging.messagesFor(structure)
-        }
-        Column(
-            Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .imePadding()
-                .background(PnsaChatCanvas),
+    }
+
+    val initials = remember(structure.displayName) {
+        structure.displayName
+            .split(" ")
+            .mapNotNull { it.firstOrNull()?.uppercaseChar() }
+            .take(2)
+            .joinToString("")
+            .ifEmpty { "ST" }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PnsaChatCanvas)
+            .windowInsetsPadding(
+                WindowInsets.ime
+                    .union(WindowInsets.navigationBars)
+                    .only(WindowInsetsSides.Bottom),
+            )
+            .clipToBounds(),
+    ) {
+        // Constant topbar header of the discussion (never scrolls or moves with keyboard)
+        Surface(
+            color = Color.White,
+            shadowElevation = 2.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .zIndex(1f),
         ) {
-            // Fixed topbar header of the discussion
-            Surface(
-                color = Color.White,
-                shadowElevation = 2.dp,
-                modifier = Modifier.fillMaxWidth(),
+            InlineConversationHeader(
+                title = structure.displayName,
+                subtitle = "En ligne · ${structure.displayCity}",
+                initials = initials,
+                onBack = onBack,
+            )
+        }
+
+        // Messages scroll strictly inside between topbar and composer bar
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .clipToBounds(),
+        ) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(vertical = 8.dp),
+                state = listState,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Box(Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
-                    InlineBackHeader(
-                        title = structure.displayName,
-                        subtitle = "En ligne · ${structure.displayCity}",
-                        onBack = onBack,
+                items(messages, key = { it.id }) { message ->
+                    ChatMessageBubble(
+                        senderName = if (message.fromStructure) structure.displayName else "Toi",
+                        messageText = message.text,
+                        timeText = message.timeLabel,
+                        isSentByMe = !message.fromStructure,
+                        statusRead = message.read,
                     )
                 }
             }
-
-            // Messages scroll strictly inside between topbar and composer bar
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .clipToBounds(),
-            ) {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(vertical = 8.dp),
-                    state = listState,
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    items(messages, key = { it.id }) { message ->
-                        ChatMessageBubble(
-                            senderName = if (message.fromStructure) structure.displayName else "Toi",
-                            messageText = message.text,
-                            timeText = message.timeLabel,
-                            isSentByMe = !message.fromStructure,
-                            statusRead = message.read,
-                        )
-                    }
-                }
-            }
-
-            WhatsAppComposerBar(
-                value = draft,
-                onValueChange = {
-                    draft = it
-                    graph.messaging.saveDraft(structureId, it)
-                },
-                placeholder = "Écrire un message à la structure…",
-                sending = false,
-                onSend = {
-                    val text = draft.trim()
-                    if (text.isBlank()) return@WhatsAppComposerBar
-                    messages = graph.messaging.sendToStructure(structure, text)
-                    draft = ""
-                },
-            )
         }
+
+        WhatsAppComposerBar(
+            value = draft,
+            onValueChange = {
+                draft = it
+                graph.messaging.saveDraft(structureId, it)
+            },
+            placeholder = "Écrire un message à la structure…",
+            sending = false,
+            onSend = {
+                val text = draft.trim()
+                if (text.isBlank()) return@WhatsAppComposerBar
+                messages = graph.messaging.sendToStructure(structure, text)
+                draft = ""
+            },
+        )
     }
 }
 

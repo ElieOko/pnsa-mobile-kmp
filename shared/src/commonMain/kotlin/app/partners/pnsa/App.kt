@@ -2,6 +2,7 @@ package app.partners.pnsa
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
@@ -17,6 +18,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import app.partners.pnsa.core.di.AppGraph
 import app.partners.pnsa.core.di.LocalAppGraph
@@ -79,21 +81,32 @@ private fun PnsaRoot() {
         navigator.saveTo(graph.prefs)
     }
 
+    val isChatConversation = when (navigator.current) {
+        is AppDestination.StructureChat,
+        is AppDestination.AdviceChat,
+        -> true
+        else -> false
+    }
+
     CompositionLocalProvider(LocalEmbeddedChrome provides true) {
         PnsaScaffold(
             containerColor = Color.White,
             bottomBar = {
-                TikTokBottomBar(
-                    selected = navigator.tab,
-                    onSelect = { navigator.openTab(it) },
-                )
+                if (!isChatConversation) {
+                    TikTokBottomBar(
+                        selected = navigator.tab,
+                        onSelect = { navigator.openTab(it) },
+                    )
+                }
             },
         ) { padding ->
             Box(
                 Modifier
+                    .fillMaxSize()
                     .padding(padding)
+                    .consumeWindowInsets(padding)
                     .windowInsetsPadding(WindowInsets.statusBars)
-                    .fillMaxSize(),
+                    .clipToBounds(),
             ) {
                 MainTab.entries.forEach { tab ->
                     if (tab in visited) {
