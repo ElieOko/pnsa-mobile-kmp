@@ -8,18 +8,25 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -55,11 +62,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import app.partners.pnsa.core.config.AppConfig
 import app.partners.pnsa.core.di.LocalAppGraph
 import app.partners.pnsa.core.ui.components.EmptyState
@@ -391,7 +400,7 @@ fun WhatsAppComposerBar(
 }
 
 @Composable
-private fun InlineConversationHeader(
+fun InlineConversationHeader(
     title: String,
     subtitle: String,
     initials: String,
@@ -571,19 +580,32 @@ fun AdviceChatScreen(id: Long, onBack: () -> Unit) {
         }
     }
 
+    val density = LocalDensity.current
+    val imeVisible = WindowInsets.ime.getBottom(density) > 0
+
     LaunchedEffect(id) { load() }
 
-    LaunchedEffect(messages.size) {
+    LaunchedEffect(messages.size, imeVisible) {
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex)
     }
 
-    PnsaScaffold(containerColor = PnsaChatCanvas) { padding ->
-        Column(
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PnsaChatCanvas)
+            .windowInsetsPadding(
+                WindowInsets.ime
+                    .union(WindowInsets.navigationBars)
+                    .only(WindowInsetsSides.Bottom),
+            )
+            .clipToBounds(),
+    ) {
+        Surface(
+            color = Color.White,
+            shadowElevation = 2.dp,
             modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .imePadding()
-                .background(PnsaChatCanvas),
+                .fillMaxWidth()
+                .zIndex(1f),
         ) {
             InlineConversationHeader(
                 title = "Conseiller SSR #$id",
@@ -591,82 +613,80 @@ fun AdviceChatScreen(id: Long, onBack: () -> Unit) {
                 initials = "CS",
                 onBack = onBack,
             )
-            HorizontalDivider(color = bagdeColor.copy(alpha = 0.15f))
+        }
 
-            if (loading) {
-                Box(Modifier.weight(1f).fillMaxWidth()) { LoadingState() }
-            } else {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .clipToBounds(),
+        if (loading) {
+            Box(Modifier.weight(1f).fillMaxWidth()) { LoadingState() }
+        } else {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .clipToBounds(),
+            ) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(vertical = 6.dp),
+                    state = listState,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(vertical = 6.dp),
-                        state = listState,
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        item {
-                            Box(Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
-                                StatusBanner("Les notifications n’affichent jamais le texte de tes messages.")
-                            }
+                    item {
+                        Box(Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
+                            StatusBanner("Les notifications n’affichent jamais le texte de tes messages.")
                         }
-                        items(messages, key = { it.id ?: it.msg.orEmpty().hashCode().toLong() }) { message ->
-                            val mine = (message.userId != null && message.userId == user?.id) || message.userId == 1L
-                            ChatMessageBubble(
-                                senderName = if (mine) "Toi" else "Conseiller SSR",
-                                messageText = message.msg.orEmpty(),
-                                timeText = formatShortTime(message.createdAt),
-                                isSentByMe = mine,
-                                statusRead = message.status,
-                            )
-                        }
+                    }
+                    items(messages, key = { it.id ?: it.msg.orEmpty().hashCode().toLong() }) { message ->
+                        val mine = (message.userId != null && message.userId == user?.id) || message.userId == 1L
+                        ChatMessageBubble(
+                            senderName = if (mine) "Toi" else "Conseiller SSR",
+                            messageText = message.msg.orEmpty(),
+                            timeText = formatShortTime(message.createdAt),
+                            isSentByMe = mine,
+                            statusRead = message.status,
+                        )
                     }
                 }
             }
-
-            WhatsAppComposerBar(
-                value = value,
-                onValueChange = {
-                    value = it
-                    graph.prefs.putString("advice_draft_$id", it.ifBlank { null })
-                },
-                placeholder = "Écrire un message…",
-                sending = sending,
-                onSend = {
-                    val trimmed = value.trim()
-                    if (trimmed.isEmpty()) return@WhatsAppComposerBar
-                    scope.launch {
-                        sending = true
-                        runCatching { graph.community.sendMessage(id, trimmed) }
-                            .onSuccess {
-                                value = ""
-                                graph.prefs.putString("advice_draft_$id", null)
-                                load()
-                            }
-                            .onFailure {
-                                val newMsg = Message(
-                                    id = (messages.size + 100).toLong(),
-                                    msg = trimmed,
-                                    userId = user?.id ?: 1L,
-                                    createdAt = "12:13",
-                                    status = true,
-                                )
-                                fallbackMessages.add(newMsg)
-                                val updated = fallbackMessages.toList()
-                                messages = updated
-                                persistAdviceMessages(updated)
-                                value = ""
-                                graph.prefs.putString("advice_draft_$id", null)
-                            }
-                        sending = false
-                    }
-                },
-            )
         }
+
+        WhatsAppComposerBar(
+            value = value,
+            onValueChange = {
+                value = it
+                graph.prefs.putString("advice_draft_$id", it.ifBlank { null })
+            },
+            placeholder = "Écrire un message…",
+            sending = sending,
+            onSend = {
+                val trimmed = value.trim()
+                if (trimmed.isEmpty()) return@WhatsAppComposerBar
+                scope.launch {
+                    sending = true
+                    runCatching { graph.community.sendMessage(id, trimmed) }
+                        .onSuccess {
+                            value = ""
+                            graph.prefs.putString("advice_draft_$id", null)
+                            load()
+                        }
+                        .onFailure {
+                            val newMsg = Message(
+                                id = (messages.size + 100).toLong(),
+                                msg = trimmed,
+                                userId = user?.id ?: 1L,
+                                createdAt = "12:13",
+                                status = true,
+                            )
+                            fallbackMessages.add(newMsg)
+                            val updated = fallbackMessages.toList()
+                            messages = updated
+                            persistAdviceMessages(updated)
+                            value = ""
+                            graph.prefs.putString("advice_draft_$id", null)
+                        }
+                    sending = false
+                }
+            },
+        )
     }
 }
 
