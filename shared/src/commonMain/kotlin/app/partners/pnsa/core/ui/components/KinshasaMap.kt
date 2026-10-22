@@ -66,6 +66,9 @@ import app.partners.pnsa.core.ui.map.MapViewStyle
 import app.partners.pnsa.core.ui.theme.PnsaGreenDeep
 import app.partners.pnsa.core.ui.theme.PnsaInk
 import app.partners.pnsa.core.ui.theme.PnsaMuted
+import app.partners.pnsa.core.ui.theme.PnsaPink
+import app.partners.pnsa.core.ui.theme.PnsaPinkDeep
+import app.partners.pnsa.core.ui.theme.PnsaPinkSoft
 import app.partners.pnsa.core.ui.theme.PnsaRed
 import app.partners.pnsa.core.ui.theme.bagdeColor
 import app.partners.pnsa.core.ui.theme.wsColor

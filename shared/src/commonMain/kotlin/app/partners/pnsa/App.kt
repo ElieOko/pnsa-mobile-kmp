@@ -54,9 +54,7 @@ fun App() {
     val graph = remember { AppGraph() }
     PnsaTheme(darkTheme = false) {
         CompositionLocalProvider(LocalAppGraph provides graph) {
-            PnsaRoot(
-                graph = TODO()
-            )
+            PnsaRoot()
         }
     }
 }
