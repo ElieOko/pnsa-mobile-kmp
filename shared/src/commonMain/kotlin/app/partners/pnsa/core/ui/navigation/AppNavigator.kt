@@ -47,6 +47,7 @@ class AppNavigator(
     private val authStack = mutableStateListOf(start)
     private val tabStacks: Map<MainTab, SnapshotStateList<AppDestination>> =
         MainTab.entries.associateWith { tab -> mutableStateListOf(rootFor(tab)) }
+    private val tabHistory = mutableStateListOf<MainTab>()
 
     var tab by mutableStateOf(tabFor(start) ?: MainTab.Structures)
         private set
@@ -118,7 +119,10 @@ class AppNavigator(
         }
         if (signedIn) {
             val stackTab = target ?: tab
-            if (stackTab != tab) tab = stackTab
+            if (stackTab != tab) {
+                recordTabJump(tab)
+                tab = stackTab
+            }
             val stack = tabStacks.getValue(stackTab)
             if (stack.lastOrNull() == destination) return
             stack += destination
@@ -131,6 +135,7 @@ class AppNavigator(
     fun replace(destination: AppDestination) {
         if (signedIn) {
             val target = tabFor(destination) ?: tab
+            if (target != tab) recordTabJump(tab)
             tab = target
             val stack = tabStacks.getValue(target)
             stack.clear()
@@ -143,17 +148,53 @@ class AppNavigator(
     }
 
     fun pop() {
+        navigateBack()
+    }
+
+    /**
+     * Handles back navigation across screens and tabs.
+     * @return true if navigation moved to a previous destination or tab,
+     *         false if already at the root of the main tab (ready for double-back exit).
+     */
+    fun navigateBack(): Boolean {
         val stack = if (signedIn) tabStacks.getValue(tab) else authStack
         if (stack.size > 1) {
             stack.removeAt(stack.lastIndex)
             onStateChanged?.invoke()
+            return true
         }
+        if (signedIn) {
+            while (tabHistory.isNotEmpty()) {
+                val previousTab = tabHistory.removeAt(tabHistory.lastIndex)
+                if (previousTab != tab) {
+                    tab = previousTab
+                    onStateChanged?.invoke()
+                    return true
+                }
+            }
+            if (tab != MainTab.Structures) {
+                tab = MainTab.Structures
+                onStateChanged?.invoke()
+                return true
+            }
+        }
+        return false
     }
 
     fun openTab(next: MainTab) {
         if (tab != next) {
+            recordTabJump(tab)
             tab = next
             onStateChanged?.invoke()
+        }
+    }
+
+    private fun recordTabJump(previous: MainTab) {
+        if (tabHistory.lastOrNull() != previous) {
+            tabHistory += previous
+            if (tabHistory.size > 12) {
+                tabHistory.removeAt(0)
+            }
         }
     }
 
