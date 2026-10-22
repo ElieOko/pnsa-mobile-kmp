@@ -84,6 +84,14 @@ class UiPreferencesTest {
         restored.restoreFrom(prefs)
         assertEquals(MainTab.Messages, restored.tab)
         assertEquals(AppDestination.Advice, restored.current)
+
+        // Back navigation pops sub-screens, then returns across tab history, then returns false at root for double-back exit
+        assertEquals(true, restored.navigateBack())
+        assertEquals(AppDestination.Messages, restored.current)
+        assertEquals(true, restored.navigateBack())
+        assertEquals(MainTab.Structures, restored.tab)
+        assertEquals(AppDestination.Structures, restored.current)
+        assertEquals(false, restored.navigateBack())
     }
 
     @Test
