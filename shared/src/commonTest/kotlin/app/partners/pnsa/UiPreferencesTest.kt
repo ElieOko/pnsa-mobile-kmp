@@ -104,5 +104,13 @@ class UiPreferencesTest {
         assertEquals(afterSend.size, reloadedRepo.messagesFor(center).size)
         assertEquals("Bonjour, avez-vous un médecin ?", reloadedRepo.messagesFor(center).last().text)
         assertEquals("Brouillon test", reloadedRepo.draftFor(centerId))
+
+        val afterVoice = reloadedRepo.sendVoiceToStructure(center, durationSeconds = 9, audioPath = "/tmp/voice_test.m4a")
+        val lastVoice = afterVoice.last()
+        assertEquals(9, lastVoice.audioDurationSeconds)
+        assertEquals("/tmp/voice_test.m4a", lastVoice.audioPath)
+        assertEquals("00:09", app.partners.pnsa.core.audio.formatVoiceTimer(lastVoice.audioDurationSeconds ?: 0))
+        val preview = reloadedRepo.previews(listOf(center), includeWithoutMessages = true).first()
+        assertEquals("Message vocal (00:09)", preview.lastMessage)
     }
 }
