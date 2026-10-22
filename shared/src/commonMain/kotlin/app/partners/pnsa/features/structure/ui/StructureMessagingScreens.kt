@@ -374,6 +374,8 @@ fun StructureChatScreen(structureId: Long, onBack: () -> Unit) {
                         timeText = message.timeLabel,
                         isSentByMe = !message.fromStructure,
                         statusRead = message.read,
+                        audioDurationSeconds = message.audioDurationSeconds,
+                        audioPath = message.audioPath,
                     )
                 }
             }
@@ -392,6 +394,13 @@ fun StructureChatScreen(structureId: Long, onBack: () -> Unit) {
                 if (text.isBlank()) return@WhatsAppComposerBar
                 messages = graph.messaging.sendToStructure(structure, text)
                 draft = ""
+            },
+            onSendVoice = { durationSeconds, audioPath ->
+                messages = graph.messaging.sendVoiceToStructure(
+                    structure = structure,
+                    durationSeconds = durationSeconds,
+                    audioPath = audioPath,
+                )
             },
         )
     }

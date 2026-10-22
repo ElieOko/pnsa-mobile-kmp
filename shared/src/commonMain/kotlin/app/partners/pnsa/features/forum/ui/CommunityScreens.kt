@@ -36,8 +36,11 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Badge
 import androidx.compose.material3.HorizontalDivider
@@ -47,9 +50,11 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,6 +74,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import app.partners.pnsa.core.audio.PlatformVoicePlayer
+import app.partners.pnsa.core.audio.PlatformVoiceRecorder
+import app.partners.pnsa.core.audio.VoiceMessageCodec
+import app.partners.pnsa.core.audio.VoicePayload
+import app.partners.pnsa.core.audio.formatVoiceTimer
+import app.partners.pnsa.core.audio.rememberEnsureAudioPermission
 import app.partners.pnsa.core.config.AppConfig
 import app.partners.pnsa.core.di.LocalAppGraph
 import app.partners.pnsa.core.ui.components.EmptyState
@@ -84,6 +95,7 @@ import app.partners.pnsa.core.ui.theme.PnsaGreenBubbleSent
 import app.partners.pnsa.core.ui.theme.PnsaGreenSoft
 import app.partners.pnsa.core.ui.theme.PnsaInk
 import app.partners.pnsa.core.ui.theme.PnsaMuted
+import app.partners.pnsa.core.ui.theme.PnsaPink
 import app.partners.pnsa.core.ui.theme.bagdeColor
 import app.partners.pnsa.core.ui.theme.wsColor
 import app.partners.pnsa.core.util.excerpt
@@ -93,6 +105,7 @@ import app.partners.pnsa.features.forum.domain.models.Discussion
 import app.partners.pnsa.features.forum.domain.models.Message
 import app.partners.pnsa.features.forum.domain.models.Sujet
 import app.partners.pnsa.features.user.domain.models.User
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -240,7 +253,12 @@ fun ChatMessageBubble(
     timeText: String,
     isSentByMe: Boolean,
     statusRead: Boolean? = true,
+    audioDurationSeconds: Int? = null,
+    audioPath: String? = null,
 ) {
+    val voicePayload = remember(messageText, audioDurationSeconds, audioPath) {
+        VoiceMessageCodec.decode(messageText, audioDurationSeconds, audioPath)
+    }
     val shape = RoundedCornerShape(
         topStart = 18.dp,
         topEnd = 18.dp,
@@ -256,7 +274,7 @@ fun ChatMessageBubble(
     ) {
         Surface(
             modifier = Modifier
-                .widthIn(min = 90.dp, max = 300.dp)
+                .widthIn(min = if (voicePayload != null) 235.dp else 90.dp, max = 300.dp)
                 .clip(shape)
                 .clipToBounds(),
             shape = shape,
@@ -283,11 +301,15 @@ fun ChatMessageBubble(
                     )
                     Spacer(Modifier.height(2.dp))
                 }
-                Text(
-                    text = messageText,
-                    color = PnsaInk,
-                    fontSize = 14.sp,
-                )
+                if (voicePayload != null) {
+                    VoiceNotePlayerRow(payload = voicePayload)
+                } else {
+                    Text(
+                        text = messageText,
+                        color = PnsaInk,
+                        fontSize = 14.sp,
+                    )
+                }
                 Spacer(Modifier.height(4.dp))
                 Row(
                     modifier = Modifier.align(Alignment.End),
@@ -314,13 +336,201 @@ fun ChatMessageBubble(
 }
 
 @Composable
+private fun VoiceNotePlayerRow(
+    payload: VoicePayload,
+) {
+    val player = remember { PlatformVoicePlayer() }
+    val totalMs = remember(payload.durationSeconds) {
+        (payload.durationSeconds.coerceAtLeast(1) * 1000)
+    }
+    var isPlaying by remember { mutableStateOf(false) }
+    var elapsedMs by remember { mutableIntStateOf(0) }
+    var usingHardwareAudio by remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            player.stop()
+        }
+    }
+
+    LaunchedEffect(isPlaying, totalMs) {
+        while (isPlaying) {
+            delay(100L)
+            if (usingHardwareAudio && player.isPlaying()) {
+                val pos = player.currentPositionMs()
+                val dur = player.durationMs().takeIf { it > 0 } ?: totalMs
+                elapsedMs = pos.coerceAtMost(dur)
+            } else {
+                val next = elapsedMs + 100
+                if (next >= totalMs) {
+                    elapsedMs = 0
+                    isPlaying = false
+                    player.stop()
+                } else {
+                    elapsedMs = next
+                }
+            }
+        }
+    }
+
+    val progress = (elapsedMs.toFloat() / totalMs.toFloat()).coerceIn(0f, 1f)
+    val displaySeconds = if (isPlaying || elapsedMs > 0) {
+        (elapsedMs / 1000).coerceIn(0, payload.durationSeconds)
+    } else {
+        payload.durationSeconds
+    }
+    val waveformHeights = remember {
+        listOf(7, 13, 18, 10, 21, 15, 9, 23, 17, 11, 20, 14, 22, 12, 16, 19, 8, 15, 21, 13, 10, 16, 11, 8)
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Surface(
+            modifier = Modifier
+                .size(38.dp)
+                .quietClick {
+                    if (isPlaying) {
+                        player.pause()
+                        isPlaying = false
+                    } else {
+                        if (elapsedMs >= totalMs) elapsedMs = 0
+                        usingHardwareAudio = player.play(payload.audioPath) {
+                            isPlaying = false
+                            elapsedMs = 0
+                        }
+                        if (usingHardwareAudio && elapsedMs > 0) {
+                            player.seekTo(elapsedMs)
+                        }
+                        isPlaying = true
+                    }
+                },
+            shape = CircleShape,
+            color = bagdeColor,
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = if (isPlaying) "Pause" else "Lire le vocal",
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+        }
+
+        Spacer(Modifier.width(10.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(26.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                val activeBars = (progress * waveformHeights.size).toInt()
+                waveformHeights.forEachIndexed { index, barHeight ->
+                    val active = if (isPlaying || elapsedMs > 0) index <= activeBars else false
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(barHeight.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(
+                                if (active) bagdeColor else bagdeColor.copy(alpha = 0.28f),
+                            )
+                            .quietClick {
+                                val targetRatio = (index + 1).toFloat() / waveformHeights.size.toFloat()
+                                val targetMs = (targetRatio * totalMs).toInt().coerceIn(0, totalMs)
+                                elapsedMs = targetMs
+                                if (usingHardwareAudio) {
+                                    player.seekTo(targetMs)
+                                }
+                            },
+                    )
+                }
+            }
+            Spacer(Modifier.height(3.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Mic,
+                        contentDescription = null,
+                        tint = if (isPlaying) PnsaPink else bagdeColor,
+                        modifier = Modifier.size(12.dp),
+                    )
+                    Text(
+                        text = if (isPlaying || elapsedMs > 0) {
+                            "${formatVoiceTimer(displaySeconds)} / ${formatVoiceTimer(payload.durationSeconds)}"
+                        } else {
+                            formatVoiceTimer(payload.durationSeconds)
+                        },
+                        color = PnsaInk,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+                Text(
+                    text = if (isPlaying) "Lecture…" else "Audio",
+                    color = PnsaMuted,
+                    fontSize = 10.sp,
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun WhatsAppComposerBar(
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String = "Écrire un message…",
     sending: Boolean = false,
     onSend: () -> Unit,
+    onSendVoice: ((durationSeconds: Int, audioPath: String?) -> Unit)? = null,
 ) {
+    val recorder = remember { PlatformVoiceRecorder() }
+    var isRecording by remember { mutableStateOf(false) }
+    var recordingSeconds by remember { mutableIntStateOf(0) }
+    var recordingTicks by remember { mutableIntStateOf(0) }
+    var amplitude by remember { mutableIntStateOf(40) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            recorder.cancelRecording()
+        }
+    }
+
+    LaunchedEffect(isRecording) {
+        if (isRecording) {
+            recordingSeconds = 0
+            recordingTicks = 0
+            while (isRecording) {
+                delay(200L)
+                recordingTicks += 1
+                recordingSeconds = recordingTicks / 5
+                amplitude = recorder.maxAmplitude().coerceIn(20, 100)
+            }
+        }
+    }
+
+    val startVoiceCapture = rememberEnsureAudioPermission {
+        recorder.startRecording()
+        recordingSeconds = 0
+        recordingTicks = 0
+        isRecording = true
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -329,72 +539,184 @@ fun WhatsAppComposerBar(
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.Bottom,
     ) {
-        Surface(
-            modifier = Modifier
-                .weight(1f)
-                .heightIn(min = 44.dp, max = 120.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .clipToBounds(),
-            shape = RoundedCornerShape(24.dp),
-            color = PnsaChatCanvas,
-            border = BorderStroke(1.dp, bagdeColor.copy(alpha = 0.30f)),
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clipToBounds()
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
-                contentAlignment = Alignment.CenterStart,
+        if (isRecording) {
+            IconButton(
+                onClick = {
+                    recorder.cancelRecording()
+                    isRecording = false
+                    recordingSeconds = 0
+                    recordingTicks = 0
+                },
+                modifier = Modifier.size(44.dp),
+                colors = IconButtonDefaults.iconButtonColors(
+                    contentColor = PnsaPink,
+                    containerColor = PnsaPink.copy(alpha = 0.12f),
+                ),
             ) {
-                BasicTextField(
-                    value = value,
-                    onValueChange = onValueChange,
-                    maxLines = 4,
-                    cursorBrush = SolidColor(bagdeColor),
-                    textStyle = TextStyle(color = PnsaInk, fontSize = 15.sp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clipToBounds(),
-                    decorationBox = { innerTextField ->
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clipToBounds(),
-                            contentAlignment = Alignment.CenterStart,
-                        ) {
-                            if (value.isEmpty()) {
-                                Text(
-                                    text = placeholder,
-                                    color = PnsaMuted,
-                                    fontSize = 14.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                            innerTextField()
-                        }
-                    },
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Annuler le vocal",
+                    modifier = Modifier.size(20.dp),
                 )
             }
-        }
-        Spacer(Modifier.width(8.dp))
-        IconButton(
-            onClick = {
-                if (value.isNotBlank() && !sending) {
-                    onSend()
+            Spacer(Modifier.width(8.dp))
+            Surface(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .clipToBounds(),
+                shape = RoundedCornerShape(24.dp),
+                color = PnsaChatCanvas,
+                border = BorderStroke(1.dp, PnsaPink.copy(alpha = 0.45f)),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (recordingTicks % 4 < 2) Color(0xFFE53935) else Color(0xFFE53935).copy(alpha = 0.3f),
+                                ),
+                        )
+                        Text(
+                            text = formatVoiceTimer(recordingSeconds),
+                            color = PnsaInk,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                        )
+                    }
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 12.dp)
+                            .height(22.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                    ) {
+                        val baseWave = listOf(8, 14, 18, 10, 20, 12, 16, 20, 9, 15, 19, 11, 17, 13)
+                        baseWave.forEachIndexed { idx, base ->
+                            val dynamicFactor = ((recordingTicks + idx * 2) % 5) * (amplitude / 25)
+                            val barH = (base + dynamicFactor).coerceIn(6, 22)
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(barH.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .background(PnsaPink),
+                            )
+                        }
+                    }
+                    Text(
+                        text = "Enregistrement…",
+                        color = PnsaMuted,
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                    )
                 }
-            },
-            modifier = Modifier.size(44.dp),
-            colors = IconButtonDefaults.iconButtonColors(
-                contentColor = Color.White,
-                containerColor = bagdeColor,
-            ),
-        ) {
-            Icon(
-                imageVector = if (value.isBlank()) Icons.Default.Mic else Icons.Default.Send,
-                contentDescription = "Envoyer",
-                modifier = Modifier.size(20.dp),
-            )
+            }
+            Spacer(Modifier.width(8.dp))
+            IconButton(
+                onClick = {
+                    val savedPath = recorder.stopRecording()
+                    val finalDuration = recordingSeconds.coerceAtLeast(1)
+                    isRecording = false
+                    recordingSeconds = 0
+                    recordingTicks = 0
+                    onSendVoice?.invoke(finalDuration, savedPath)
+                },
+                modifier = Modifier.size(44.dp),
+                colors = IconButtonDefaults.iconButtonColors(
+                    contentColor = Color.White,
+                    containerColor = bagdeColor,
+                ),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Send,
+                    contentDescription = "Envoyer le vocal",
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        } else {
+            Surface(
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 44.dp, max = 120.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .clipToBounds(),
+                shape = RoundedCornerShape(24.dp),
+                color = PnsaChatCanvas,
+                border = BorderStroke(1.dp, bagdeColor.copy(alpha = 0.30f)),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clipToBounds()
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    BasicTextField(
+                        value = value,
+                        onValueChange = onValueChange,
+                        maxLines = 4,
+                        cursorBrush = SolidColor(bagdeColor),
+                        textStyle = TextStyle(color = PnsaInk, fontSize = 15.sp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clipToBounds(),
+                        decorationBox = { innerTextField ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clipToBounds(),
+                                contentAlignment = Alignment.CenterStart,
+                            ) {
+                                if (value.isEmpty()) {
+                                    Text(
+                                        text = placeholder,
+                                        color = PnsaMuted,
+                                        fontSize = 14.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        },
+                    )
+                }
+            }
+            Spacer(Modifier.width(8.dp))
+            IconButton(
+                onClick = {
+                    if (value.isNotBlank() && !sending) {
+                        onSend()
+                    } else if (value.isBlank() && !sending && onSendVoice != null) {
+                        startVoiceCapture()
+                    }
+                },
+                modifier = Modifier.size(44.dp),
+                colors = IconButtonDefaults.iconButtonColors(
+                    contentColor = Color.White,
+                    containerColor = bagdeColor,
+                ),
+            ) {
+                Icon(
+                    imageVector = if (value.isBlank()) Icons.Default.Mic else Icons.Default.Send,
+                    contentDescription = if (value.isBlank()) "Enregistrer un vocal" else "Envoyer",
+                    modifier = Modifier.size(20.dp),
+                )
+            }
         }
     }
 }
@@ -682,6 +1004,28 @@ fun AdviceChatScreen(id: Long, onBack: () -> Unit) {
                             persistAdviceMessages(updated)
                             value = ""
                             graph.prefs.putString("advice_draft_$id", null)
+                        }
+                    sending = false
+                }
+            },
+            onSendVoice = { durationSeconds, audioPath ->
+                val encodedVoice = VoiceMessageCodec.encode(durationSeconds, audioPath)
+                scope.launch {
+                    sending = true
+                    runCatching { graph.community.sendMessage(id, encodedVoice) }
+                        .onSuccess { load() }
+                        .onFailure {
+                            val newMsg = Message(
+                                id = (messages.size + 100).toLong(),
+                                msg = encodedVoice,
+                                userId = user?.id ?: 1L,
+                                createdAt = "12:13",
+                                status = true,
+                            )
+                            fallbackMessages.add(newMsg)
+                            val updated = fallbackMessages.toList()
+                            messages = updated
+                            persistAdviceMessages(updated)
                         }
                     sending = false
                 }

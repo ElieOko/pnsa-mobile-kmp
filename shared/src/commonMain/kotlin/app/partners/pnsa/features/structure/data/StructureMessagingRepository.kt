@@ -1,5 +1,6 @@
 package app.partners.pnsa.features.structure.data
 
+import app.partners.pnsa.core.audio.VoiceMessageCodec
 import app.partners.pnsa.core.data.KeyValueStore
 import app.partners.pnsa.core.network.AppJson
 import app.partners.pnsa.features.structure.domain.models.HealthStructure
@@ -17,6 +18,8 @@ data class StructureChatMessage(
     val fromStructure: Boolean,
     val timeLabel: String,
     val read: Boolean,
+    val audioPath: String? = null,
+    val audioDurationSeconds: Int? = null,
 )
 
 data class StructureChatPreview(
@@ -103,11 +106,16 @@ class StructureMessagingRepository(
             val structureId = structure.id ?: return@mapNotNull null
             if (!includeWithoutMessages && structureId !in threads.keys) return@mapNotNull null
             val last = threads[structureId]?.lastOrNull()
+            val previewText = if (last != null) {
+                VoiceMessageCodec.previewLabel(last.text, last.audioDurationSeconds, last.audioPath)
+            } else {
+                "Touchez pour démarrer la conversation"
+            }
             StructureChatPreview(
                 structureId = structureId,
                 structureName = structure.displayName,
                 city = structure.displayCity,
-                lastMessage = last?.text ?: "Touchez pour démarrer la conversation",
+                lastMessage = previewText,
                 lastTime = last?.timeLabel.orEmpty(),
                 unreadCount = threads[structureId]
                     ?.count { message -> message.fromStructure && !message.read }
@@ -144,6 +152,26 @@ class StructureMessagingRepository(
         return thread.toList()
     }
 
+    fun sendVoiceToStructure(
+        structure: HealthStructure,
+        durationSeconds: Int,
+        audioPath: String?,
+    ): List<StructureChatMessage> {
+        val structureId = structure.id ?: return emptyList()
+        val safeDuration = durationSeconds.coerceAtLeast(1)
+        val thread = threadFor(structure)
+        thread += newMessage(
+            structureId = structureId,
+            fromStructure = false,
+            text = VoiceMessageCodec.encode(safeDuration, audioPath),
+            read = true,
+            audioPath = audioPath,
+            audioDurationSeconds = safeDuration,
+        )
+        saveThreadsToStore()
+        return thread.toList()
+    }
+
     private fun threadFor(structure: HealthStructure): MutableList<StructureChatMessage> {
         val structureId = structure.id ?: return mutableListOf()
         return threads.getOrPut(structureId) {
@@ -163,6 +191,8 @@ class StructureMessagingRepository(
         fromStructure: Boolean,
         text: String,
         read: Boolean,
+        audioPath: String? = null,
+        audioDurationSeconds: Int? = null,
     ): StructureChatMessage {
         val id = nextId++
         val minute = (id % 60).toInt().toString().padStart(2, '0')
@@ -173,6 +203,8 @@ class StructureMessagingRepository(
             fromStructure = fromStructure,
             timeLabel = "14:$minute",
             read = read,
+            audioPath = audioPath,
+            audioDurationSeconds = audioDurationSeconds,
         )
     }
 
