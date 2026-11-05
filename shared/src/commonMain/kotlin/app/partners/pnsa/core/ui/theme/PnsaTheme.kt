@@ -41,6 +41,19 @@ val PnsaChrome = Color.White
 val PnsaChromeLift = Color(0xFFF6FBF6)
 val PnsaMuted = Color(0xFF5C6B5E)
 
+val ReperePurple = Color(0xFF6C4DFF)
+val ReperePurpleDeep = Color(0xFF4B32D4)
+val RepereCoral = Color(0xFFFF7A59)
+val RepereTeal = Color(0xFF14B8A6)
+val RepereInk = Color(0xFF241B4B)
+val RepereMuted = Color(0xFF6E6788)
+val RepereLavender = Color(0xFFF6F3FC)
+val ReperePeach = Color(0xFFFFE8DF)
+val RepereLilac = Color(0xFFE7E3FF)
+val RepereCream = Color(0xFFFFF4D8)
+val RepereMint = Color(0xFFE5F8F4)
+val ReperePink = Color(0xFFFFE4EE)
+
 val PnsaBlueRed = Brush.linearGradient(listOf(bagdeColor, Color(0xFF28C930), PnsaGreenDeep))
 val PnsaHeroBrush = Brush.verticalGradient(
     listOf(Color(0xCC0D1F10), Color(0x990E7A14), Color(0xE60D1F10)),

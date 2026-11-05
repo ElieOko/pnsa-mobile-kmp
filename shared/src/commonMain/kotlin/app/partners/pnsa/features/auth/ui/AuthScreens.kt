@@ -115,9 +115,9 @@ fun WelcomeScreen(
                 Column {
                     BrandMark()
                     Spacer(Modifier.height(16.dp))
-                    Text("PNSA", color = Color.White, fontSize = 40.sp, fontWeight = FontWeight.Bold)
+                    Text("Repère Jeunes", color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Bold)
                     Text(
-                        "Plateforme professionnelle SSR",
+                        "Ta santé, tes repères.",
                         color = Color.White.copy(alpha = 0.86f),
                         style = MaterialTheme.typography.titleMedium,
                     )

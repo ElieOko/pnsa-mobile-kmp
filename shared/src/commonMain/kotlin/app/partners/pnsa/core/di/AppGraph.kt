@@ -2,8 +2,10 @@ package app.partners.pnsa.core.di
 
 import androidx.compose.runtime.staticCompositionLocalOf
 import app.partners.pnsa.core.data.CatalogCache
+import app.partners.pnsa.core.data.FavoriteStructures
 import app.partners.pnsa.core.data.ScreenStore
 import app.partners.pnsa.core.data.UiPreferences
+import app.partners.pnsa.features.home.data.RepereSearch
 import app.partners.pnsa.core.data.createKeyValueStore
 import app.partners.pnsa.core.location.DirectionsClient
 import app.partners.pnsa.core.network.ApiClient
@@ -20,6 +22,8 @@ class AppGraph {
     private val store = createKeyValueStore()
     val session: SessionRepository = SessionRepository(store)
     val prefs: UiPreferences = UiPreferences(store)
+    val favorites: FavoriteStructures = FavoriteStructures(prefs)
+    val search: RepereSearch = RepereSearch(prefs)
     val cache: CatalogCache = CatalogCache()
     val screens: ScreenStore = ScreenStore(store)
     val api: ApiClient = ApiClient(session)

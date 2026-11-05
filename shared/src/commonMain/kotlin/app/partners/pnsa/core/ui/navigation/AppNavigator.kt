@@ -10,9 +10,9 @@ import app.partners.pnsa.core.network.AppJson
 import kotlinx.serialization.encodeToString
 
 enum class MainTab(val label: String) {
-    Structures("Carte"),
-    Messages("Discussions"),
-    Profile("Profil"),
+    Home("Accueil"),
+    Explorer("Explorer"),
+    Favorites("Favoris"),
 }
 
 sealed class AppDestination {
@@ -38,10 +38,11 @@ sealed class AppDestination {
     data object More : AppDestination()
     data object Messages : AppDestination()
     data class StructureChat(val structureId: Long) : AppDestination()
+    data object Favorites : AppDestination()
 }
 
 class AppNavigator(
-    start: AppDestination = AppDestination.Structures,
+    start: AppDestination = AppDestination.Home,
     private val onStateChanged: (() -> Unit)? = null,
 ) {
     private val authStack = mutableStateListOf(start)
@@ -49,7 +50,7 @@ class AppNavigator(
         MainTab.entries.associateWith { tab -> mutableStateListOf(rootFor(tab)) }
     private val tabHistory = mutableStateListOf<MainTab>()
 
-    var tab by mutableStateOf(tabFor(start) ?: MainTab.Structures)
+    var tab by mutableStateOf(tabFor(start) ?: MainTab.Home)
         private set
     var signedIn by mutableStateOf(true)
 
@@ -94,7 +95,7 @@ class AppNavigator(
     }
 
     fun restoreFrom(prefs: UiPreferences) {
-        val savedTab = MainTab.entries.firstOrNull { it.name == prefs.navTab } ?: MainTab.Structures
+        val savedTab = MainTab.entries.firstOrNull { it.name == prefs.navTab } ?: MainTab.Home
         val rawJson = prefs.navStacksJson.orEmpty()
         val savedStacks: Map<MainTab, List<AppDestination>> = if (rawJson.isNotBlank()) {
             runCatching { AppJson.decodeFromString<Map<String, List<String>>>(rawJson) }
@@ -172,8 +173,8 @@ class AppNavigator(
                     return true
                 }
             }
-            if (tab != MainTab.Structures) {
-                tab = MainTab.Structures
+            if (tab != MainTab.Home) {
+                tab = MainTab.Home
                 onStateChanged?.invoke()
                 return true
             }
@@ -209,26 +210,27 @@ class AppNavigator(
     fun title(): String = titleFor(current)
 
     private fun rootFor(tab: MainTab): AppDestination = when (tab) {
-        MainTab.Structures -> AppDestination.Structures
-        MainTab.Messages -> AppDestination.Messages
-        MainTab.Profile -> AppDestination.Profile
+        MainTab.Home -> AppDestination.Home
+        MainTab.Explorer -> AppDestination.Structures
+        MainTab.Favorites -> AppDestination.Favorites
     }
 
     private fun isTabRoot(destination: AppDestination): Boolean = when (destination) {
+        AppDestination.Home,
         AppDestination.Structures,
-        AppDestination.Messages,
-        AppDestination.Profile,
+        AppDestination.Favorites,
         -> true
         else -> false
     }
 
     fun tabFor(destination: AppDestination): MainTab? = when (destination) {
-        AppDestination.Structures, is AppDestination.StructureDetail -> MainTab.Structures
+        AppDestination.Home -> MainTab.Home
+        AppDestination.Structures, is AppDestination.StructureDetail -> MainTab.Explorer
+        AppDestination.Favorites -> MainTab.Favorites
         AppDestination.Messages,
         is AppDestination.StructureChat,
         AppDestination.Advice,
         is AppDestination.AdviceChat,
-        -> MainTab.Messages
         AppDestination.Profile,
         AppDestination.ProfileEdit,
         AppDestination.Orientations,
@@ -240,19 +242,19 @@ class AppNavigator(
         AppDestination.PublicLegal,
         AppDestination.Learn,
         is AppDestination.ContentDetail,
-        AppDestination.Home,
-        -> MainTab.Profile
+        -> MainTab.Home
         else -> null
     }
 }
 
 fun titleFor(destination: AppDestination): String = when (destination) {
-    AppDestination.Welcome -> "PNSA"
+    AppDestination.Welcome -> "Repère Jeunes"
     AppDestination.Login -> "Connexion"
     AppDestination.Register -> "Inscription"
     AppDestination.PublicHelp, AppDestination.Help -> "Aide"
     AppDestination.PublicLegal -> "Confidentialité"
-    AppDestination.Home -> "PNSA"
+    AppDestination.Home -> "Repère Jeunes"
+    AppDestination.Favorites -> "Favoris"
     AppDestination.Learn -> "Apprendre"
     is AppDestination.ContentDetail -> "Contenu"
     AppDestination.Structures -> "Carte"
@@ -288,6 +290,7 @@ private fun encodeDestination(destination: AppDestination): String? = when (dest
     AppDestination.PublicLegal -> "PublicLegal"
     AppDestination.More -> "More"
     AppDestination.Home -> "Home"
+    AppDestination.Favorites -> "Favorites"
     else -> null
 }
 
@@ -314,6 +317,7 @@ private fun decodeDestination(token: String): AppDestination? {
         "PublicLegal" -> AppDestination.PublicLegal
         "More" -> AppDestination.More
         "Home" -> AppDestination.Home
+        "Favorites" -> AppDestination.Favorites
         else -> null
     }
 }

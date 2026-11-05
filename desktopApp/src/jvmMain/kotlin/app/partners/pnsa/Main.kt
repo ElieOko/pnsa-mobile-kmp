@@ -17,7 +17,7 @@ import androidx.compose.ui.window.rememberWindowState
 fun main() = application {
     Window(
         onCloseRequest = ::exitApplication,
-        title = "PNSA — Santé des adolescents",
+        title = "Repère Jeunes",
         state = rememberWindowState(size = DpSize(390.dp, 844.dp)),
     ) {
         DesktopPreview()

@@ -1,6 +1,6 @@
 package app.partners.pnsa.features.home.ui
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,243 +11,284 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Chat
-import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.partners.pnsa.core.di.LocalAppGraph
-import app.partners.pnsa.core.network.ApiException
 import app.partners.pnsa.core.ui.components.AvatarCircle
-import app.partners.pnsa.core.ui.components.EmptyState
-import app.partners.pnsa.core.ui.components.ErrorState
-import app.partners.pnsa.core.ui.components.LoadingState
-import app.partners.pnsa.core.ui.components.MetaRow
-import app.partners.pnsa.core.ui.components.PageBackdrop
-import app.partners.pnsa.core.ui.components.PnsaCard
 import app.partners.pnsa.core.ui.components.PnsaScaffold
-import app.partners.pnsa.core.ui.components.SectionTitle
-import app.partners.pnsa.core.ui.components.ShortcutTile
-import app.partners.pnsa.core.ui.components.StatusBanner
 import app.partners.pnsa.core.ui.components.quietClick
 import app.partners.pnsa.core.ui.navigation.AppDestination
 import app.partners.pnsa.core.ui.navigation.AppNavigator
-import app.partners.pnsa.core.ui.theme.PnsaGreenDeep
-import app.partners.pnsa.core.ui.theme.PnsaInk
-import app.partners.pnsa.core.ui.theme.PnsaMuted
-import app.partners.pnsa.core.ui.theme.bagdeColor
-import app.partners.pnsa.core.util.excerpt
-import app.partners.pnsa.core.util.formatIsoDate
-import app.partners.pnsa.features.content.domain.models.HomeFeed
-import kotlinx.coroutines.launch
+import app.partners.pnsa.core.ui.navigation.MainTab
+import app.partners.pnsa.core.ui.theme.RepereCoral
+import app.partners.pnsa.core.ui.theme.RepereInk
+import app.partners.pnsa.core.ui.theme.RepereLavender
+import app.partners.pnsa.core.ui.theme.RepereMuted
+import app.partners.pnsa.core.ui.theme.ReperePurple
+import app.partners.pnsa.features.home.data.RepereCatalogue
+import app.partners.pnsa.features.home.data.RepereVisuel
+import org.jetbrains.compose.resources.painterResource
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(navigator: AppNavigator) {
     val graph = LocalAppGraph.current
     val user by graph.session.user.collectAsState()
-    val scope = rememberCoroutineScope()
-    var feed by remember { mutableStateOf<HomeFeed?>(null) }
-    var loading by remember { mutableStateOf(true) }
-    var refreshing by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var offlineHint by remember { mutableStateOf<String?>(null) }
+    var zone by remember { mutableStateOf(graph.search.city) }
 
-    fun load(fromRefresh: Boolean = false) {
-        scope.launch {
-            if (fromRefresh) refreshing = true else loading = true
-            error = null
-            offlineHint = null
-            runCatching {
-                val synced = runCatching { graph.catalog.syncCatalog() }.getOrNull()
-                val home = graph.catalog.home()
-                synced to home
-            }.onSuccess { (sync, home) ->
-                feed = home
-                graph.screens.home = home
-                graph.screens.homeLoaded = true
-                graph.session.saveLastSync(sync?.syncedAt ?: sync?.cursor ?: graph.catalog.lastSyncLabel())
-            }.onFailure { throwable ->
-                val cached = graph.catalog.cachedContenus()
-                if (cached.isNotEmpty()) {
-                    feed = HomeFeed(contenus = cached, faqs = graph.catalog.cachedFaqs())
-                    graph.screens.home = feed
-                    graph.screens.homeLoaded = true
-                    offlineHint = "Affichage du dernier catalogue synchronisé."
-                } else {
-                    error = (throwable as? ApiException)?.userMessage() ?: throwable.message
+    fun openExplorer(filtre: String) {
+        graph.search.open(filter = filtre, city = zone.trim(), query = "", map = true)
+        navigator.openTab(MainTab.Explorer)
+    }
+
+    PnsaScaffold(containerColor = Color.White) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .background(Color.White),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 18.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RepereWordmark()
+                    AvatarCircle(
+                        initials = user?.initials?.takeIf { it.isNotBlank() && it != "?" } ?: "RJ",
+                        color = ReperePurple,
+                        modifier = Modifier.quietClick { navigator.push(AppDestination.Profile) },
+                    )
                 }
             }
-            loading = false
-            refreshing = false
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        val cached = graph.screens.home
-        if (graph.screens.homeLoaded && cached != null) {
-            feed = cached
-            loading = false
-        } else {
-            load()
-        }
-    }
-
-    PnsaScaffold { padding ->
-        PageBackdrop {
-            PullToRefreshBox(
-                isRefreshing = refreshing,
-                onRefresh = { load(true) },
-                modifier = Modifier.padding(padding).fillMaxSize(),
-            ) {
-                when {
-                    loading && feed == null -> LoadingState("Préparation de ton accueil…")
-                    error != null && feed == null -> ErrorState(error.orEmpty(), onRetry = { load() })
-                    feed == null -> EmptyState("Rien à afficher", "Tire pour actualiser.")
-                    else -> {
-                        val data = feed!!
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            item {
-                                Spacer(Modifier.height(10.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Column {
-                                        Text(
-                                            "PNSA",
-                                            color = bagdeColor,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 24.sp,
-                                        )
-                                        Text(
-                                            "Santé Sexuelle et Reproductive",
-                                            color = PnsaMuted,
-                                            fontSize = 12.sp,
-                                        )
-                                    }
-                                    AvatarCircle(
-                                        initials = user?.initials?.takeIf { it != "?" } ?: "PN",
-                                        modifier = Modifier.quietClick { navigator.push(AppDestination.Profile) },
-                                    )
-                                }
-                                Spacer(Modifier.height(12.dp))
-                                Surface(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(22.dp),
-                                    border = BorderStroke(1.dp, bagdeColor.copy(alpha = 0.25f)),
-                                ) {
-                                    Box(
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .background(
-                                                Brush.horizontalGradient(
-                                                    listOf(bagdeColor, PnsaGreenDeep),
-                                                ),
-                                            )
-                                            .padding(20.dp),
-                                    ) {
-                                        Column {
-                                            Text(
-                                                "Salut ${user?.prenom ?: "Professionnel"}",
-                                                color = Color.White,
-                                                style = MaterialTheme.typography.headlineSmall,
-                                                fontWeight = FontWeight.Bold,
-                                            )
-                                            Spacer(Modifier.height(4.dp))
-                                            Text(
-                                                "Plateforme professionnelle SSR · Kinshasa",
-                                                color = Color.White.copy(alpha = 0.90f),
-                                                fontSize = 13.sp,
-                                            )
-                                        }
-                                    }
-                                }
-                                Spacer(Modifier.height(10.dp))
-                                StatusBanner(
-                                    "Synchronisé ${formatIsoDate(graph.catalog.lastSyncLabel())}. Un contenu nouveau sur le site apparaît ici sans mettre à jour l’application.",
-                                )
-                                offlineHint?.let {
-                                    Spacer(Modifier.height(8.dp))
-                                    StatusBanner(it)
-                                }
-                            }
-                            item {
-                                SectionTitle("Services rapides")
-                                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                                    ShortcutTile("Carte SSR", "Trouver une structure", Icons.Default.Place, { navigator.push(AppDestination.Structures) }, Modifier.weight(1f))
-                                    ShortcutTile("Discussions", "Échanges structures", Icons.Default.Chat, { navigator.push(AppDestination.Messages) }, Modifier.weight(1f))
-                                }
-                                Spacer(Modifier.height(10.dp))
-                                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                                    ShortcutTile("Apprendre", "Articles et fiches", Icons.Default.Favorite, { navigator.push(AppDestination.Learn) }, Modifier.weight(1f))
-                                    ShortcutTile("Orientations", "Suivi des références", Icons.Default.Star, { navigator.push(AppDestination.Orientations) }, Modifier.weight(1f))
-                                }
-                            }
-                            item { SectionTitle("Nouveautés") }
-                            if (data.contenus.isEmpty()) {
-                                item {
-                                    EmptyState("Aucun contenu pour le moment", "Reviens après la prochaine publication.")
-                                }
-                            }
-                            items(data.contenus, key = { it.id ?: it.libelle.orEmpty() }) { item ->
-                                PnsaCard(onClick = { item.id?.let { navigator.push(AppDestination.ContentDetail(it)) } }) {
-                                    MetaRow(listOfNotNull(item.categoryLabel, item.langue?.uppercase(), if (item.allowOffline == true) "Hors ligne" else null))
-                                    Spacer(Modifier.height(8.dp))
-                                    Text(item.title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = PnsaInk)
-                                    Spacer(Modifier.height(4.dp))
-                                    Text(excerpt(item.description), color = PnsaMuted)
-                                    Spacer(Modifier.height(8.dp))
-                                    Text(
-                                        "Version ${item.contentVersion ?: 1} · ${formatIsoDate(item.updatedAt)}",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = bagdeColor,
-                                        fontWeight = FontWeight.SemiBold,
-                                    )
-                                }
-                            }
-                            if (data.faqs.isNotEmpty()) {
-                                item { SectionTitle("Questions fréquentes") }
-                                items(data.faqs.take(4), key = { "faq-${it.id}" }) { faq ->
-                                    PnsaCard(onClick = { navigator.push(AppDestination.Help) }) {
-                                        Text(faq.libelle.orEmpty(), fontWeight = FontWeight.Bold, color = PnsaInk)
-                                        Spacer(Modifier.height(4.dp))
-                                        Text(excerpt(faq.description, 120), color = PnsaMuted)
-                                    }
-                                }
-                            }
-                            item { Spacer(Modifier.height(24.dp)) }
+            item {
+                Text(
+                    "De quoi as-tu besoin ?",
+                    color = RepereInk,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 28.sp,
+                    lineHeight = 32.sp,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Trouve un service adapté près de toi.",
+                    color = RepereMuted,
+                    fontSize = 15.sp,
+                )
+            }
+            item {
+                val hero = RepereCatalogue.hero
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(168.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .quietClick { openExplorer(hero.filtre) },
+                ) {
+                    Image(
+                        painter = painterResource(hero.image),
+                        contentDescription = hero.titre,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    Box(
+                        Modifier
+                            .align(Alignment.BottomStart)
+                            .fillMaxWidth()
+                            .background(Color(0x99000000))
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                    ) {
+                        Column {
+                            Text(hero.titre, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text(hero.detail, color = Color.White.copy(alpha = 0.92f), fontSize = 12.sp, maxLines = 2)
                         }
                     }
                 }
             }
+            item {
+                ZoneSearchField(
+                    value = zone,
+                    onValueChange = { zone = it },
+                )
+            }
+            item {
+                val besoins = RepereCatalogue.besoins
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    besoins.chunked(2).forEach { row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                            row.forEach { visuel ->
+                                BesoinCard(
+                                    visuel = visuel,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = { openExplorer(visuel.filtre) },
+                                )
+                            }
+                            if (row.size == 1) Spacer(Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+            item {
+                Button(
+                    onClick = { openExplorer("Tous") },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(26.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = ReperePurple, contentColor = Color.White),
+                ) {
+                    Text("Trouver un service", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Spacer(Modifier.width(6.dp))
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+                }
+            }
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    RepereCatalogue.cartes.forEach { visuel ->
+                        CarteRepere(
+                            visuel = visuel,
+                            onClick = { openExplorer(visuel.filtre) },
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun RepereWordmark() {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("Repère", color = ReperePurple, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp)
+        Spacer(Modifier.width(6.dp))
+        Text("Jeunes", color = RepereCoral, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp)
+    }
+}
+
+@Composable
+private fun ZoneSearchField(value: String, onValueChange: (String) -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(28.dp),
+        color = RepereLavender,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Default.Place, contentDescription = null, tint = ReperePurple, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Box(Modifier.weight(1f)) {
+                if (value.isEmpty()) {
+                    Text("Ville ou zone de santé", color = RepereMuted, fontSize = 14.sp)
+                }
+                BasicTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    singleLine = true,
+                    textStyle = TextStyle(color = RepereInk, fontSize = 14.sp),
+                    cursorBrush = SolidColor(ReperePurple),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            Icon(Icons.Default.Search, contentDescription = null, tint = RepereMuted, modifier = Modifier.size(18.dp))
+        }
+    }
+}
+
+@Composable
+private fun BesoinCard(visuel: RepereVisuel, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Surface(
+        modifier = modifier.height(132.dp).quietClick(onClick = onClick),
+        shape = RoundedCornerShape(22.dp),
+        color = visuel.fond,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Image(
+                painter = painterResource(visuel.image),
+                contentDescription = visuel.titre,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.size(62.dp).clip(CircleShape),
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                visuel.titre,
+                color = RepereInk,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+                lineHeight = 16.sp,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CarteRepere(visuel: RepereVisuel, onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().quietClick(onClick = onClick),
+        shape = RoundedCornerShape(22.dp),
+        color = visuel.fond,
+    ) {
+        Row(
+            modifier = Modifier.padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Image(
+                painter = painterResource(visuel.image),
+                contentDescription = visuel.titre,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.size(72.dp).clip(RoundedCornerShape(16.dp)),
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(visuel.titre, color = RepereInk, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Spacer(Modifier.height(2.dp))
+                Text(visuel.detail, color = RepereMuted, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = ReperePurple,
+            )
         }
     }
 }

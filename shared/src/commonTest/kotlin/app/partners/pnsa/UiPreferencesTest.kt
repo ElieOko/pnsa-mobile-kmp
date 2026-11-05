@@ -1,7 +1,9 @@
 package app.partners.pnsa
 
+import app.partners.pnsa.core.data.FavoriteStructures
 import app.partners.pnsa.core.data.KeyValueStore
 import app.partners.pnsa.core.data.UiPreferences
+import app.partners.pnsa.features.home.data.matchesFiltre
 import app.partners.pnsa.core.ui.map.MapViewStyle
 import app.partners.pnsa.core.ui.navigation.AppDestination
 import app.partners.pnsa.core.ui.navigation.AppNavigator
@@ -70,28 +72,38 @@ class UiPreferencesTest {
         assertEquals(Color(0xFF1AB221), bagdeColor)
         val store = MemoryStore()
         val prefs = UiPreferences(store)
-        val nav = AppNavigator(AppDestination.Structures, onStateChanged = { })
-        assertEquals(MainTab.Structures, nav.tab)
-        nav.push(AppDestination.Messages)
-        assertEquals(MainTab.Messages, nav.tab)
+        val nav = AppNavigator(AppDestination.Home, onStateChanged = { })
+        assertEquals(MainTab.Home, nav.tab)
+        nav.push(AppDestination.Structures)
+        assertEquals(MainTab.Explorer, nav.tab)
+        nav.push(AppDestination.StructureDetail(12))
+        assertEquals(AppDestination.StructureDetail(12), nav.current)
         nav.push(AppDestination.Profile)
-        assertEquals(MainTab.Profile, nav.tab)
-        nav.push(AppDestination.Advice)
-        assertEquals(MainTab.Messages, nav.tab)
+        assertEquals(MainTab.Home, nav.tab)
+        assertEquals(AppDestination.Profile, nav.current)
         nav.saveTo(prefs)
 
-        val restored = AppNavigator(AppDestination.Structures)
+        val restored = AppNavigator(AppDestination.Home)
         restored.restoreFrom(prefs)
-        assertEquals(MainTab.Messages, restored.tab)
-        assertEquals(AppDestination.Advice, restored.current)
-
-        // Back navigation pops sub-screens, then returns across tab history, then returns false at root for double-back exit
+        assertEquals(MainTab.Home, restored.tab)
+        assertEquals(AppDestination.Profile, restored.current)
         assertEquals(true, restored.navigateBack())
-        assertEquals(AppDestination.Messages, restored.current)
-        assertEquals(true, restored.navigateBack())
-        assertEquals(MainTab.Structures, restored.tab)
-        assertEquals(AppDestination.Structures, restored.current)
+        assertEquals(AppDestination.Home, restored.current)
         assertEquals(false, restored.navigateBack())
+
+        val live = AppNavigator(AppDestination.Home)
+        live.openTab(MainTab.Explorer)
+        live.push(AppDestination.StructureDetail(4))
+        live.openTab(MainTab.Favorites)
+        assertEquals(MainTab.Favorites, live.tab)
+        assertEquals(true, live.navigateBack())
+        assertEquals(MainTab.Explorer, live.tab)
+        assertEquals(AppDestination.StructureDetail(4), live.current)
+        assertEquals(true, live.navigateBack())
+        assertEquals(AppDestination.Structures, live.current)
+        assertEquals(true, live.navigateBack())
+        assertEquals(MainTab.Home, live.tab)
+        assertEquals(false, live.navigateBack())
     }
 
     @Test
@@ -120,5 +132,24 @@ class UiPreferencesTest {
         assertEquals("00:09", app.partners.pnsa.core.audio.formatVoiceTimer(lastVoice.audioDurationSeconds ?: 0))
         val preview = reloadedRepo.previews(listOf(center), includeWithoutMessages = true).first()
         assertEquals("Message vocal (00:09)", preview.lastMessage)
+    }
+
+    @Test
+    fun repereFiltersAndFavoritesMatchTheYouthCatalogue() {
+        assertEquals(true, matchesFiltre("Préservatif masculin . Pilule COC", "Contraception"))
+        assertEquals(true, matchesFiltre("Prise en charge IST/VIH", "IST et VIH"))
+        assertEquals(true, matchesFiltre("IEC / CCC", "Conseil"))
+        assertEquals(true, matchesFiltre("Prise en charge VBG", "Violence"))
+        assertEquals(false, matchesFiltre("Consultation prénatale (CPN)", "Violence"))
+        assertEquals(true, matchesFiltre(null, "Tous"))
+
+        val prefs = UiPreferences(MemoryStore())
+        val favorites = FavoriteStructures(prefs)
+        favorites.toggle(-1009L)
+        favorites.toggle(-1018L)
+        assertEquals(setOf(-1009L, -1018L), favorites.ids)
+        favorites.toggle(-1009L)
+        val reloaded = FavoriteStructures(prefs)
+        assertEquals(setOf(-1018L), reloaded.ids)
     }
 }

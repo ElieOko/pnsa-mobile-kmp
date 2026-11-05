@@ -68,6 +68,8 @@ import app.partners.pnsa.core.ui.theme.PnsaInk
 import app.partners.pnsa.core.ui.theme.PnsaMuted
 import app.partners.pnsa.core.ui.theme.PnsaPink
 import app.partners.pnsa.core.ui.theme.PnsaPinkDeep
+import app.partners.pnsa.core.ui.theme.RepereCoral
+import app.partners.pnsa.core.ui.theme.ReperePurple
 import app.partners.pnsa.core.ui.theme.PnsaPinkSoft
 import app.partners.pnsa.core.ui.theme.PnsaRed
 import app.partners.pnsa.core.ui.theme.bagdeColor
@@ -332,7 +334,7 @@ fun KinshasaGpsMap(
                     image = markerLogo,
                     dstOffset = IntOffset((p.x - markerSize / 2f).toInt(), (p.y - markerSize / 2f).toInt()),
                     dstSize = IntSize(markerSize, markerSize),
-                    colorFilter = ColorFilter.tint(if (active) PnsaPink else PnsaPinkDeep),
+                    colorFilter = ColorFilter.tint(if (active) ReperePurple else RepereCoral),
                 )
             }
 
