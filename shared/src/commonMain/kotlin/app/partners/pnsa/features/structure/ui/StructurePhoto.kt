@@ -73,6 +73,7 @@ private val photoInflight = mutableSetOf<String>()
 private val photoPromote = mutableSetOf<String>()
 private val photoFailed = mutableSetOf<String>()
 private val photoMemory = mutableSetOf<String>()
+private val photoRetained = LinkedHashSet<String>()
 private var photoWorkers = 0
 private val photoDisk = StructurePhotoDisk()
 
@@ -159,8 +160,7 @@ private suspend fun publishStructurePhoto(url: String, bitmap: ImageBitmap) {
         structurePhotoBitmaps.remove(url)
         structurePhotoBitmaps[url] = bitmap
         while (structurePhotoBitmaps.size > PHOTO_CACHE_SIZE) {
-            val eldest = structurePhotoBitmaps.keys.firstOrNull() ?: break
-            if (eldest == url) break
+            val eldest = structurePhotoBitmaps.keys.firstOrNull { it != url && it !in photoRetained } ?: break
             structurePhotoBitmaps.remove(eldest)
             evicted += eldest
         }
@@ -176,6 +176,14 @@ private suspend fun downloadStructurePhoto(url: String): ByteArray? = runCatchin
     if (response.status.isSuccess()) response.bodyAsBytes() else null
 }.getOrNull()
 
+private fun retainStructurePhoto(url: String) {
+    photoRetained.remove(url)
+    photoRetained.add(url)
+    while (photoRetained.size > 96) {
+        photoRetained.remove(photoRetained.first())
+    }
+}
+
 internal fun structurePhotoKey(url: String): String {
     val id = url.substringAfter("/files/", "").substringBefore("?").filter { it.isDigit() }
     return id.ifEmpty { url.hashCode().toUInt().toString(16) }
@@ -189,14 +197,20 @@ fun StructureCover(
 ) {
     val url = structure.photoUrl?.takeIf { it.isNotBlank() }
     val bitmap = url?.let { structurePhotoBitmaps[it] }
+    var shown by remember(url) { mutableStateOf(bitmap) }
+    if (bitmap != null) shown = bitmap
     var expanded by remember(url) { mutableStateOf(false) }
-    LaunchedEffect(url, bitmap) {
-        if (url != null && bitmap == null) prefetchStructurePhotos(listOf(url))
+    LaunchedEffect(url) {
+        if (url != null) retainStructurePhoto(url)
+    }
+    LaunchedEffect(url, shown) {
+        if (url != null && shown == null) prefetchStructurePhotos(listOf(url))
     }
     val open = modifier.quietClick { expanded = true }
-    if (bitmap != null) {
+    val display = shown
+    if (display != null) {
         Image(
-            bitmap = bitmap,
+            bitmap = display,
             contentDescription = contentDescription,
             contentScale = ContentScale.Crop,
             modifier = open,
@@ -205,7 +219,7 @@ fun StructureCover(
         PhotoLoading(open)
     }
     if (expanded) {
-        StructurePhotoViewer(bitmap, contentDescription, onClose = { expanded = false })
+        StructurePhotoViewer(display, contentDescription, onClose = { expanded = false })
     }
 }
 

@@ -40,6 +40,12 @@ import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
 import app.partners.pnsa.shared.R
 
+private object SavedMapCamera {
+    var latitude: Double? = null
+    var longitude: Double? = null
+    var zoom: Float? = null
+}
+
 private class GoogleMapState {
     var map: GoogleMap? = null
     var lastIds: List<Long?> = emptyList()
@@ -123,6 +129,12 @@ actual fun PlatformStructureMap(
                         state.selectedMarkerIcon = runCatching { createMarkerIcon(context, selected = true) }.getOrNull()
                     }
                     configureMap(googleMap)
+                    googleMap.setOnCameraIdleListener {
+                        val camera = googleMap.cameraPosition
+                        SavedMapCamera.latitude = camera.target.latitude
+                        SavedMapCamera.longitude = camera.target.longitude
+                        SavedMapCamera.zoom = camera.zoom
+                    }
                     googleMap.setOnCameraMoveStartedListener { reason ->
                         if (reason == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE) {
                             onFollowInterrupted()
@@ -163,7 +175,14 @@ private fun configureMap(map: GoogleMap) {
     }
     map.setMinZoomPreference(11f)
     map.setMaxZoomPreference(18f)
-    map.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(-4.3276, 15.3136), 15.8f))
+    val savedLat = SavedMapCamera.latitude
+    val savedLon = SavedMapCamera.longitude
+    val savedZoom = SavedMapCamera.zoom
+    if (savedLat != null && savedLon != null && savedZoom != null) {
+        map.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(savedLat, savedLon), savedZoom))
+    } else {
+        map.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(-4.3276, 15.3136), 15.8f))
+    }
 }
 
 private fun bindGoogleMap(

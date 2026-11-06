@@ -193,7 +193,24 @@ private fun PnsaRoot() {
 }
 
 @Composable
+private fun ExplorerTab(navigator: AppNavigator, onBack: () -> Unit) {
+    val dest = navigator.currentFor(MainTab.Explorer)
+    Box(Modifier.fillMaxSize()) {
+        KeepAlivePane(visible = dest == AppDestination.Structures) {
+            StructureListScreen(navigator)
+        }
+        if (dest is AppDestination.StructureDetail) {
+            StructureDetailScreen(dest.id, navigator, onBack = onBack)
+        }
+    }
+}
+
+@Composable
 private fun SignedInFlow(navigator: AppNavigator, tab: MainTab, onBack: () -> Unit) {
+    if (tab == MainTab.Explorer) {
+        ExplorerTab(navigator, onBack)
+        return
+    }
     when (val dest = navigator.currentFor(tab)) {
         AppDestination.Home -> HomeScreen(navigator)
         AppDestination.Favorites -> FavoritesScreen(navigator)
