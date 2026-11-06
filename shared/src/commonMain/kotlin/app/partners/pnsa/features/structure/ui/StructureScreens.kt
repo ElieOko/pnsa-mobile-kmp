@@ -698,14 +698,6 @@ fun StructureDetailScreen(id: Long, navigator: AppNavigator, onBack: () -> Unit)
                             Spacer(Modifier.height(8.dp))
                             StatusBanner("Coordonnées GPS non renseignées. La fiche reste consultable.")
                         }
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "Signaler une erreur",
-                            color = RepereMuted,
-                            fontSize = 13.sp,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth().quietClick { navigator.push(AppDestination.Help) }.padding(vertical = 8.dp),
-                        )
                         if (!structure.email.isNullOrBlank()) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Email, contentDescription = null, tint = ReperePurple, modifier = Modifier.size(18.dp))

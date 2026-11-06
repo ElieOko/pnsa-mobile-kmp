@@ -98,10 +98,7 @@ fun MoreMenuScreen(navigator: AppNavigator) {
                 ShortcutTile("Carte", "Trouver une structure", Icons.Default.Map, { navigator.push(AppDestination.Structures) }, Modifier.weight(1f))
                 ShortcutTile("Messagerie", "Chat avec une structure", Icons.Default.Chat, { navigator.push(AppDestination.Messages) }, Modifier.weight(1f))
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                ShortcutTile("Orientations", "Mes références", Icons.Default.Place, { navigator.push(AppDestination.Orientations) }, Modifier.weight(1f))
-                ShortcutTile("Profil", "Compte et choix", Icons.Default.Edit, { navigator.push(AppDestination.Profile) }, Modifier.weight(1f))
-            }
+            ShortcutTile("Orientations", "Mes références", Icons.Default.Place, { navigator.push(AppDestination.Orientations) })
             ShortcutTile("Aide", "FAQ, contact, limites", Icons.Default.Help, { navigator.push(AppDestination.Help) })
             StatusBanner("Ce service informe et oriente. Il ne remplace pas une consultation ni une urgence médicale.")
         }

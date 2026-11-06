@@ -4,8 +4,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.useContents
 import kotlinx.coroutines.channels.awaitClose
@@ -22,6 +20,9 @@ import platform.darwin.NSObject
 
 private fun CLAuthorizationStatus.isGranted(): Boolean =
     this == kCLAuthorizationStatusAuthorizedWhenInUse || this == kCLAuthorizationStatusAuthorizedAlways
+
+private val locationGrantedState = mutableStateOf(false)
+private var locationRequestStarted = false
 
 @OptIn(ExperimentalForeignApi::class)
 private class IosLocationDelegate(
@@ -43,19 +44,19 @@ private class IosLocationDelegate(
 
 @Composable
 actual fun rememberLocationGranted(): Boolean {
-    var granted by remember { mutableStateOf(false) }
+    val granted by locationGrantedState
     DisposableEffect(Unit) {
         val manager = CLLocationManager()
         val delegate = IosLocationDelegate(
-            onAuthorized = { granted = it },
+            onAuthorized = { locationGrantedState.value = it },
             onLocation = {},
         )
         manager.delegate = delegate
         val status = manager.authorizationStatus
-        if (status == kCLAuthorizationStatusNotDetermined) {
+        locationGrantedState.value = status.isGranted()
+        if (status == kCLAuthorizationStatusNotDetermined && !locationRequestStarted) {
+            locationRequestStarted = true
             manager.requestWhenInUseAuthorization()
-        } else {
-            granted = status.isGranted()
         }
         onDispose { manager.delegate = null }
     }

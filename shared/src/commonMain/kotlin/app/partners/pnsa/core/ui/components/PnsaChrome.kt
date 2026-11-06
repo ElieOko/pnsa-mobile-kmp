@@ -22,7 +22,6 @@ import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shield
@@ -186,7 +185,6 @@ fun PnsaDrawerContent(
             DrawerItem("Discussions", Icons.Default.Chat) { onDestination(AppDestination.Messages) }
             HorizontalDivider(color = bagdeColor.copy(alpha = 0.12f), modifier = Modifier.padding(vertical = 8.dp))
             DrawerItem("Mes orientations", Icons.Default.Place) { onDestination(AppDestination.Orientations) }
-            DrawerItem("Profil", Icons.Default.Person) { onDestination(AppDestination.Profile) }
             DrawerItem("Aide", Icons.Default.Help) { onDestination(AppDestination.Help) }
             DrawerItem("Confidentialité", Icons.Default.Shield) { onDestination(AppDestination.PublicLegal) }
             if (showLogout) {

@@ -48,7 +48,6 @@ import app.partners.pnsa.core.di.LocalAppGraph
 import app.partners.pnsa.core.ui.components.AvatarCircle
 import app.partners.pnsa.core.ui.components.PnsaScaffold
 import app.partners.pnsa.core.ui.components.quietClick
-import app.partners.pnsa.core.ui.navigation.AppDestination
 import app.partners.pnsa.core.ui.navigation.AppNavigator
 import app.partners.pnsa.core.ui.navigation.MainTab
 import app.partners.pnsa.core.ui.theme.RepereCoral
@@ -90,7 +89,6 @@ fun HomeScreen(navigator: AppNavigator) {
                     AvatarCircle(
                         initials = user?.initials?.takeIf { it.isNotBlank() && it != "?" } ?: "RJ",
                         color = ReperePurple,
-                        modifier = Modifier.quietClick { navigator.push(AppDestination.Profile) },
                     )
                 }
             }
