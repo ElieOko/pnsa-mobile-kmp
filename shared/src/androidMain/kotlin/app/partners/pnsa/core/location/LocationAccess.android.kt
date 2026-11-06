@@ -6,10 +6,14 @@ import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.core.content.ContextCompat
 import app.partners.pnsa.AndroidAppContext
 import com.google.android.gms.location.LocationCallback
@@ -48,15 +52,26 @@ actual fun rememberLocationGranted(): Boolean {
             ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
         }
     }
-    LaunchedEffect(Unit) {
-        val allowed = locationPermissions.any { permission ->
-            ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
-        }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    fun allowedNow(): Boolean = locationPermissions.any { permission ->
+        ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+    }
+    fun requestIfNeeded(allowed: Boolean) {
+        val wasGranted = locationGrantedState.value
         locationGrantedState.value = allowed
+        if (!allowed && wasGranted) locationRequestStarted = false
         if (!allowed && !locationRequestStarted) {
             locationRequestStarted = true
             launcher.launch(locationPermissions)
         }
+    }
+    LaunchedEffect(Unit) { requestIfNeeded(allowedNow()) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) requestIfNeeded(allowedNow())
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     return granted
 }

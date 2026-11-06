@@ -25,6 +25,7 @@
             android:value="AIzaSyBtJ_UIIACwrn6lDgoHYsoDaeBIsr-HKTE" />
         <activity
             android:exported="true"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode|density|fontScale"
             android:windowSoftInputMode="adjustResize"
             android:name=".MainActivity">
             <intent-filter>
