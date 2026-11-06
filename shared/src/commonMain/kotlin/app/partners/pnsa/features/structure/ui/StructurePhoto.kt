@@ -5,10 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -19,13 +16,17 @@ import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsBytes
 import io.ktor.http.isSuccess
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-private const val PHOTO_MAX_EDGE = 960
-private const val PHOTO_CACHE_SIZE = 36
+private const val PHOTO_MAX_EDGE = 720
+private const val PHOTO_CACHE_SIZE = 64
+private const val PHOTO_PARALLEL = 3
 
 private val photoClient = platformHttpClient {
     expectSuccess = false
@@ -36,37 +37,112 @@ private val photoClient = platformHttpClient {
     }
 }
 
-private val photoMutex = Mutex()
-private val photoCache = LinkedHashMap<String, ImageBitmap>()
+private val photoScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+private val photoGate = Mutex()
+private val photoQueue = ArrayDeque<String>()
+private val photoInflight = mutableSetOf<String>()
+private val photoFailed = mutableSetOf<String>()
+private val photoMemory = mutableSetOf<String>()
+private var photoWorkers = 0
+private val photoDisk = StructurePhotoDisk()
 
-private suspend fun cachedPhoto(url: String): ImageBitmap? = photoMutex.withLock { photoCache[url] }
+internal val structurePhotoBitmaps = mutableStateMapOf<String, ImageBitmap>()
 
-private suspend fun storePhoto(url: String, image: ImageBitmap) {
-    photoMutex.withLock {
-        photoCache.remove(url)
-        photoCache[url] = image
-        while (photoCache.size > PHOTO_CACHE_SIZE) {
-            val eldest = photoCache.entries.firstOrNull()?.key ?: break
-            photoCache.remove(eldest)
+internal class DecodedStructurePhoto(val bitmap: ImageBitmap, val jpeg: ByteArray)
+
+internal expect class StructurePhotoDisk() {
+    fun read(key: String): ByteArray?
+    fun write(key: String, bytes: ByteArray)
+}
+
+internal expect fun decodeStructurePhoto(bytes: ByteArray, maxEdge: Int): DecodedStructurePhoto
+
+fun prefetchStructurePhotos(urls: List<String>, ahead: Boolean = true) {
+    val wanted = urls.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+    if (wanted.isEmpty()) return
+    photoScope.launch {
+        photoGate.withLock {
+            val ordered = if (ahead) wanted.asReversed() else wanted
+            for (url in ordered) {
+                if (ahead) photoFailed.remove(url)
+                if (url in photoMemory || url in photoInflight || url in photoFailed) continue
+                photoQueue.remove(url)
+                if (ahead) photoQueue.addFirst(url) else photoQueue.addLast(url)
+            }
+            while (photoWorkers < PHOTO_PARALLEL && photoQueue.isNotEmpty()) {
+                photoWorkers++
+                launchPhotoWorker()
+            }
         }
     }
 }
 
-internal suspend fun loadStructurePhoto(url: String): ImageBitmap? {
-    cachedPhoto(url)?.let { return it }
-    val bytes = runCatching {
-        val response = photoClient.get(url)
-        if (!response.status.isSuccess()) return null
-        response.bodyAsBytes()
-    }.getOrNull() ?: return null
-    val image = runCatching {
-        withContext(Dispatchers.Default) { decodeStructurePhoto(bytes, PHOTO_MAX_EDGE) }
-    }.getOrNull() ?: return null
-    storePhoto(url, image)
-    return image
+private fun launchPhotoWorker() {
+    photoScope.launch {
+        while (true) {
+            val url = photoGate.withLock {
+                val next = photoQueue.removeFirstOrNull()
+                if (next == null) {
+                    photoWorkers--
+                    null
+                } else {
+                    photoInflight += next
+                    next
+                }
+            } ?: return@launch
+            val loaded = runCatching { loadStructurePhoto(url) }.getOrDefault(false)
+            photoGate.withLock {
+                photoInflight -= url
+                if (!loaded) photoFailed += url
+            }
+        }
+    }
 }
 
-expect fun decodeStructurePhoto(bytes: ByteArray, maxEdge: Int): ImageBitmap
+private suspend fun loadStructurePhoto(url: String): Boolean {
+    val key = structurePhotoKey(url)
+    val cached = withContext(Dispatchers.Default) { runCatching { photoDisk.read(key) }.getOrNull() }
+    val decoded = if (cached != null) {
+        runCatching { decodeStructurePhoto(cached, PHOTO_MAX_EDGE) }.getOrNull()
+    } else {
+        null
+    } ?: run {
+        val bytes = downloadStructurePhoto(url) ?: return false
+        val fresh = runCatching { decodeStructurePhoto(bytes, PHOTO_MAX_EDGE) }.getOrNull() ?: return false
+        withContext(Dispatchers.Default) { runCatching { photoDisk.write(key, fresh.jpeg) } }
+        fresh
+    }
+    publishStructurePhoto(url, decoded.bitmap)
+    return true
+}
+
+private suspend fun publishStructurePhoto(url: String, bitmap: ImageBitmap) {
+    val evicted = mutableListOf<String>()
+    withContext(Dispatchers.Main.immediate) {
+        structurePhotoBitmaps.remove(url)
+        structurePhotoBitmaps[url] = bitmap
+        while (structurePhotoBitmaps.size > PHOTO_CACHE_SIZE) {
+            val eldest = structurePhotoBitmaps.keys.firstOrNull() ?: break
+            if (eldest == url) break
+            structurePhotoBitmaps.remove(eldest)
+            evicted += eldest
+        }
+    }
+    photoGate.withLock {
+        photoMemory += url
+        photoMemory -= evicted.toSet()
+    }
+}
+
+private suspend fun downloadStructurePhoto(url: String): ByteArray? = runCatching {
+    val response = photoClient.get(url)
+    if (response.status.isSuccess()) response.bodyAsBytes() else null
+}.getOrNull()
+
+internal fun structurePhotoKey(url: String): String {
+    val id = url.substringAfter("/files/", "").substringBefore("?").filter { it.isDigit() }
+    return id.ifEmpty { url.hashCode().toUInt().toString(16) }
+}
 
 @Composable
 fun StructureCover(
@@ -75,14 +151,13 @@ fun StructureCover(
     modifier: Modifier = Modifier,
 ) {
     val url = structure.photoUrl?.takeIf { it.isNotBlank() }
-    var bitmap by remember(url) { mutableStateOf<ImageBitmap?>(null) }
+    val bitmap = url?.let { structurePhotoBitmaps[it] }
     LaunchedEffect(url) {
-        bitmap = if (url == null) null else loadStructurePhoto(url)
+        if (url != null) prefetchStructurePhotos(listOf(url))
     }
-    val loaded = bitmap
-    if (loaded != null) {
+    if (bitmap != null) {
         Image(
-            bitmap = loaded,
+            bitmap = bitmap,
             contentDescription = contentDescription,
             contentScale = ContentScale.Crop,
             modifier = modifier,

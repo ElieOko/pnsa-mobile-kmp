@@ -55,7 +55,9 @@ import app.partners.pnsa.features.structure.ui.OrientationListScreen
 import app.partners.pnsa.features.structure.ui.StructureChatScreen
 import app.partners.pnsa.features.structure.ui.StructureConversationsScreen
 import app.partners.pnsa.features.structure.ui.StructureDetailScreen
+import app.partners.pnsa.features.structure.data.KinshasaCenters
 import app.partners.pnsa.features.structure.ui.StructureListScreen
+import app.partners.pnsa.features.structure.ui.prefetchStructurePhotos
 import app.partners.pnsa.features.user.ui.HelpScreen
 import app.partners.pnsa.features.user.ui.ProfileEditScreen
 import app.partners.pnsa.features.user.ui.ProfileScreen
@@ -86,6 +88,12 @@ private fun PnsaRoot() {
     }
     val visited = remember { mutableStateListOf(navigator.tab) }
     var exitPending by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        val urls = KinshasaCenters.all.mapNotNull { it.photoUrl }
+        prefetchStructurePhotos(urls.take(18))
+        prefetchStructurePhotos(urls.drop(18), ahead = false)
+    }
 
     LaunchedEffect(navigator.tab, navigator.current) {
         if (navigator.tab !in visited) visited += navigator.tab

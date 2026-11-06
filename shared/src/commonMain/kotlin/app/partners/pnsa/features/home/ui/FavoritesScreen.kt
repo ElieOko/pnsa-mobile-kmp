@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -23,6 +24,7 @@ import app.partners.pnsa.core.ui.theme.RepereInk
 import app.partners.pnsa.core.ui.theme.RepereMuted
 import app.partners.pnsa.features.structure.data.KinshasaCenters
 import app.partners.pnsa.features.structure.ui.StructureVisualCard
+import app.partners.pnsa.features.structure.ui.prefetchStructurePhotos
 
 @Composable
 fun FavoritesScreen(navigator: AppNavigator) {
@@ -30,6 +32,9 @@ fun FavoritesScreen(navigator: AppNavigator) {
     val favoriteIds = graph.favorites.ids
     val structures = remember(graph.screens.structures, favoriteIds) {
         KinshasaCenters.mergeWith(graph.screens.structures).filter { it.id in favoriteIds }
+    }
+    LaunchedEffect(structures) {
+        prefetchStructurePhotos(structures.mapNotNull { it.photoUrl })
     }
 
     PnsaScaffold { padding ->

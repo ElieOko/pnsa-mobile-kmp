@@ -83,7 +83,6 @@ import app.partners.pnsa.core.ui.components.PnsaCard
 import app.partners.pnsa.core.ui.components.PnsaScaffold
 import app.partners.pnsa.core.ui.components.PnsaTextField
 import app.partners.pnsa.core.ui.components.PrimaryAction
-import app.partners.pnsa.core.ui.components.SecondaryAction
 import app.partners.pnsa.core.ui.components.StatusBanner
 import app.partners.pnsa.core.ui.components.quietClick
 import app.partners.pnsa.core.ui.map.MapViewStyle
@@ -200,6 +199,12 @@ fun StructureListScreen(navigator: AppNavigator) {
     }
     val displayedDirectoryItems = remember(filtered, visibleCount) {
         filtered.take(visibleCount)
+    }
+
+    LaunchedEffect(filtered, visibleCount) {
+        val urls = filtered.mapNotNull { it.photoUrl }
+        prefetchStructurePhotos(urls.take(visibleCount + 12))
+        prefetchStructurePhotos(urls.drop(visibleCount + 12), ahead = false)
     }
 
     // Progressive bidirectional scroll on Structures SSR directory
@@ -707,14 +712,6 @@ fun StructureDetailScreen(id: Long, navigator: AppNavigator, onBack: () -> Unit)
                                 Spacer(Modifier.width(8.dp))
                                 Text(structure.email.orEmpty(), color = RepereMuted, fontSize = 13.sp)
                             }
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        SecondaryAction("Discuter avec cette structure", enabled = structure.id != null) {
-                            structure.id?.let { navigator.push(AppDestination.StructureChat(it)) }
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        PrimaryAction("Demander une orientation") {
-                            navigator.push(AppDestination.OrientationCreate(id))
                         }
                         Spacer(Modifier.height(24.dp))
                     }
