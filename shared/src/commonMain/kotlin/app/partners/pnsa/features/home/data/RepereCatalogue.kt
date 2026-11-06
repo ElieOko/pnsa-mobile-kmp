@@ -15,7 +15,6 @@ import app.partners.pnsa.resources.photo_consultation_couple
 import app.partners.pnsa.resources.photo_consultation_femme
 import app.partners.pnsa.resources.photo_consultation_homme
 import app.partners.pnsa.resources.photo_couple_parc
-import kotlin.math.absoluteValue
 import org.jetbrains.compose.resources.DrawableResource
 
 enum class RepereRole {
@@ -128,12 +127,6 @@ object RepereCatalogue {
     val tous: List<RepereVisuel> = listOf(hero) + besoins + cartes
 
     fun byId(id: String): RepereVisuel? = tous.firstOrNull { it.id == id }
-}
-
-fun coverForStructure(id: Long?): DrawableResource {
-    val images = RepereCatalogue.tous.map { it.image }
-    val index = (id ?: 0L).absoluteValue % images.size
-    return images[index.toInt()]
 }
 
 fun HealthStructure.pastilles(): List<String> {

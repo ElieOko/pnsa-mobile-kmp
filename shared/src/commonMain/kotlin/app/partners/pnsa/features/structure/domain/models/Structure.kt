@@ -21,6 +21,7 @@ data class HealthStructure(
     val services: String? = null,
     @SerialName("structure_type") val structureType: String? = null,
     @SerialName("opening_hours") val openingHours: String? = null,
+    @SerialName("photo_url") val photoUrl: String? = null,
     @SerialName("content_version") val contentVersion: Int? = null,
     val status: String? = null,
 ) {
