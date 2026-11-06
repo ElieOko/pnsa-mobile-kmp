@@ -37,6 +37,7 @@ import app.partners.pnsa.core.ui.navigation.AppDestination
 import app.partners.pnsa.core.ui.navigation.AppNavigator
 import app.partners.pnsa.core.ui.navigation.MainTab
 import app.partners.pnsa.core.ui.navigation.SystemBackHandler
+import app.partners.pnsa.core.location.rememberLocationGranted
 import app.partners.pnsa.core.ui.navigation.exitApplication
 import app.partners.pnsa.core.ui.theme.LocalEmbeddedChrome
 import app.partners.pnsa.core.ui.theme.LocalTabActive
@@ -59,8 +60,6 @@ import app.partners.pnsa.features.structure.data.KinshasaCenters
 import app.partners.pnsa.features.structure.ui.StructureListScreen
 import app.partners.pnsa.features.structure.ui.prefetchStructurePhotos
 import app.partners.pnsa.features.user.ui.HelpScreen
-import app.partners.pnsa.features.user.ui.ProfileEditScreen
-import app.partners.pnsa.features.user.ui.ProfileScreen
 import kotlinx.coroutines.delay
 
 @Composable
@@ -88,6 +87,7 @@ private fun PnsaRoot() {
     }
     val visited = remember { mutableStateListOf(navigator.tab) }
     var exitPending by remember { mutableStateOf(false) }
+    rememberLocationGranted()
 
     LaunchedEffect(Unit) {
         val urls = KinshasaCenters.all.mapNotNull { it.photoUrl }
@@ -99,6 +99,10 @@ private fun PnsaRoot() {
         if (navigator.tab !in visited) visited += navigator.tab
         exitPending = false
         navigator.saveTo(graph.prefs)
+        when (navigator.current) {
+            AppDestination.Profile, AppDestination.ProfileEdit, AppDestination.More -> navigator.navigateBack()
+            else -> Unit
+        }
     }
 
     LaunchedEffect(exitPending) {
@@ -204,8 +208,7 @@ private fun SignedInFlow(navigator: AppNavigator, tab: MainTab, onBack: () -> Un
         is AppDestination.OrientationCreate -> OrientationCreateScreen(dest.structureId, navigator, onBack = onBack)
         AppDestination.Learn -> ContentListScreen(navigator)
         is AppDestination.ContentDetail -> ContentDetailScreen(dest.id, onBack = onBack)
-        AppDestination.Profile, AppDestination.More -> ProfileScreen(navigator)
-        AppDestination.ProfileEdit -> ProfileEditScreen(onBack = onBack)
+        AppDestination.Profile, AppDestination.ProfileEdit, AppDestination.More -> HomeScreen(navigator)
         AppDestination.Help, AppDestination.PublicHelp -> HelpScreen(onBack = onBack)
         AppDestination.PublicLegal -> LegalScreen(onBack = onBack)
         AppDestination.Welcome,

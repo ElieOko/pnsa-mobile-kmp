@@ -9,8 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import app.partners.pnsa.AndroidAppContext
@@ -28,6 +26,9 @@ private val locationPermissions = arrayOf(
     Manifest.permission.ACCESS_COARSE_LOCATION,
 )
 
+private val locationGrantedState = mutableStateOf(hasLocationPermission())
+private var locationRequestStarted = false
+
 private fun hasLocationPermission(): Boolean {
     if (!AndroidAppContext.isBound) return false
     val context = AndroidAppContext.application
@@ -39,17 +40,23 @@ private fun hasLocationPermission(): Boolean {
 @Composable
 actual fun rememberLocationGranted(): Boolean {
     val context = LocalContext.current
-    fun check(): Boolean = locationPermissions.any { permission ->
-        ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
-    }
-    var granted by remember { mutableStateOf(check()) }
+    val granted by locationGrantedState
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) {
-        granted = check()
+        locationGrantedState.value = locationPermissions.any { permission ->
+            ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+        }
     }
     LaunchedEffect(Unit) {
-        if (!granted) launcher.launch(locationPermissions)
+        val allowed = locationPermissions.any { permission ->
+            ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+        }
+        locationGrantedState.value = allowed
+        if (!allowed && !locationRequestStarted) {
+            locationRequestStarted = true
+            launcher.launch(locationPermissions)
+        }
     }
     return granted
 }
