@@ -461,12 +461,16 @@ fun QuietAction(text: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun AvatarCircle(initials: String, modifier: Modifier = Modifier) {
+fun AvatarCircle(
+    initials: String,
+    modifier: Modifier = Modifier,
+    color: Color = bagdeColor,
+) {
     Box(
         modifier
             .size(42.dp)
             .clip(CircleShape)
-            .background(bagdeColor),
+            .background(color),
         contentAlignment = Alignment.Center,
     ) {
         Text(initials, color = Color.White, fontWeight = FontWeight.Bold)

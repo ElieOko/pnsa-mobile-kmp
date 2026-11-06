@@ -17,15 +17,18 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Help
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.outlined.Chat
-import androidx.compose.material.icons.outlined.Map
-import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalDrawerSheet
@@ -52,6 +55,8 @@ import app.partners.pnsa.core.ui.navigation.MainTab
 import app.partners.pnsa.core.ui.theme.PnsaGreenDeep
 import app.partners.pnsa.core.ui.theme.PnsaInk
 import app.partners.pnsa.core.ui.theme.PnsaMuted
+import app.partners.pnsa.core.ui.theme.RepereLilac
+import app.partners.pnsa.core.ui.theme.ReperePurple
 import app.partners.pnsa.core.ui.theme.bagdeColor
 import app.partners.pnsa.core.ui.theme.wsColor
 
@@ -104,9 +109,9 @@ fun TikTokBottomBar(
         listParent.forEachIndexed { i, parent ->
             NavigationBarItem(
                 colors = NavigationBarItemDefaults.colors(
-                    indicatorColor = wsColor,
-                    selectedIconColor = bagdeColor,
-                    selectedTextColor = PnsaInk,
+                    indicatorColor = RepereLilac,
+                    selectedIconColor = ReperePurple,
+                    selectedTextColor = ReperePurple,
                     unselectedIconColor = PnsaMuted,
                     unselectedTextColor = PnsaMuted,
                 ),
@@ -135,9 +140,9 @@ fun TikTokBottomBar(
 }
 
 private fun tabIcons(tab: MainTab): Pair<ImageVector, ImageVector> = when (tab) {
-    MainTab.Structures -> Icons.Filled.Map to Icons.Outlined.Map
-    MainTab.Messages -> Icons.Filled.Chat to Icons.Outlined.Chat
-    MainTab.Profile -> Icons.Filled.Person to Icons.Outlined.Person
+    MainTab.Home -> Icons.Filled.Home to Icons.Outlined.Home
+    MainTab.Explorer -> Icons.Filled.Search to Icons.Outlined.Search
+    MainTab.Favorites -> Icons.Filled.Favorite to Icons.Outlined.FavoriteBorder
 }
 
 @Composable

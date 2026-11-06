@@ -43,6 +43,8 @@ import app.partners.pnsa.core.ui.theme.LocalTabActive
 import app.partners.pnsa.core.ui.theme.PnsaInk
 import app.partners.pnsa.core.ui.theme.PnsaTheme
 import app.partners.pnsa.features.auth.ui.LegalScreen
+import app.partners.pnsa.features.home.ui.FavoritesScreen
+import app.partners.pnsa.features.home.ui.HomeScreen
 import app.partners.pnsa.features.content.ui.ContentDetailScreen
 import app.partners.pnsa.features.content.ui.ContentListScreen
 import app.partners.pnsa.features.forum.ui.AdviceChatScreen
@@ -75,7 +77,7 @@ private fun PnsaRoot() {
     val navigator = remember {
         var navRef: AppNavigator? = null
         AppNavigator(
-            start = AppDestination.Structures,
+            start = AppDestination.Home,
             onStateChanged = { navRef?.saveTo(graph.prefs) },
         ).also { nav ->
             navRef = nav
@@ -181,6 +183,8 @@ private fun PnsaRoot() {
 @Composable
 private fun SignedInFlow(navigator: AppNavigator, tab: MainTab, onBack: () -> Unit) {
     when (val dest = navigator.currentFor(tab)) {
+        AppDestination.Home -> HomeScreen(navigator)
+        AppDestination.Favorites -> FavoritesScreen(navigator)
         AppDestination.Structures -> StructureListScreen(navigator)
         is AppDestination.StructureDetail -> StructureDetailScreen(dest.id, navigator, onBack = onBack)
         AppDestination.Messages -> StructureConversationsScreen(navigator)
@@ -196,10 +200,9 @@ private fun SignedInFlow(navigator: AppNavigator, tab: MainTab, onBack: () -> Un
         AppDestination.ProfileEdit -> ProfileEditScreen(onBack = onBack)
         AppDestination.Help, AppDestination.PublicHelp -> HelpScreen(onBack = onBack)
         AppDestination.PublicLegal -> LegalScreen(onBack = onBack)
-        AppDestination.Home,
         AppDestination.Welcome,
         AppDestination.Login,
         AppDestination.Register,
-        -> StructureListScreen(navigator)
+        -> HomeScreen(navigator)
     }
 }

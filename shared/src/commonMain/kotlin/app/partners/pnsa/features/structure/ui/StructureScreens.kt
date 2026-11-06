@@ -8,7 +8,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -28,17 +28,24 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,7 +61,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.partners.pnsa.core.di.LocalAppGraph
@@ -66,18 +77,13 @@ import app.partners.pnsa.core.location.shouldRefreshRoute
 import app.partners.pnsa.core.network.ApiException
 import app.partners.pnsa.core.ui.components.EmptyState
 import app.partners.pnsa.core.ui.components.ErrorState
-import app.partners.pnsa.core.ui.components.GpsPlaceCard
 import app.partners.pnsa.core.ui.components.InlineBackHeader
 import app.partners.pnsa.core.ui.components.KeepAlivePane
-import app.partners.pnsa.core.ui.components.KinshasaMapMath
 import app.partners.pnsa.core.ui.components.LoadingState
-import app.partners.pnsa.core.ui.components.MetaRow
 import app.partners.pnsa.core.ui.components.PageBackdrop
 import app.partners.pnsa.core.ui.components.PnsaCard
-import app.partners.pnsa.core.ui.components.PnsaChip
 import app.partners.pnsa.core.ui.components.PnsaScaffold
 import app.partners.pnsa.core.ui.components.PnsaTextField
-import app.partners.pnsa.core.ui.components.PnsaTopBar
 import app.partners.pnsa.core.ui.components.PrimaryAction
 import app.partners.pnsa.core.ui.components.SecondaryAction
 import app.partners.pnsa.core.ui.components.StatusBanner
@@ -86,13 +92,22 @@ import app.partners.pnsa.core.ui.map.MapViewStyle
 import app.partners.pnsa.core.ui.map.PlatformStructureMap
 import app.partners.pnsa.core.ui.navigation.AppDestination
 import app.partners.pnsa.core.ui.navigation.AppNavigator
-import app.partners.pnsa.core.ui.theme.PnsaBlue
 import app.partners.pnsa.core.ui.theme.PnsaInk
 import app.partners.pnsa.core.ui.theme.PnsaMuted
-import app.partners.pnsa.core.ui.theme.PnsaPink
-import app.partners.pnsa.core.ui.theme.PnsaPinkSoft
+import app.partners.pnsa.core.ui.theme.RepereInk
+import app.partners.pnsa.core.ui.theme.RepereLavender
+import app.partners.pnsa.core.ui.theme.RepereMint
+import app.partners.pnsa.core.ui.theme.RepereMuted
+import app.partners.pnsa.core.ui.theme.ReperePink
+import app.partners.pnsa.core.ui.theme.ReperePurple
+import app.partners.pnsa.core.ui.theme.RepereTeal
 import app.partners.pnsa.core.ui.theme.bagdeColor
 import app.partners.pnsa.core.ui.theme.wsColor
+import app.partners.pnsa.features.home.data.coverForStructure
+import app.partners.pnsa.features.home.data.espaceJeunes
+import app.partners.pnsa.features.home.data.matchesFiltre
+import app.partners.pnsa.features.home.data.pastilles
+import org.jetbrains.compose.resources.painterResource
 import app.partners.pnsa.core.util.formatIsoDate
 import app.partners.pnsa.features.structure.data.KinshasaCenters
 import app.partners.pnsa.features.structure.domain.models.HealthStructure
@@ -108,9 +123,8 @@ fun StructureListScreen(navigator: AppNavigator) {
     val graph = LocalAppGraph.current
     val scope = rememberCoroutineScope()
     var items by remember { mutableStateOf(graph.screens.structures.ifEmpty { KinshasaCenters.all }) }
+    val search = graph.search
     var province by remember { mutableStateOf("") }
-    var city by remember { mutableStateOf(graph.prefs.mapCity) }
-    var query by remember { mutableStateOf(graph.prefs.mapQuery) }
     var loading by remember { mutableStateOf(!graph.screens.structuresLoaded) }
     var error by remember { mutableStateOf<String?>(null) }
     var selectedId by remember { mutableStateOf(graph.prefs.mapSelectedId ?: items.firstOrNull()?.id) }
@@ -124,8 +138,6 @@ fun StructureListScreen(navigator: AppNavigator) {
         )
     }
     var visibleCount by remember { mutableIntStateOf(INITIAL_DIRECTORY_LIMIT) }
-    var selectedServiceFilter by remember { mutableStateOf(graph.prefs.mapServiceFilter) }
-    var selectedTypeFilter by remember { mutableStateOf(graph.prefs.mapTypeFilter) }
     val directoryListState = rememberLazyListState()
 
     fun apply(list: List<HealthStructure>) {
@@ -148,8 +160,8 @@ fun StructureListScreen(navigator: AppNavigator) {
                 graph.catalog.structures(
                     perPage = 50,
                     province = province.ifBlank { null },
-                    city = city.ifBlank { null },
-                    queryText = query.ifBlank { null },
+                    city = search.city.ifBlank { null },
+                    queryText = search.query.ifBlank { null },
                 )
             }.onSuccess { apply(it.data) }
                 .onFailure { throwable ->
@@ -169,37 +181,25 @@ fun StructureListScreen(navigator: AppNavigator) {
         }
     }
 
-    val serviceFilters = remember(items) {
-        val distinctServices = items
-            .asSequence()
-            .mapNotNull { it.services }
-            .flatMap { it.split(".", ",", ";") }
-            .map { it.trim() }
-            .filter { it.isNotEmpty() && !it.equals("Aucun service renseigné", ignoreCase = true) }
-            .distinct()
-            .take(12)
-            .toList()
-        listOf("Tous") + distinctServices
+    LaunchedEffect(search.request) {
+        if (search.request > 0) {
+            showMap = search.openOnMap
+            graph.prefs.mapShowMap = search.openOnMap
+            visibleCount = INITIAL_DIRECTORY_LIMIT
+        }
     }
 
-    val typeFilters = remember(items) {
-        val distinctTypes = items.mapNotNull { it.structureType?.trim()?.takeIf { s -> s.isNotEmpty() } }.distinct().take(6)
-        listOf("Toutes") + distinctTypes
-    }
-
-    val filtered = remember(items, query, city, province, selectedServiceFilter, selectedTypeFilter) {
+    val filtered = remember(items, search.query, search.city, province, search.serviceFilter) {
         items.filter { item ->
             val haystack = listOf(item.displayName, item.displayCity, item.displayAddress, item.services, item.structureType)
                 .joinToString(" ")
                 .lowercase()
-            val matchesQuery = query.isBlank() || haystack.contains(query.lowercase())
-            val matchesCity = city.isBlank() || item.displayCity.contains(city, ignoreCase = true)
+            val matchesQuery = search.query.isBlank() || haystack.contains(search.query.lowercase())
+            val zone = listOf(item.displayCity, item.displayAddress, item.province.orEmpty()).joinToString(" ")
+            val matchesCity = search.city.isBlank() || zone.contains(search.city, ignoreCase = true)
             val matchesProvince = province.isBlank() || item.province.orEmpty().contains(province, ignoreCase = true)
-            val matchesService = selectedServiceFilter == "Tous" ||
-                item.services.orEmpty().contains(selectedServiceFilter, ignoreCase = true) ||
-                item.structureType.orEmpty().contains(selectedServiceFilter, ignoreCase = true)
-            val matchesType = selectedTypeFilter == "Toutes" || item.structureType.equals(selectedTypeFilter, ignoreCase = true)
-            matchesQuery && matchesCity && matchesProvince && matchesService && matchesType
+            val matchesService = matchesFiltre(item.services, search.serviceFilter)
+            matchesQuery && matchesCity && matchesProvince && matchesService
         }
     }
     val displayedDirectoryItems = remember(filtered, visibleCount) {
@@ -258,55 +258,32 @@ fun StructureListScreen(navigator: AppNavigator) {
                         modifier = Modifier
                             .align(Alignment.TopStart)
                             .fillMaxWidth()
-                            .padding(start = 12.dp, top = 8.dp, end = 62.dp),
+                            .padding(start = 12.dp, top = 8.dp, end = 12.dp),
                     ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        Surface(
+                            shape = RoundedCornerShape(24.dp),
+                            color = Color.White.copy(alpha = 0.96f),
+                            shadowElevation = 6.dp,
                         ) {
-                            Surface(
-                                shape = RoundedCornerShape(28.dp),
-                                color = Color.White,
-                                shadowElevation = 5.dp,
-                                border = BorderStroke(1.dp, bagdeColor.copy(alpha = 0.25f)),
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(10.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
-                                Row(
-                                    Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    PnsaChip(
-                                        label = "Carte",
-                                        selected = true,
-                                        onClick = {},
-                                    )
-                                    PnsaChip(
-                                        label = "Annuaire (${filtered.size})",
-                                        selected = false,
-                                        onClick = {
-                                            showMap = false
-                                            graph.prefs.mapShowMap = false
-                                        },
-                                    )
+                                ExplorerHeading(showMap = true) { map ->
+                                    showMap = map
+                                    graph.prefs.mapShowMap = map
                                 }
-                            }
-
-                            // Services filter chips directly below Carte & Annuaire
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .horizontalScroll(rememberScrollState()),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            ) {
-                                serviceFilters.forEach { serviceLabel ->
-                                    PnsaChip(
-                                        label = serviceLabel,
-                                        selected = selectedServiceFilter == serviceLabel,
-                                        onClick = {
-                                            selectedServiceFilter = serviceLabel
-                                            graph.prefs.mapServiceFilter = serviceLabel
-                                        },
-                                    )
+                                RepereQueryField(
+                                    value = search.query,
+                                    onValueChange = {
+                                        search.updateQuery(it)
+                                        visibleCount = INITIAL_DIRECTORY_LIMIT
+                                    },
+                                    placeholder = "Lieu ou structure",
+                                )
+                                RepereFilterRow(selected = search.serviceFilter) { label ->
+                                    search.updateFilter(label)
+                                    visibleCount = INITIAL_DIRECTORY_LIMIT
                                 }
                             }
                         }
@@ -316,7 +293,7 @@ fun StructureListScreen(navigator: AppNavigator) {
                     Column(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(top = 8.dp, end = 12.dp),
+                            .padding(top = 210.dp, end = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
@@ -325,7 +302,7 @@ fun StructureListScreen(navigator: AppNavigator) {
                             modifier = Modifier
                                 .size(38.dp)
                                 .clip(CircleShape)
-                                .background(if (isStandard) PnsaPink else Color.White.copy(alpha = 0.92f))
+                                .background(if (isStandard) ReperePurple else Color.White.copy(alpha = 0.92f))
                                 .quietClick {
                                     mapStyle = MapViewStyle.Standard
                                     graph.prefs.mapStyle = MapViewStyle.Standard.name
@@ -335,7 +312,7 @@ fun StructureListScreen(navigator: AppNavigator) {
                             Icon(
                                 imageVector = Icons.Default.Map,
                                 contentDescription = "Vue Standard",
-                                tint = if (isStandard) Color.White else PnsaPink,
+                                tint = if (isStandard) Color.White else ReperePurple,
                                 modifier = Modifier.size(20.dp),
                             )
                         }
@@ -345,7 +322,7 @@ fun StructureListScreen(navigator: AppNavigator) {
                             modifier = Modifier
                                 .size(38.dp)
                                 .clip(CircleShape)
-                                .background(if (isSatellite) PnsaPink else Color.White.copy(alpha = 0.92f))
+                                .background(if (isSatellite) ReperePurple else Color.White.copy(alpha = 0.92f))
                                 .quietClick {
                                     mapStyle = MapViewStyle.Satellite
                                     graph.prefs.mapStyle = MapViewStyle.Satellite.name
@@ -355,7 +332,7 @@ fun StructureListScreen(navigator: AppNavigator) {
                             Icon(
                                 imageVector = Icons.Default.Public,
                                 contentDescription = "Vue Satellite",
-                                tint = if (isSatellite) Color.White else PnsaPink,
+                                tint = if (isSatellite) Color.White else ReperePurple,
                                 modifier = Modifier.size(20.dp),
                             )
                         }
@@ -365,7 +342,7 @@ fun StructureListScreen(navigator: AppNavigator) {
                             modifier = Modifier
                                 .size(38.dp)
                                 .clip(CircleShape)
-                                .background(if (mapOnlyMode) PnsaPink else Color.White.copy(alpha = 0.92f))
+                                .background(if (mapOnlyMode) ReperePurple else Color.White.copy(alpha = 0.92f))
                                 .quietClick {
                                     mapOnlyMode = !mapOnlyMode
                                     graph.prefs.mapOnlyMode = mapOnlyMode
@@ -375,7 +352,7 @@ fun StructureListScreen(navigator: AppNavigator) {
                             Icon(
                                 imageVector = if (mapOnlyMode) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                                 contentDescription = if (mapOnlyMode) "Afficher les cartes" else "Voir uniquement la carte",
-                                tint = if (mapOnlyMode) Color.White else PnsaPink,
+                                tint = if (mapOnlyMode) Color.White else ReperePurple,
                                 modifier = Modifier.size(20.dp),
                             )
                         }
@@ -390,15 +367,15 @@ fun StructureListScreen(navigator: AppNavigator) {
                                 .size(42.dp)
                                 .quietClick(onClick = { followUser = true }),
                             shape = CircleShape,
-                            color = if (followUser) PnsaPink else Color.White,
+                            color = if (followUser) ReperePurple else Color.White,
                             shadowElevation = 5.dp,
-                            border = BorderStroke(1.dp, PnsaPink),
+                            border = BorderStroke(1.dp, ReperePurple),
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     Icons.Default.MyLocation,
                                     contentDescription = "Suivre ma position",
-                                    tint = if (followUser) Color.White else PnsaPink,
+                                    tint = if (followUser) Color.White else ReperePurple,
                                     modifier = Modifier.size(20.dp),
                                 )
                             }
@@ -428,10 +405,7 @@ fun StructureListScreen(navigator: AppNavigator) {
                             exit = fadeOut(tween(180)) + slideOutVertically(tween(180)) { it / 2 },
                         ) {
                             if (selected != null) {
-                                GpsPlaceCard(
-                                    item = selected,
-                                    onChat = selected.id?.let { id -> { navigator.push(AppDestination.StructureChat(id)) } },
-                                ) {
+                                MapPlacePreview(selected) {
                                     selected.id?.let { navigator.push(AppDestination.StructureDetail(it)) }
                                 }
                             }
@@ -450,94 +424,43 @@ fun StructureListScreen(navigator: AppNavigator) {
                     ) {
                         item {
                             Spacer(Modifier.height(8.dp))
-                            Surface(
-                                shape = RoundedCornerShape(28.dp),
-                                color = Color.White,
-                                shadowElevation = 3.dp,
-                                border = BorderStroke(1.dp, bagdeColor.copy(alpha = 0.25f)),
-                            ) {
-                                Row(
-                                    Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    PnsaChip(
-                                        label = "Carte",
-                                        selected = false,
-                                        onClick = {
-                                            showMap = true
-                                            graph.prefs.mapShowMap = true
-                                        },
-                                    )
-                                    PnsaChip(
-                                        label = "Annuaire (${filtered.size})",
-                                        selected = true,
-                                        onClick = {},
-                                    )
-                                }
+                            ExplorerHeading(showMap = false) { map ->
+                                showMap = map
+                                graph.prefs.mapShowMap = map
                             }
-                            Spacer(Modifier.height(6.dp))
-                            Row(
-                                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            ) {
-                                serviceFilters.forEach { serviceLabel ->
-                                    PnsaChip(
-                                        label = serviceLabel,
-                                        selected = selectedServiceFilter == serviceLabel,
-                                        onClick = {
-                                            selectedServiceFilter = serviceLabel
-                                            graph.prefs.mapServiceFilter = serviceLabel
-                                            visibleCount = INITIAL_DIRECTORY_LIMIT
-                                        },
-                                    )
-                                }
-                            }
-                            Spacer(Modifier.height(6.dp))
-                            InlineBackHeader(
-                                title = "Structures SSR",
-                                subtitle = "${displayedDirectoryItems.size} affichées sur ${filtered.size} structures disponibles",
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            Row(
-                                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                typeFilters.forEach { filterLabel ->
-                                    PnsaChip(
-                                        label = filterLabel,
-                                        selected = selectedTypeFilter == filterLabel,
-                                        onClick = {
-                                            selectedTypeFilter = filterLabel
-                                            graph.prefs.mapTypeFilter = filterLabel
-                                            visibleCount = INITIAL_DIRECTORY_LIMIT
-                                        },
-                                    )
-                                }
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            PnsaTextField(
-                                value = query,
+                            Spacer(Modifier.height(10.dp))
+                            RepereQueryField(
+                                value = search.query,
                                 onValueChange = {
-                                    query = it
-                                    graph.prefs.mapQuery = it
+                                    search.updateQuery(it)
                                     visibleCount = INITIAL_DIRECTORY_LIMIT
                                 },
-                                label = "Filtrer par nom, service ou commune",
+                                placeholder = "Lieu ou structure",
                             )
                             Spacer(Modifier.height(8.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Box(Modifier.weight(1f)) {
-                                    PnsaTextField(
-                                        value = city,
-                                        onValueChange = {
-                                            city = it
-                                            graph.prefs.mapCity = it
-                                            visibleCount = INITIAL_DIRECTORY_LIMIT
-                                        },
-                                        label = "Commune / ville",
-                                    )
-                                }
+                            RepereFilterRow(selected = search.serviceFilter) { label ->
+                                search.updateFilter(label)
+                                visibleCount = INITIAL_DIRECTORY_LIMIT
+                            }
+                            if (search.city.isNotBlank()) {
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    "Zone : ${search.city} · ${filtered.size} services",
+                                    color = ReperePurple,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.quietClick {
+                                        search.updateCity("")
+                                        visibleCount = INITIAL_DIRECTORY_LIMIT
+                                    },
+                                )
+                            } else {
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    "${filtered.size} services autour de toi",
+                                    color = RepereMuted,
+                                    fontSize = 12.sp,
+                                )
                             }
                         }
                         if (error != null && filtered.isEmpty()) {
@@ -547,46 +470,10 @@ fun StructureListScreen(navigator: AppNavigator) {
                             items = displayedDirectoryItems,
                             key = { _, it -> it.id ?: it.displayName },
                         ) { _, structure ->
-                            PnsaCard(
-                                onClick = {
-                                    selectedId = structure.id
-                                    graph.prefs.mapSelectedId = structure.id
-                                    showMap = true
-                                    followUser = false
-                                    graph.prefs.mapShowMap = true
-                                },
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        Modifier
-                                            .size(44.dp)
-                                            .clip(CircleShape)
-                                            .background(PnsaPinkSoft),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Icon(Icons.Default.Place, contentDescription = null, tint = PnsaPink)
-                                    }
-                                    Spacer(Modifier.width(12.dp))
-                                    Column(Modifier.weight(1f)) {
-                                        Text(structure.displayName, fontWeight = FontWeight.Bold, color = PnsaInk)
-                                        Text(
-                                            "${structure.province ?: "Kinshasa"} · ${structure.displayCity}",
-                                            color = bagdeColor,
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                        )
-                                        Text(structure.displayAddress, color = PnsaMuted, fontSize = 13.sp)
-                                    }
-                                }
-                                if (structure.hasCoordinates) {
-                                    Spacer(Modifier.height(8.dp))
-                                    MetaRow(
-                                        listOfNotNull(
-                                            structure.structureType,
-                                            KinshasaMapMath.formatCoord(structure.latitude, structure.longitude),
-                                        ),
-                                    )
-                                }
+                            StructureVisualCard(structure) {
+                                selectedId = structure.id
+                                graph.prefs.mapSelectedId = structure.id
+                                structure.id?.let { navigator.push(AppDestination.StructureDetail(it)) }
                             }
                         }
                         item {
@@ -633,101 +520,208 @@ fun StructureDetailScreen(id: Long, navigator: AppNavigator, onBack: () -> Unit)
             item == null -> EmptyState("Fiche introuvable", "Cette structure n’est plus proposée.")
             else -> {
                 val structure = item!!
+                val uriHandler = LocalUriHandler.current
+                val favorite = graph.favorites.contains(structure.id)
+                var routeRequested by remember(structure.id) { mutableStateOf(false) }
+                val pastilles = structure.pastilles()
                 Column(
                     Modifier
                         .padding(padding)
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
                         .verticalScroll(rememberScrollState()),
                 ) {
-                    InlineBackHeader(
-                        title = structure.displayName,
-                        subtitle = "${structure.displayCity} · ${structure.structureType ?: "Centre SSR"}",
-                        onBack = onBack,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    MetaRow(listOfNotNull(structure.structureType, structure.province, structure.displayCity))
-                    Spacer(Modifier.height(12.dp))
-                    PnsaCard {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Place, contentDescription = null, tint = bagdeColor, modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(structure.displayAddress, fontWeight = FontWeight.Medium, color = PnsaInk)
-                        }
-                        if (!structure.phone.isNullOrBlank()) {
-                            Spacer(Modifier.height(8.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Call, contentDescription = null, tint = bagdeColor, modifier = Modifier.size(20.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text("Tél. ${structure.phone}", color = PnsaInk)
-                            }
-                        }
-                        if (!structure.email.isNullOrBlank()) {
-                            Spacer(Modifier.height(8.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Email, contentDescription = null, tint = bagdeColor, modifier = Modifier.size(20.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text(structure.email.orEmpty(), color = PnsaInk)
-                            }
-                        }
-                        if (!structure.openingHours.isNullOrBlank()) {
-                            Spacer(Modifier.height(8.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Schedule, contentDescription = null, tint = bagdeColor, modifier = Modifier.size(20.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text("Horaires : ${structure.openingHours}", color = PnsaMuted)
-                            }
-                        }
-                        if (!structure.services.isNullOrBlank()) {
-                            Spacer(Modifier.height(12.dp))
-                            Text("Services disponibles", fontWeight = FontWeight.Bold, color = bagdeColor)
-                            Spacer(Modifier.height(4.dp))
-                            Text(structure.services.orEmpty(), color = PnsaInk)
-                        }
-                    }
-                    if (structure.hasCoordinates) {
-                        val navigation = rememberMapNavigation(structure)
-                        Spacer(Modifier.height(12.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Surface(
+                            modifier = Modifier.size(38.dp).quietClick(onClick = onBack),
+                            shape = CircleShape,
+                            color = RepereLavender,
                         ) {
-                            MapViewStyle.entries.forEach { style ->
-                                PnsaChip(
-                                    label = style.label,
-                                    selected = detailMapStyle == style,
-                                    onClick = { detailMapStyle = style },
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour", tint = RepereInk)
+                            }
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                structure.displayName,
+                                color = RepereInk,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                "${structure.structureType ?: "Centre de santé"} · ${structure.displayCity}",
+                                color = RepereMuted,
+                                fontSize = 12.sp,
+                            )
+                        }
+                        Surface(
+                            modifier = Modifier.size(38.dp).quietClick {
+                                structure.id?.let { graph.favorites.toggle(it) }
+                            },
+                            shape = CircleShape,
+                            color = if (favorite) ReperePink else RepereLavender,
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    if (favorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                                    contentDescription = if (favorite) "Retirer des favoris" else "Ajouter aux favoris",
+                                    tint = if (favorite) ReperePurple else RepereInk,
                                 )
                             }
                         }
-                        Spacer(Modifier.height(8.dp))
-                        if (navigation.route != null) {
-                            StatusBanner("Itinéraire : ${navigation.route.summary}")
-                            Spacer(Modifier.height(8.dp))
-                        }
-                        PlatformStructureMap(
-                            structures = listOf(structure),
-                            selectedId = structure.id,
-                            onSelect = {},
-                            modifier = Modifier.fillMaxWidth().height(260.dp),
-                            userLocation = navigation.user,
-                            route = navigation.route,
-                            followUser = true,
-                            mapStyle = detailMapStyle,
+                    }
+                    Image(
+                        painter = painterResource(coverForStructure(structure.id)),
+                        contentDescription = structure.displayName,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .fillMaxWidth()
+                            .height(190.dp)
+                            .clip(RoundedCornerShape(22.dp)),
+                    )
+                    Column(Modifier.padding(horizontal = 16.dp)) {
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            "Un accueil pour les jeunes",
+                            color = RepereInk,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 22.sp,
                         )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "Des services de santé adaptés, dans un cadre bienveillant et confidentiel.",
+                            color = RepereMuted,
+                            fontSize = 14.sp,
+                        )
+                        if (pastilles.isNotEmpty()) {
+                            Spacer(Modifier.height(12.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                                pastilles.take(3).forEach { label ->
+                                    val tint = when (label) {
+                                        "Contraception" -> RepereMint
+                                        "IST et VIH" -> ReperePink
+                                        "Aide après une violence" -> RepereLavender
+                                        else -> RepereLavender
+                                    }
+                                    Surface(shape = RoundedCornerShape(20.dp), color = tint) {
+                                        Text(
+                                            label,
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                            color = RepereInk,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 12.sp,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(16.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Place, contentDescription = null, tint = ReperePurple, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Column {
+                                Text("Adresse et repère", fontWeight = FontWeight.Bold, color = RepereInk)
+                                Text(structure.displayAddress, color = RepereMuted, fontSize = 13.sp)
+                            }
+                        }
+                        if (structure.espaceJeunes()) {
+                            Spacer(Modifier.height(12.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Favorite, contentDescription = null, tint = RepereTeal, modifier = Modifier.size(20.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Column {
+                                    Text("Espace jeunes disponible", fontWeight = FontWeight.Bold, color = RepereInk)
+                                    Text("Accueil adapté aux adolescent·e·s", color = RepereMuted, fontSize = 13.sp)
+                                }
+                            }
+                        }
+                        if (!structure.openingHours.isNullOrBlank()) {
+                            Spacer(Modifier.height(12.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Schedule, contentDescription = null, tint = ReperePurple, modifier = Modifier.size(20.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(structure.openingHours.orEmpty(), color = RepereMuted, fontSize = 13.sp)
+                            }
+                        }
+                        Spacer(Modifier.height(18.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                            Button(
+                                onClick = { routeRequested = true },
+                                enabled = structure.hasCoordinates,
+                                modifier = Modifier.weight(1f).height(48.dp),
+                                shape = RoundedCornerShape(24.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = ReperePurple, contentColor = Color.White),
+                            ) {
+                                Icon(Icons.Default.Navigation, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Itinéraire", fontWeight = FontWeight.Bold)
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    val phone = structure.phone.orEmpty().filter { it.isDigit() || it == '+' }
+                                    if (phone.isNotBlank()) {
+                                        runCatching { uriHandler.openUri("tel:$phone") }
+                                    }
+                                },
+                                enabled = !structure.phone.isNullOrBlank(),
+                                modifier = Modifier.weight(1f).height(48.dp),
+                                shape = RoundedCornerShape(24.dp),
+                            ) {
+                                Icon(Icons.Default.Call, contentDescription = null, tint = ReperePurple, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Appeler", color = ReperePurple, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        if (routeRequested && structure.hasCoordinates) {
+                            val navigation = rememberMapNavigation(structure)
+                            Spacer(Modifier.height(12.dp))
+                            if (navigation.route != null) {
+                                StatusBanner("Itinéraire : ${navigation.route.summary}")
+                                Spacer(Modifier.height(8.dp))
+                            }
+                            PlatformStructureMap(
+                                structures = listOf(structure),
+                                selectedId = structure.id,
+                                onSelect = {},
+                                modifier = Modifier.fillMaxWidth().height(220.dp),
+                                userLocation = navigation.user,
+                                route = navigation.route,
+                                followUser = true,
+                                mapStyle = detailMapStyle,
+                            )
+                        } else if (!structure.hasCoordinates) {
+                            Spacer(Modifier.height(8.dp))
+                            StatusBanner("Coordonnées GPS non renseignées. La fiche reste consultable.")
+                        }
                         Spacer(Modifier.height(8.dp))
-                        StatusBanner("Position : ${KinshasaMapMath.formatCoord(structure.latitude, structure.longitude)}.")
-                    } else {
+                        Text(
+                            "Signaler une erreur",
+                            color = RepereMuted,
+                            fontSize = 13.sp,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().quietClick { navigator.push(AppDestination.Help) }.padding(vertical = 8.dp),
+                        )
+                        if (!structure.email.isNullOrBlank()) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Email, contentDescription = null, tint = ReperePurple, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(structure.email.orEmpty(), color = RepereMuted, fontSize = 13.sp)
+                            }
+                        }
                         Spacer(Modifier.height(8.dp))
-                        StatusBanner("Coordonnées GPS non renseignées. La fiche reste consultable.")
-                    }
-                    Spacer(Modifier.height(20.dp))
-                    SecondaryAction("Discuter avec cette structure", enabled = structure.id != null) {
-                        structure.id?.let { navigator.push(AppDestination.StructureChat(it)) }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    PrimaryAction("Demander une orientation") {
-                        navigator.push(AppDestination.OrientationCreate(id))
+                        SecondaryAction("Discuter avec cette structure", enabled = structure.id != null) {
+                            structure.id?.let { navigator.push(AppDestination.StructureChat(it)) }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        PrimaryAction("Demander une orientation") {
+                            navigator.push(AppDestination.OrientationCreate(id))
+                        }
+                        Spacer(Modifier.height(24.dp))
                     }
                 }
             }

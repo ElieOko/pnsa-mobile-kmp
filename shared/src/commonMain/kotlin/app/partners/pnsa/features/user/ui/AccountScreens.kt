@@ -92,7 +92,7 @@ fun MoreMenuScreen(navigator: AppNavigator) {
         Column(Modifier.padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             InlineBackHeader(
                 title = "Plus d’options",
-                subtitle = "Accès rapide aux services PNSA",
+                subtitle = "Accès rapide aux services Repère Jeunes",
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 ShortcutTile("Carte", "Trouver une structure", Icons.Default.Map, { navigator.push(AppDestination.Structures) }, Modifier.weight(1f))
@@ -129,7 +129,7 @@ fun ProfileScreen(navigator: AppNavigator) {
         }
     }
 
-    val displayName = user?.displayName?.ifBlank { null } ?: "Professionnel PNSA"
+    val displayName = user?.displayName?.ifBlank { null } ?: "Membre Repère Jeunes"
     val displayEmail = user?.email?.ifBlank { null } ?: "contact@pnsa-rdc.org"
     val displayPhone = user?.phone?.ifBlank { null } ?: AppConfig.contactPhone
     val displayLocation = listOfNotNull(user?.province, user?.ville).filter { it.isNotBlank() }.joinToString(" · ").ifBlank { "Kinshasa · RDC" }

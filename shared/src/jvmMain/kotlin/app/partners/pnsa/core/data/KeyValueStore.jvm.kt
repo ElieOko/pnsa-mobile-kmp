@@ -7,7 +7,11 @@ actual fun createKeyValueStore(): KeyValueStore {
     return object : KeyValueStore {
         override fun get(key: String): String? = prefs.get(key, null)
         override fun put(key: String, value: String?) {
-            if (value == null) prefs.remove(key) else prefs.put(key, value)
+            if (value == null || value.length > Preferences.MAX_VALUE_LENGTH) {
+                prefs.remove(key)
+            } else {
+                prefs.put(key, value)
+            }
         }
     }
 }

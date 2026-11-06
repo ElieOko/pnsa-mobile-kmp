@@ -40,7 +40,7 @@ class UiPreferences(
         set(value) { store.put(MAP_ONLY_MODE, if (value) "1" else "0") }
 
     var navTab: String
-        get() = store.get(NAV_TAB) ?: "Structures"
+        get() = store.get(NAV_TAB) ?: "Home"
         set(value) { store.put(NAV_TAB, value) }
 
     var navStacksJson: String?
