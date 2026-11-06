@@ -1,6 +1,5 @@
 package app.partners.pnsa.features.structure.ui
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -29,7 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -42,10 +40,8 @@ import app.partners.pnsa.core.ui.theme.RepereMuted
 import app.partners.pnsa.core.ui.theme.ReperePurple
 import app.partners.pnsa.core.ui.theme.RepereTeal
 import app.partners.pnsa.features.home.data.RepereFiltres
-import app.partners.pnsa.features.home.data.coverForStructure
 import app.partners.pnsa.features.home.data.espaceJeunes
 import app.partners.pnsa.features.structure.domain.models.HealthStructure
-import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun CarteListeToggle(showMap: Boolean, onShowMap: (Boolean) -> Unit) {
@@ -150,10 +146,9 @@ fun StructureVisualCard(structure: HealthStructure, onOpen: () -> Unit) {
     ) {
         Column(Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Image(
-                    painter = painterResource(coverForStructure(structure.id)),
+                StructureCover(
+                    structure = structure,
                     contentDescription = structure.displayName,
-                    contentScale = ContentScale.Crop,
                     modifier = Modifier.size(74.dp).clip(RoundedCornerShape(16.dp)),
                 )
                 Spacer(Modifier.width(12.dp))
@@ -237,10 +232,9 @@ fun MapPlacePreview(structure: HealthStructure, onOpen: () -> Unit) {
         shadowElevation = 8.dp,
     ) {
         Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Image(
-                painter = painterResource(coverForStructure(structure.id)),
+            StructureCover(
+                structure = structure,
                 contentDescription = structure.displayName,
-                contentScale = ContentScale.Crop,
                 modifier = Modifier.size(64.dp).clip(RoundedCornerShape(14.dp)),
             )
             Spacer(Modifier.width(10.dp))

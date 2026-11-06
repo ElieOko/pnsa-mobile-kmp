@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -61,7 +60,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -103,11 +101,9 @@ import app.partners.pnsa.core.ui.theme.ReperePurple
 import app.partners.pnsa.core.ui.theme.RepereTeal
 import app.partners.pnsa.core.ui.theme.bagdeColor
 import app.partners.pnsa.core.ui.theme.wsColor
-import app.partners.pnsa.features.home.data.coverForStructure
 import app.partners.pnsa.features.home.data.espaceJeunes
 import app.partners.pnsa.features.home.data.matchesFiltre
 import app.partners.pnsa.features.home.data.pastilles
-import org.jetbrains.compose.resources.painterResource
 import app.partners.pnsa.core.util.formatIsoDate
 import app.partners.pnsa.features.structure.data.KinshasaCenters
 import app.partners.pnsa.features.structure.domain.models.HealthStructure
@@ -574,10 +570,9 @@ fun StructureDetailScreen(id: Long, navigator: AppNavigator, onBack: () -> Unit)
                             }
                         }
                     }
-                    Image(
-                        painter = painterResource(coverForStructure(structure.id)),
+                    StructureCover(
+                        structure = structure,
                         contentDescription = structure.displayName,
-                        contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .padding(horizontal = 16.dp)
                             .fillMaxWidth()
