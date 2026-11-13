@@ -31,6 +31,7 @@ data class RepereVisuel(
     val filtre: String,
     val fond: Color,
     val role: RepereRole,
+    val resume: String = detail,
 )
 
 data class RepereFiltre(
@@ -56,7 +57,7 @@ fun matchesFiltre(services: String?, label: String): Boolean {
 object RepereCatalogue {
     val hero: RepereVisuel = RepereVisuel(
         id = "couple-parc",
-        titre = "INBOX – près de toi",
+        titre = "Des services près de toi",
         detail = "Géolocalise les centres, pharmacies et services adaptés à tes besoins.",
         image = Res.drawable.photo_couple_parc,
         filtre = "Tous",
@@ -69,6 +70,7 @@ object RepereCatalogue {
             id = "contraception",
             titre = "Contraception",
             detail = "Tu veux éviter une grossesse ? Trouve la méthode ou les conseils dont tu as besoin.",
+            resume = "Méthodes et conseils pour éviter une grossesse.",
             image = Res.drawable.illu_contraception,
             filtre = "Contraception",
             fond = ReperePeach,
@@ -78,6 +80,7 @@ object RepereCatalogue {
             id = "ist-vih",
             titre = "IST et VIH/SIDA",
             detail = "Tu veux te protéger, te faire dépister ou te soigner ? Trouve le service adapté.",
+            resume = "Dépistage, protection et prise en charge.",
             image = Res.drawable.illu_vih,
             filtre = "IST et VIH/SIDA",
             fond = RepereCream,
@@ -87,6 +90,7 @@ object RepereCatalogue {
             id = "ecoute",
             titre = "Écoute et conseil",
             detail = "Tu as des questions sur ton corps, ta sexualité ou tes relations ? Trouve quelqu’un à qui parler.",
+            resume = "Parler de ton corps, ta sexualité ou tes relations.",
             image = Res.drawable.illu_ecoute,
             filtre = "Conseil",
             fond = RepereLilac,
@@ -96,6 +100,7 @@ object RepereCatalogue {
             id = "violence",
             titre = "Aide après une violence",
             detail = "Tu as subi une violence ou tu te sens en danger ? Trouve rapidement de l’aide.",
+            resume = "Écoute, soins et protection rapidement.",
             image = Res.drawable.illu_violence,
             filtre = "Violence",
             fond = ReperePink,

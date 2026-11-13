@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalDrawerSheet
@@ -47,14 +48,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.partners.pnsa.core.ui.navigation.AppDestination
 import app.partners.pnsa.core.ui.navigation.MainTab
 import app.partners.pnsa.core.ui.theme.PnsaGreenDeep
 import app.partners.pnsa.core.ui.theme.PnsaInk
-import app.partners.pnsa.core.ui.theme.PnsaMuted
-import app.partners.pnsa.core.ui.theme.RepereLilac
+import app.partners.pnsa.core.ui.theme.RepereLavender
+import app.partners.pnsa.core.ui.theme.RepereMuted
 import app.partners.pnsa.core.ui.theme.ReperePurple
 import app.partners.pnsa.core.ui.theme.bagdeColor
 import app.partners.pnsa.core.ui.theme.wsColor
@@ -101,39 +103,61 @@ fun TikTokBottomBar(
         state.intValue = selected.ordinal
     }
 
-    NavigationBar(
-        containerColor = Color.White,
-        tonalElevation = 0.dp,
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White)
+            .navigationBarsPadding(),
     ) {
-        listParent.forEachIndexed { i, parent ->
-            NavigationBarItem(
-                colors = NavigationBarItemDefaults.colors(
-                    indicatorColor = RepereLilac,
-                    selectedIconColor = ReperePurple,
-                    selectedTextColor = ReperePurple,
-                    unselectedIconColor = PnsaMuted,
-                    unselectedTextColor = PnsaMuted,
-                ),
-                onClick = {
-                    state.intValue = i
-                    onSelect(parent.tab)
-                },
-                selected = i == state.intValue,
-                icon = {
-                    Icon(
-                        imageVector = if (i == state.intValue) parent.selectedIcon else parent.icon,
-                        contentDescription = null,
-                        modifier = Modifier.size(28.dp),
-                    )
-                },
-                label = {
-                    Text(
-                        parent.name,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 10.sp,
-                    )
-                },
-            )
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(RepereLavender),
+        )
+        NavigationBar(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(64.dp),
+            containerColor = Color.White,
+            tonalElevation = 0.dp,
+            windowInsets = WindowInsets(0, 0, 0, 0),
+        ) {
+            listParent.forEachIndexed { i, parent ->
+                NavigationBarItem(
+                    colors = NavigationBarItemDefaults.colors(
+                        indicatorColor = RepereLavender,
+                        selectedIconColor = ReperePurple,
+                        selectedTextColor = ReperePurple,
+                        unselectedIconColor = RepereMuted,
+                        unselectedTextColor = RepereMuted,
+                    ),
+                    onClick = {
+                        state.intValue = i
+                        onSelect(parent.tab)
+                    },
+                    selected = i == state.intValue,
+                    alwaysShowLabel = true,
+                    icon = {
+                        Icon(
+                            imageVector = if (i == state.intValue) parent.selectedIcon else parent.icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = if (i == state.intValue) ReperePurple else RepereMuted,
+                        )
+                    },
+                    label = {
+                        Text(
+                            parent.name,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
+                )
+            }
         }
     }
 }

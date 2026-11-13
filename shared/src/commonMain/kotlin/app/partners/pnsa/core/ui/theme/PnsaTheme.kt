@@ -41,18 +41,20 @@ val PnsaChrome = Color.White
 val PnsaChromeLift = Color(0xFFF6FBF6)
 val PnsaMuted = Color(0xFF5C6B5E)
 
-val ReperePurple = Color(0xFF6C4DFF)
-val ReperePurpleDeep = Color(0xFF4B32D4)
-val RepereCoral = Color(0xFFFF7A59)
+/** Brand navy from the Repères Jeunes logo. */
+val ReperePurple = Color(0xFF104080)
+val ReperePurpleDeep = Color(0xFF0A2E5C)
+/** Brand orange from the logo compass. */
+val RepereCoral = Color(0xFFF06010)
 val RepereTeal = Color(0xFF14B8A6)
-val RepereInk = Color(0xFF241B4B)
-val RepereMuted = Color(0xFF6E6788)
-val RepereLavender = Color(0xFFF6F3FC)
-val ReperePeach = Color(0xFFFFE8DF)
-val RepereLilac = Color(0xFFE7E3FF)
-val RepereCream = Color(0xFFFFF4D8)
-val RepereMint = Color(0xFFE5F8F4)
-val ReperePink = Color(0xFFFFE4EE)
+val RepereInk = Color(0xFF0C2E5C)
+val RepereMuted = Color(0xFF5A6B7D)
+val RepereLavender = Color(0xFFE8F0FA)
+val ReperePeach = Color(0xFFFFE8D9)
+val RepereLilac = Color(0xFFD9E6F5)
+val RepereCream = Color(0xFFFFF3E6)
+val RepereMint = Color(0xFFEAF4FF)
+val ReperePink = Color(0xFFFFE6E2)
 
 val PnsaBlueRed = Brush.linearGradient(listOf(bagdeColor, Color(0xFF28C930), PnsaGreenDeep))
 val PnsaHeroBrush = Brush.verticalGradient(
