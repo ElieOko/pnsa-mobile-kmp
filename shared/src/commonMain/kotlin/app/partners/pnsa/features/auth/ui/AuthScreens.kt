@@ -115,7 +115,7 @@ fun WelcomeScreen(
                 Column {
                     BrandMark()
                     Spacer(Modifier.height(16.dp))
-                    Text("INBOX", color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Bold)
+                    Text("Repère Jeunes", color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Bold)
                     Text(
                         "Le bon service de santé, au bon endroit, près de toi !",
                         color = Color.White.copy(alpha = 0.86f),
@@ -123,7 +123,7 @@ fun WelcomeScreen(
                     )
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        "Bienvenue sur Repère Jeunes ! Tu cherches une méthode contraceptive, un service de dépistage des IST et du VIH, des conseils sur ta santé sexuelle et reproductive ou une assistance en cas de violence ? INBOX est là pour toi !",
+                        "Tu cherches une méthode contraceptive, un service de dépistage des IST et du VIH, des conseils sur ta santé sexuelle et reproductive ou une assistance en cas de violence ?",
                         color = Color.White.copy(alpha = 0.9f),
                         style = MaterialTheme.typography.bodyLarge,
                     )
@@ -481,7 +481,7 @@ private fun BrandMark() {
         )
         Column {
             Text("Repère Jeunes", color = Color.White, fontWeight = FontWeight.SemiBold)
-            Text("INBOX · près de toi", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
+            Text("Près de toi", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
         }
     }
 }

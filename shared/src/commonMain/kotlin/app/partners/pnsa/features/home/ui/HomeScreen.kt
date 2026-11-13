@@ -57,6 +57,8 @@ import app.partners.pnsa.core.ui.theme.RepereMuted
 import app.partners.pnsa.core.ui.theme.ReperePurple
 import app.partners.pnsa.features.home.data.RepereCatalogue
 import app.partners.pnsa.features.home.data.RepereVisuel
+import app.partners.pnsa.resources.Res
+import app.partners.pnsa.resources.logo_reperes_jeunes
 import org.jetbrains.compose.resources.painterResource
 
 @Composable
@@ -97,14 +99,15 @@ fun HomeScreen(navigator: AppNavigator) {
                     "Bienvenue sur Repère Jeunes !",
                     color = RepereInk,
                     fontWeight = FontWeight.ExtraBold,
-                    fontSize = 26.sp,
-                    lineHeight = 30.sp,
+                    fontSize = 24.sp,
+                    lineHeight = 28.sp,
                 )
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(6.dp))
                 Text(
-                    "Le bon service de santé, au bon endroit, près de toi !",
+                    "Tu cherches une méthode contraceptive, un service de dépistage des IST et du VIH, des conseils sur ta santé sexuelle et reproductive ou une assistance en cas de violence ?",
                     color = RepereMuted,
-                    fontSize = 15.sp,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
                 )
             }
             item {
@@ -126,7 +129,7 @@ fun HomeScreen(navigator: AppNavigator) {
                         Modifier
                             .align(Alignment.BottomStart)
                             .fillMaxWidth()
-                            .background(Color(0x99000000))
+                            .background(Color(0x990C2E5C))
                             .padding(horizontal = 14.dp, vertical = 10.dp),
                     ) {
                         Column {
@@ -164,7 +167,7 @@ fun HomeScreen(navigator: AppNavigator) {
                     onClick = { openExplorer("Tous") },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape = RoundedCornerShape(26.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = ReperePurple, contentColor = Color.White),
+                    colors = ButtonDefaults.buttonColors(containerColor = RepereCoral, contentColor = Color.White),
                 ) {
                     Text("Trouver un service", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Spacer(Modifier.width(6.dp))
@@ -189,6 +192,13 @@ fun HomeScreen(navigator: AppNavigator) {
 @Composable
 fun RepereWordmark() {
     Row(verticalAlignment = Alignment.CenterVertically) {
+        Image(
+            painter = painterResource(Res.drawable.logo_reperes_jeunes),
+            contentDescription = "Repères Jeunes",
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)),
+        )
+        Spacer(Modifier.width(8.dp))
         Text("Repère", color = ReperePurple, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp)
         Spacer(Modifier.width(6.dp))
         Text("Jeunes", color = RepereCoral, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp)
@@ -229,12 +239,12 @@ private fun ZoneSearchField(value: String, onValueChange: (String) -> Unit) {
 @Composable
 private fun BesoinCard(visuel: RepereVisuel, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Surface(
-        modifier = modifier.height(132.dp).quietClick(onClick = onClick),
+        modifier = modifier.height(168.dp).quietClick(onClick = onClick),
         shape = RoundedCornerShape(22.dp),
         color = visuel.fond,
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -242,7 +252,7 @@ private fun BesoinCard(visuel: RepereVisuel, modifier: Modifier = Modifier, onCl
                 painter = painterResource(visuel.image),
                 contentDescription = visuel.titre,
                 contentScale = ContentScale.Fit,
-                modifier = Modifier.size(62.dp).clip(CircleShape),
+                modifier = Modifier.size(52.dp).clip(CircleShape),
             )
             Spacer(Modifier.height(8.dp))
             Text(
@@ -253,6 +263,16 @@ private fun BesoinCard(visuel: RepereVisuel, modifier: Modifier = Modifier, onCl
                 lineHeight = 16.sp,
                 textAlign = TextAlign.Center,
                 maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                visuel.resume,
+                color = RepereMuted,
+                fontSize = 11.sp,
+                lineHeight = 14.sp,
+                textAlign = TextAlign.Center,
+                maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
             )
         }
