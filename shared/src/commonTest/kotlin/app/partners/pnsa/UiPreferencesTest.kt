@@ -137,7 +137,7 @@ class UiPreferencesTest {
     @Test
     fun repereFiltersAndFavoritesMatchTheYouthCatalogue() {
         assertEquals(true, matchesFiltre("Préservatif masculin . Pilule COC", "Contraception"))
-        assertEquals(true, matchesFiltre("Prise en charge IST/VIH", "IST et VIH"))
+        assertEquals(true, matchesFiltre("Prise en charge IST/VIH", "IST et VIH/SIDA"))
         assertEquals(true, matchesFiltre("IEC / CCC", "Conseil"))
         assertEquals(true, matchesFiltre("Prise en charge VBG", "Violence"))
         assertEquals(false, matchesFiltre("Consultation prénatale (CPN)", "Violence"))

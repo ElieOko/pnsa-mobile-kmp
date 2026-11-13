@@ -10,7 +10,9 @@ class RepereSearch(
     private val prefs: UiPreferences,
 ) {
     var serviceFilter by mutableStateOf(
-        prefs.mapServiceFilter.takeIf { saved -> RepereFiltres.any { it.label == saved } } ?: "Tous",
+        prefs.mapServiceFilter
+            .let { saved -> if (saved == "IST et VIH") "IST et VIH/SIDA" else saved }
+            .takeIf { saved -> RepereFiltres.any { it.label == saved } } ?: "Tous",
     )
     var city by mutableStateOf(prefs.mapCity)
     var query by mutableStateOf(prefs.mapQuery)

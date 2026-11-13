@@ -92,7 +92,7 @@ fun MoreMenuScreen(navigator: AppNavigator) {
         Column(Modifier.padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             InlineBackHeader(
                 title = "Plus d’options",
-                subtitle = "Accès rapide aux services Repère Jeunes",
+                subtitle = "INBOX — le bon service de santé, au bon endroit, près de toi",
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 ShortcutTile("Carte", "Trouver une structure", Icons.Default.Map, { navigator.push(AppDestination.Structures) }, Modifier.weight(1f))

@@ -604,7 +604,7 @@ fun StructureDetailScreen(id: Long, navigator: AppNavigator, onBack: () -> Unit)
                                 pastilles.take(3).forEach { label ->
                                     val tint = when (label) {
                                         "Contraception" -> RepereMint
-                                        "IST et VIH" -> ReperePink
+                                        "IST et VIH", "IST et VIH/SIDA" -> ReperePink
                                         "Aide après une violence" -> RepereLavender
                                         else -> RepereLavender
                                     }
