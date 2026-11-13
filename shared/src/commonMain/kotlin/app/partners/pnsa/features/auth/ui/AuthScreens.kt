@@ -71,8 +71,8 @@ import app.partners.pnsa.features.auth.domain.models.ConsentPayload
 import app.partners.pnsa.features.auth.domain.models.RegisterRequest
 import app.partners.pnsa.resources.Res
 import app.partners.pnsa.resources.about
-import app.partners.pnsa.resources.favicon
 import app.partners.pnsa.resources.hero_bg
+import app.partners.pnsa.resources.logo_reperes_jeunes
 import app.partners.pnsa.resources.teen
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.DrawableResource
@@ -115,15 +115,15 @@ fun WelcomeScreen(
                 Column {
                     BrandMark()
                     Spacer(Modifier.height(16.dp))
-                    Text("Repère Jeunes", color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Bold)
+                    Text("INBOX", color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Bold)
                     Text(
-                        "Ta santé, tes repères.",
+                        "Le bon service de santé, au bon endroit, près de toi !",
                         color = Color.White.copy(alpha = 0.86f),
                         style = MaterialTheme.typography.titleMedium,
                     )
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        "Informer, former et orienter les adolescents et les professionnels de santé en République démocratique du Congo.",
+                        "Bienvenue sur Repère Jeunes ! Tu cherches une méthode contraceptive, un service de dépistage des IST et du VIH, des conseils sur ta santé sexuelle et reproductive ou une assistance en cas de violence ? INBOX est là pour toi !",
                         color = Color.White.copy(alpha = 0.9f),
                         style = MaterialTheme.typography.bodyLarge,
                     )
@@ -474,14 +474,14 @@ fun LegalScreen(onBack: () -> Unit) {
 private fun BrandMark() {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Image(
-            painterResource(Res.drawable.favicon),
-            contentDescription = "PNSA",
-            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(14.dp)),
-            contentScale = ContentScale.Crop,
+            painterResource(Res.drawable.logo_reperes_jeunes),
+            contentDescription = "Repères Jeunes",
+            modifier = Modifier.size(56.dp).clip(RoundedCornerShape(14.dp)),
+            contentScale = ContentScale.Fit,
         )
         Column {
-            Text("Programme National", color = Color.White, fontWeight = FontWeight.SemiBold)
-            Text("Santé des Adolescents", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
+            Text("Repère Jeunes", color = Color.White, fontWeight = FontWeight.SemiBold)
+            Text("INBOX · près de toi", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
         }
     }
 }

@@ -10,9 +10,9 @@ import app.partners.pnsa.features.structure.domain.models.HealthStructure
 import app.partners.pnsa.resources.Res
 import app.partners.pnsa.resources.illu_contraception
 import app.partners.pnsa.resources.illu_ecoute
-import app.partners.pnsa.resources.illu_jeune
+import app.partners.pnsa.resources.illu_vih
+import app.partners.pnsa.resources.illu_violence
 import app.partners.pnsa.resources.photo_consultation_couple
-import app.partners.pnsa.resources.photo_consultation_femme
 import app.partners.pnsa.resources.photo_consultation_homme
 import app.partners.pnsa.resources.photo_couple_parc
 import org.jetbrains.compose.resources.DrawableResource
@@ -42,7 +42,7 @@ val RepereFiltres: List<RepereFiltre> = listOf(
     RepereFiltre("Tous", emptyList()),
     RepereFiltre("Conseil", listOf("IEC", "CCC", "conseil")),
     RepereFiltre("Contraception", listOf("Préservatif", "Contraception", "Pilule", "Implant", "Injectable", "DIU", "DMPA")),
-    RepereFiltre("IST et VIH", listOf("IST", "VIH")),
+    RepereFiltre("IST et VIH/SIDA", listOf("IST", "VIH", "SIDA")),
     RepereFiltre("Violence", listOf("VBG", "violence")),
 )
 
@@ -56,8 +56,8 @@ fun matchesFiltre(services: String?, label: String): Boolean {
 object RepereCatalogue {
     val hero: RepereVisuel = RepereVisuel(
         id = "couple-parc",
-        titre = "Des services près de toi",
-        detail = "Un accompagnement pour avancer à deux, près de chez toi.",
+        titre = "INBOX – près de toi",
+        detail = "Géolocalise les centres, pharmacies et services adaptés à tes besoins.",
         image = Res.drawable.photo_couple_parc,
         filtre = "Tous",
         fond = RepereMint,
@@ -68,7 +68,7 @@ object RepereCatalogue {
         RepereVisuel(
             id = "contraception",
             titre = "Contraception",
-            detail = "Préservatif et méthodes adaptées, expliquées simplement.",
+            detail = "Tu veux éviter une grossesse ? Trouve la méthode ou les conseils dont tu as besoin.",
             image = Res.drawable.illu_contraception,
             filtre = "Contraception",
             fond = ReperePeach,
@@ -76,17 +76,17 @@ object RepereCatalogue {
         ),
         RepereVisuel(
             id = "ist-vih",
-            titre = "IST et VIH",
-            detail = "Dépistage et prise en charge, dans un cadre confidentiel.",
-            image = Res.drawable.illu_jeune,
-            filtre = "IST et VIH",
+            titre = "IST et VIH/SIDA",
+            detail = "Tu veux te protéger, te faire dépister ou te soigner ? Trouve le service adapté.",
+            image = Res.drawable.illu_vih,
+            filtre = "IST et VIH/SIDA",
             fond = RepereCream,
             role = RepereRole.Besoin,
         ),
         RepereVisuel(
             id = "ecoute",
             titre = "Écoute et conseil",
-            detail = "Parler à un professionnel, sans jugement.",
+            detail = "Tu as des questions sur ton corps, ta sexualité ou tes relations ? Trouve quelqu’un à qui parler.",
             image = Res.drawable.illu_ecoute,
             filtre = "Conseil",
             fond = RepereLilac,
@@ -95,8 +95,8 @@ object RepereCatalogue {
         RepereVisuel(
             id = "violence",
             titre = "Aide après une violence",
-            detail = "Un accueil bienveillant, avec une personne formée.",
-            image = Res.drawable.photo_consultation_femme,
+            detail = "Tu as subi une violence ou tu te sens en danger ? Trouve rapidement de l’aide.",
+            image = Res.drawable.illu_violence,
             filtre = "Violence",
             fond = ReperePink,
             role = RepereRole.Besoin,
@@ -109,7 +109,7 @@ object RepereCatalogue {
             titre = "Une consultation pour lui",
             detail = "Poser ses questions à un médecin, y compris sur le corps.",
             image = Res.drawable.photo_consultation_homme,
-            filtre = "IST et VIH",
+            filtre = "IST et VIH/SIDA",
             fond = RepereMint,
             role = RepereRole.Carte,
         ),
@@ -133,7 +133,7 @@ fun HealthStructure.pastilles(): List<String> {
     val services = this.services.orEmpty()
     return buildList {
         if (matchesFiltre(services, "Contraception")) add("Contraception")
-        if (matchesFiltre(services, "IST et VIH")) add("IST et VIH")
+        if (matchesFiltre(services, "IST et VIH/SIDA")) add("IST et VIH/SIDA")
         if (matchesFiltre(services, "Conseil")) add("Écoute et conseil")
         if (matchesFiltre(services, "Violence")) add("Aide après une violence")
     }

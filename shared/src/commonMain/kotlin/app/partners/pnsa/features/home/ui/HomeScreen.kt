@@ -94,15 +94,15 @@ fun HomeScreen(navigator: AppNavigator) {
             }
             item {
                 Text(
-                    "De quoi as-tu besoin ?",
+                    "Bienvenue sur Repère Jeunes !",
                     color = RepereInk,
                     fontWeight = FontWeight.ExtraBold,
-                    fontSize = 28.sp,
-                    lineHeight = 32.sp,
+                    fontSize = 26.sp,
+                    lineHeight = 30.sp,
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "Trouve un service adapté près de toi.",
+                    "Le bon service de santé, au bon endroit, près de toi !",
                     color = RepereMuted,
                     fontSize = 15.sp,
                 )
@@ -241,7 +241,7 @@ private fun BesoinCard(visuel: RepereVisuel, modifier: Modifier = Modifier, onCl
             Image(
                 painter = painterResource(visuel.image),
                 contentDescription = visuel.titre,
-                contentScale = ContentScale.Crop,
+                contentScale = ContentScale.Fit,
                 modifier = Modifier.size(62.dp).clip(CircleShape),
             )
             Spacer(Modifier.height(8.dp))
