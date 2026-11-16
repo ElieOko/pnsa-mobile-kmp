@@ -115,9 +115,9 @@ fun WelcomeScreen(
                 Column {
                     BrandMark()
                     Spacer(Modifier.height(16.dp))
-                    Text("Repère Jeunes", color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Bold)
+                    Text(AppConfig.appDisplayName, color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Bold)
                     Text(
-                        "Le bon service de santé, au bon endroit, près de toi !",
+                        AppConfig.appShortTagline,
                         color = Color.White.copy(alpha = 0.86f),
                         style = MaterialTheme.typography.titleMedium,
                     )

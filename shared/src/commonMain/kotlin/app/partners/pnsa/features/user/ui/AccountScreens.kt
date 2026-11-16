@@ -544,6 +544,15 @@ fun HelpScreen(onBack: () -> Unit) {
             }
             item {
                 PnsaCard {
+                    Text("À propos de ${AppConfig.appDisplayName}", fontWeight = FontWeight.Bold, color = bagdeColor)
+                    Spacer(Modifier.height(6.dp))
+                    Text(AppConfig.appShortTagline, fontWeight = FontWeight.Medium, color = PnsaInk)
+                    Spacer(Modifier.height(8.dp))
+                    Text(AppConfig.appDescriptiveNote, color = PnsaMuted)
+                }
+            }
+            item {
+                PnsaCard {
                     Text("Contact officiel PNSA", fontWeight = FontWeight.Bold, color = bagdeColor)
                     Spacer(Modifier.height(6.dp))
                     Text(AppConfig.contactEmail, fontWeight = FontWeight.Medium, color = PnsaInk)
